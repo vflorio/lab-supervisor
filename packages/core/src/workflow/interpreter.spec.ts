@@ -7,7 +7,7 @@ import type * as Workflow from "./workflow";
 //  fixtures
 
 const noopEnv = (log: string[] = []): Interpreter.WorkflowEnv => ({
-  scripts: [],
+  workflows: [],
   logger: {
     debug: (msg) => () => log.push(`[DEBUG] ${msg}`),
     info: (msg) => () => log.push(`[INFO] ${msg}`),
@@ -28,183 +28,55 @@ const noopEnv = (log: string[] = []): Interpreter.WorkflowEnv => ({
   },
 });
 
-const failingEnv = (failCount: number): { env: Interpreter.WorkflowEnv; calls: string[] } => {
-  let attempts = 0;
-  const calls: string[] = [];
-  return {
-    calls,
-    env: {
-      scripts: [],
-      logger: {
-        debug: () => () => {},
-        info: () => () => {},
-        warn: () => () => {},
-        error: () => () => {},
-        logNetwork: () => () => {},
-      },
-      capabilities: {
-        restartApp: (pkg) => {
-          calls.push(`restartApp:${pkg}`);
-          attempts++;
-          return attempts <= failCount
-            ? TE.left({ type: "WorkflowError", message: `fail #${attempts}` })
-            : TE.right(undefined);
-        },
-        ensureActivity: () => TE.right(undefined),
-        openUrl: () => TE.right(undefined),
-        openDeveloperSettings: () => TE.right(undefined),
-        reboot: () => TE.right(undefined),
-        wakeUp: () => TE.right(undefined),
-        inputTap: () => TE.right(undefined),
-        waitForDevice: () => TE.right(undefined),
-        waitForActivity: () => TE.right(undefined),
-      },
-    },
-  };
-};
-
 describe("workflow interpreter", () => {
-  it("executes a simple workflow successfully", async () => {
+  it("executes a flat sequence of commands successfully", async () => {
     const log: string[] = [];
     const env = noopEnv(log);
 
     const workflow: Workflow.Workflow = {
       name: "test-wf",
-      strategies: [
-        {
-          commands: [{ type: "restartApp", packageId: "com.example.app" }, { type: "waitForDevice" }],
-          policy: [
-            ["constantDelay", "10ms"],
-            ["limitRetries", 3],
-          ],
-        },
-      ],
+      commands: [{ type: "restartApp", packageId: "com.example.app" }, { type: "waitForDevice" }],
     };
 
     const result = await Interpreter.interpretWorkflow(workflow)(env)();
     expect(E.isRight(result)).toBe(true);
   });
 
-  it("retries a failing strategy with policy", async () => {
-    const { env, calls } = failingEnv(2);
-
-    const workflow: Workflow.Workflow = {
-      name: "retry-wf",
-      strategies: [
-        {
-          commands: [{ type: "restartApp", packageId: "com.example.app" }],
-          policy: [
-            ["constantDelay", "10ms"],
-            ["limitRetries", 5],
-          ],
-        },
-      ],
-    };
-
-    const result = await Interpreter.interpretWorkflow(workflow)(env)();
-    expect(E.isRight(result)).toBe(true);
-    expect(calls.length).toBe(3); // 2 failures + 1 success
-  });
-
-  it("escalates to secondary strategy when primary exhausted", async () => {
-    const calls: string[] = [];
+  it("propagates a command failure as a Left", async () => {
     const env: Interpreter.WorkflowEnv = {
-      scripts: [],
-      logger: {
-        debug: () => () => {},
-        info: () => () => {},
-        warn: () => () => {},
-        error: () => () => {},
-        logNetwork: () => () => {},
-      },
+      ...noopEnv(),
       capabilities: {
-        restartApp: () => {
-          calls.push("restartApp");
-          return TE.left({ type: "WorkflowError", message: "always fails" });
-        },
-        ensureActivity: () => TE.right(undefined),
-        openUrl: () => TE.right(undefined),
-        openDeveloperSettings: () => TE.right(undefined),
-        reboot: () => {
-          calls.push("reboot");
-          return TE.right(undefined);
-        },
-        wakeUp: () => TE.right(undefined),
-        inputTap: () => TE.right(undefined),
-        waitForDevice: () => {
-          calls.push("waitForDevice");
-          return TE.right(undefined);
-        },
-        waitForActivity: () => TE.right(undefined),
+        ...noopEnv().capabilities,
+        restartApp: () => TE.left({ type: "WorkflowError", message: "nope" }),
       },
     };
 
     const workflow: Workflow.Workflow = {
-      name: "escalation-wf",
-      strategies: [
-        {
-          commands: [{ type: "restartApp", packageId: "com.example.app" }],
-          policy: [
-            ["constantDelay", "10ms"],
-            ["limitRetries", 2],
-          ],
-        },
-        {
-          commands: [{ type: "reboot" }, { type: "waitForDevice" }],
-          policy: [
-            ["constantDelay", "10ms"],
-            ["limitRetries", 1],
-          ],
-        },
-      ],
+      name: "fail-wf",
+      commands: [{ type: "restartApp", packageId: "pkg" }],
     };
 
     const result = await Interpreter.interpretWorkflow(workflow)(env)();
-    expect(E.isRight(result)).toBe(true);
-    // Primary: 3 attempts (initial + 2 retries), then secondary succeeds
-    expect(calls.filter((c) => c === "restartApp").length).toBe(3);
-    expect(calls).toContain("reboot");
-    expect(calls).toContain("waitForDevice");
+    expect(E.isLeft(result)).toBe(true);
   });
 
-  it("resolves script references via 'run' command", async () => {
+  it("resolves workflow references via the 'run' command", async () => {
     const tapCalls: Array<{ x: number; y: number }> = [];
     const env: Interpreter.WorkflowEnv = {
-      scripts: [{ name: "my-script", commands: [{ type: "inputTap", coords: { x: 0.5, y: 0.5 } }] }],
-      logger: {
-        debug: () => () => {},
-        info: () => () => {},
-        warn: () => () => {},
-        error: () => () => {},
-        logNetwork: () => () => {},
-      },
+      workflows: [{ name: "my-workflow", commands: [{ type: "inputTap", coords: { x: 0.5, y: 0.5 } }] }],
+      logger: noopEnv().logger,
       capabilities: {
-        restartApp: () => TE.right(undefined),
-        ensureActivity: () => TE.right(undefined),
-        openUrl: () => TE.right(undefined),
-        openDeveloperSettings: () => TE.right(undefined),
-        reboot: () => TE.right(undefined),
-        wakeUp: () => TE.right(undefined),
+        ...noopEnv().capabilities,
         inputTap: (coords) => {
           tapCalls.push(coords);
           return TE.right(undefined);
         },
-        waitForDevice: () => TE.right(undefined),
-        waitForActivity: () => TE.right(undefined),
       },
     };
 
     const workflow: Workflow.Workflow = {
-      name: "script-wf",
-      strategies: [
-        {
-          commands: [{ type: "run", scriptName: "my-script" }],
-          policy: [
-            ["constantDelay", "10ms"],
-            ["limitRetries", 1],
-          ],
-        },
-      ],
+      name: "outer-wf",
+      commands: [{ type: "run", workflowName: "my-workflow" }],
     };
 
     const result = await Interpreter.interpretWorkflow(workflow)(env)();
@@ -212,53 +84,35 @@ describe("workflow interpreter", () => {
     expect(tapCalls).toEqual([{ x: 0.5, y: 0.5 }]);
   });
 
-  it("fails when all strategies are exhausted", async () => {
-    const env: Interpreter.WorkflowEnv = {
-      scripts: [],
-      logger: {
-        debug: () => () => {},
-        info: () => () => {},
-        warn: () => () => {},
-        error: () => () => {},
-        logNetwork: () => () => {},
-      },
-      capabilities: {
-        restartApp: () => TE.left({ type: "WorkflowError", message: "nope" }),
-        ensureActivity: () => TE.left({ type: "WorkflowError", message: "nope" }),
-        openUrl: () => TE.right(undefined),
-        openDeveloperSettings: () => TE.right(undefined),
-        reboot: () => TE.left({ type: "WorkflowError", message: "nope" }),
-        wakeUp: () => TE.right(undefined),
-        inputTap: () => TE.right(undefined),
-        waitForDevice: () => TE.right(undefined),
-        waitForActivity: () => TE.right(undefined),
-      },
-    };
+  it("fails with a WorkflowError when the referenced workflow is missing", async () => {
+    const env = noopEnv();
 
     const workflow: Workflow.Workflow = {
-      name: "fail-wf",
-      strategies: [
-        {
-          commands: [{ type: "restartApp", packageId: "pkg" }],
-          policy: [
-            ["constantDelay", "10ms"],
-            ["limitRetries", 1],
-          ],
-        },
-        {
-          commands: [{ type: "reboot" }],
-          policy: [
-            ["constantDelay", "10ms"],
-            ["limitRetries", 1],
-          ],
-        },
-      ],
+      name: "outer-wf",
+      commands: [{ type: "run", workflowName: "missing-workflow" }],
     };
 
     const result = await Interpreter.interpretWorkflow(workflow)(env)();
     expect(E.isLeft(result)).toBe(true);
     if (E.isLeft(result)) {
-      expect(result.left.message).toContain("all strategies exhausted");
+      expect(result.left.message).toContain("missing-workflow");
     }
+  });
+
+  it("run() looks up a workflow by name from the provided list", async () => {
+    const env = noopEnv();
+    const workflows: readonly Workflow.Workflow[] = [
+      { name: "open-developer-settings", commands: [{ type: "openDeveloperSettings" }] },
+    ];
+
+    const result = await Interpreter.run(workflows, "open-developer-settings")(env)();
+    expect(E.isRight(result)).toBe(true);
+  });
+
+  it("run() fails when the workflow name is not found", async () => {
+    const env = noopEnv();
+
+    const result = await Interpreter.run([], "does-not-exist")(env)();
+    expect(E.isLeft(result)).toBe(true);
   });
 });

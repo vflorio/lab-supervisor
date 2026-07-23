@@ -1,12 +1,11 @@
 import * as Errors from "@supervisor/core/errors";
 import type * as Logger from "@supervisor/core/logger";
 import * as NetworkTarget from "@supervisor/core/network-target";
-import type * as RetryPolicy from "@supervisor/core/retry/codec";
 import * as Retry from "@supervisor/core/retry/retry";
 import * as Adb from "@supervisor/core/services/adb";
 import type * as Shell from "@supervisor/core/shell";
 import * as WorkflowInterpreter from "@supervisor/core/workflow/interpreter";
-import type { RecoveryConfig } from "@supervisor/core/workflow/workflow";
+import type { Workflow } from "@supervisor/core/workflow/workflow";
 import { pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";
 import type * as DeviceRegistry from "./registry";
@@ -17,11 +16,11 @@ const mapWorkflowError = (
 
 interface WorkflowRunnerEnv {
   readonly logger: Logger.Tagged;
-  readonly recovery: RecoveryConfig;
+  readonly workflows: readonly Workflow[];
   readonly spawn: Shell.Spawn;
 }
 
-export type RunError = WorkflowInterpreter.WorkflowError | RetryPolicy.PolicyDecodeError;
+export type RunError = WorkflowInterpreter.WorkflowError;
 
 export const run =
   (env: WorkflowRunnerEnv) =>
@@ -29,11 +28,11 @@ export const run =
   (target: NetworkTarget.Target): TE.TaskEither<RunError, void> =>
     pipe(
       WorkflowInterpreter.run(
-        env.recovery,
+        env.workflows,
         workflow,
       )({
         logger: env.logger,
-        scripts: env.recovery.scripts,
+        workflows: env.workflows,
         capabilities: makeCapabilities(env, target),
       }),
 

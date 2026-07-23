@@ -58,9 +58,9 @@ export interface AdbTracker {
 
 export const start = (
   log: Logger.Tagged,
+  stream: Predicates.PredicateStream,
   policy: Retry.Policy,
   env: Adb.AdbEnv,
-  predicates: Predicates.PredicateStream,
 ): AdbTracker => {
   const deviceStream = createDeviceStream();
   const diffFor = Predicates.diff<Adb.Device>(DOMAIN, keyOf, toFacts);
@@ -78,7 +78,7 @@ export const start = (
 
     const { changed, next } = diffFor(snapshot, result.right);
     snapshot = next;
-    for (const fact of changed) predicates.emit(fact);
+    for (const fact of changed) stream.emit(fact);
   };
 
   return {

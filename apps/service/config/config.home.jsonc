@@ -41,48 +41,27 @@
       ["limitRetries", 10]
     ]
   },
-  "recovery": {
-    "scripts": [],
-    "workflows": [
+  "workflows": [
+    [
+      "open-chrome",
       [
-        "open-chrome",
-        {
-          "primary": {
-            "commands": [
-              // wake screen up
-              ["wakeUp"],
-              // Ensure APp is running (start if not opened)
-              ["ensureActivity", "com.android.chrome", "com.google.android.apps.chrome.Main"]
-            ],
-            "policy": [
-              ["constantDelay", "500ms"],
-              ["exponentialBackoff", "500ms"],
-              ["capDelay", "30s"],
-              ["limitRetries", 10]
-            ]
-          },
-          "secondary": {
-            "commands": [
-              ["reboot"],
-              // FIXME va rivista, attende sulla 5555, mentre dopo un reboot è necessario il processo di connessione
-              ["waitForDevice"],
-              ["ensureActivity", "com.android.chrome", "com.google.android.apps.chrome.Main"]
-            ],
-            "policy": [["constantDelay", "60s"], ["limitRetries", 3]]
-          }
-        }
-      ],
-      [
-        "open-developer-settings",
-        {
-          "primary": {
-            "commands": [["wakeUp"], ["openDeveloperSettings"]],
-            "policy": [["constantDelay", "1s"], ["limitRetries", 3]]
-          }
-        }
+        // wake screen up
+        ["wakeUp"],
+        // Ensure App is running (start if not opened)
+        ["ensureActivity", "com.android.chrome", "com.google.android.apps.chrome.Main"]
       ]
-    ]
-  },
+    ],
+    [
+      "open-chrome-reboot",
+      [
+        ["reboot"],
+        // FIXME va rivista, attende sulla 5555, mentre dopo un reboot è necessario il processo di connessione
+        ["waitForDevice"],
+        ["ensureActivity", "com.android.chrome", "com.google.android.apps.chrome.Main"]
+      ]
+    ],
+    ["open-developer-settings", [["wakeUp"], ["openDeveloperSettings"]]]
+  ],
   "registry": {
     "dbPath": "data/device-registry.json",
     "devices": {

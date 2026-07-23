@@ -138,7 +138,9 @@ export const create: Effect<ServiceHandle> = pipe(
 
     const runWorkflow: (targets: readonly NetworkTarget.Target[]) => TE.TaskEither<Workflow.RunError, void> = flow(
       RA.traverse(TE.ApplicativeSeq)(
-        Workflow.run({ logger: workflowLog, spawn: Node.spawn, recovery: config.recovery })("open-developer-settings"),
+        Workflow.run({ logger: workflowLog, spawn: Node.spawn, workflows: config.workflows })(
+          "open-developer-settings",
+        ),
       ),
       TE.asUnit,
     );

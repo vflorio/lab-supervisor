@@ -23,7 +23,7 @@ const validConfig = {
   },
   adb: { port: 5555, reconnect: [["constantDelay", "400ms"]] },
   log: { level: "debug" },
-  recovery: { scripts: [], workflows: [] },
+  workflows: [],
   trpc: { port: 3001, hostname: "127.0.0.1" },
   registry: { dbPath: "data/device-registry.json" },
 };

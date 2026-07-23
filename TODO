@@ -16,6 +16,7 @@
 - [X] Candybox reachability check
 - [X] Suitest Availability check: polling raggiungibilità per device type (Candybox, Android camera), con intervallo configurabile
 - [X] Activation gate: saltare il polling fuori dallo schedule di lavoro configurato
+    - [ ]: estendere il concetto allo stato di controlled per singolo device (es: uso tv 1 dalle 14 alle 18)
 - [X] Offline state tracker: tracciamento centralizzato stato device (online/offline/recovering), durata irraggiungibilità, integrato con availability check
 
 ## Recovery Workflows

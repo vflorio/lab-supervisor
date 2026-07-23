@@ -22,9 +22,5 @@ export const trackerConfig: Predicates.TrackerConfig<Suitest.Env, Suitest.Suites
   fetch: Suitest.getControlUnits,
 };
 
-// Extension point per un futuro trigger di workflow (es. "tap sul bottone connect
-// dell'app Suitest") quando un control-unit passa online:true -> false. Nessuna azione
-// è cablata oggi: un consumer futuro può fare
-// `predicateStream.subscribe((entry) => { if (isControlUnitOffline(entry)) ... })`.
 export const isControlUnitOffline = (entry: Predicates.PredicateEntry): boolean =>
   entry.domain === DOMAIN && entry.name === PREDICATE_ONLINE && entry.value === false;

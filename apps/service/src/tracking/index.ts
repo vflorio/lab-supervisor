@@ -2,17 +2,14 @@ import type * as Config from "@supervisor/core/config";
 import type * as Logger from "@supervisor/core/logger";
 import * as Predicates from "@supervisor/core/predicates/index";
 import type * as Retry from "@supervisor/core/retry/retry";
-import type * as Adb from "@supervisor/core/services/adb";
+import type * as AdbService from "@supervisor/core/services/adb";
 import * as E from "fp-ts/Either";
-import * as AdbTracking from "./adb";
-import * as SuitestCameraTracking from "./suitest-camera";
-import * as SuitestControlUnitTracking from "./suitest-control-unit";
-import * as SuitestDeviceTracking from "./suitest-device";
+import * as Adb from "./adb";
+import * as SuitestCamera from "./suitest-camera";
+import * as SuitestControlUnit from "./suitest-control-unit";
+import * as SuitestDevice from "./suitest-device";
 
 export * as Adb from "./adb";
-export * as SuitestCamera from "./suitest-camera";
-export * as SuitestControlUnit from "./suitest-control-unit";
-export * as SuitestDevice from "./suitest-device";
 
 // -------------------------------------------------------------------------------------
 // Composizione dei 4 tracker di monitoring, ognuno sulla propria policy configurabile.
@@ -32,39 +29,39 @@ export interface TrackingPolicies {
 
 export interface TrackingEnv {
   readonly logger: Logger.Tagged;
-  readonly adbEnv: Adb.AdbEnv;
+  readonly adbEnv: AdbService.AdbEnv;
   readonly suitestConfig: Config.Suitest;
   readonly policies: TrackingPolicies;
   readonly stream: Predicates.PredicateStream;
 }
 
 export interface TrackingHandle {
-  readonly adbDeviceFeed: AdbTracking.DeviceFeed;
+  readonly adbDeviceFeed: Adb.DeviceFeed;
   readonly stop: () => void;
 }
 
 export const startAll = (env: TrackingEnv): TrackingHandle => {
-  const adb = AdbTracking.start(env.logger.child("adb"), env.policies.adb, env.adbEnv, env.stream);
+  const adb = Adb.start(env.logger.child("adb"), env.stream, env.policies.adb, env.adbEnv);
 
   const camera = Predicates.run(
     env.logger,
-    env.policies.suitestCamera,
-    SuitestCameraTracking.trackerConfig,
     env.stream,
+    env.policies.suitestCamera,
+    SuitestCamera.trackerConfig,
   )({ logger: env.logger.child("camera"), suitestConfig: env.suitestConfig });
 
   const controlUnit = Predicates.run(
     env.logger,
-    env.policies.suitestControlUnit,
-    SuitestControlUnitTracking.trackerConfig,
     env.stream,
+    env.policies.suitestControlUnit,
+    SuitestControlUnit.trackerConfig,
   )({ logger: env.logger.child("control-unit"), suitestConfig: env.suitestConfig });
 
   const device = Predicates.run(
     env.logger,
-    env.policies.suitestDevice,
-    SuitestDeviceTracking.trackerConfig,
     env.stream,
+    env.policies.suitestDevice,
+    SuitestDevice.trackerConfig,
   )({ logger: env.logger.child("device"), suitestConfig: env.suitestConfig });
 
   const handles = [adb.handle, camera, controlUnit, device];

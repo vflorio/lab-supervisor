@@ -60,9 +60,9 @@ export const diff =
 export const run =
   <Env, Error extends AppError, RawItem>(
     logger: Logger.Tagged,
+    stream: PredicateStream,
     policy: Retry.Policy,
     config: TrackerConfig<Env, Error, RawItem>,
-    stream: PredicateStream,
   ) =>
   (env: Env): IntervalLoop.Handle => {
     const diffFor = diff<RawItem>(config.domain, config.keyOf, config.toFacts);

@@ -1,8 +1,7 @@
 import * as E from "fp-ts/Either";
 import * as t from "io-ts";
 import { match } from "ts-pattern";
-import { PolicyJsonCodec } from "../retry/codec";
-import type { Command, Script, Workflow, WorkflowStrategy } from "./workflow";
+import type { Command, Workflow } from "./workflow";
 
 // -------------------------------------------------------------------------------------
 // Codecs
@@ -58,10 +57,10 @@ const validateCommand = (u: unknown, c: t.Context): t.Validation<Command> => {
       return t.success({ type: "waitForActivity" as const, activity });
     })
     .with("run", () => {
-      const scriptName = args[0];
-      if (typeof scriptName !== "string") return t.failure(u, c, "run requires a script name");
+      const workflowName = args[0];
+      if (typeof workflowName !== "string") return t.failure(u, c, "run requires a workflow name");
 
-      return t.success({ type: "run" as const, scriptName });
+      return t.success({ type: "run" as const, workflowName });
     })
     .otherwise(() => t.failure(u, c, `Unknown command: "${name}"`));
 };
@@ -77,7 +76,7 @@ const encodeCommand = (cmd: Command): unknown[] =>
     .with({ type: "inputTap" }, ({ coords }) => ["inputTap", coords])
     .with({ type: "waitForDevice" }, () => ["waitForDevice"])
     .with({ type: "waitForActivity" }, ({ activity }) => ["waitForActivity", activity])
-    .with({ type: "run" }, ({ scriptName }) => ["run", scriptName])
+    .with({ type: "run" }, ({ workflowName }) => ["run", workflowName])
     .exhaustive();
 
 // JSON: ["commandName", ...args] -> Command
@@ -89,16 +88,16 @@ export const CommandCodec = new t.Type<Command, unknown[], unknown>(
 );
 
 // ----
-// Script - JSON: ["name", [[cmd], [cmd], ...]]
+// Workflow - JSON: ["name", [[cmd], [cmd], ...]]
 
-const isScript = (u: unknown): u is Script => typeof u === "object" && u !== null && "name" in u;
+const isWorkflow = (u: unknown): u is Workflow => typeof u === "object" && u !== null && "name" in u;
 
-const validateScript = (u: unknown, c: t.Context): t.Validation<Script> => {
-  if (!Array.isArray(u) || u.length !== 2) return t.failure(u, c, "Expected: [scriptName, [commands...]]");
+const validateWorkflow = (u: unknown, c: t.Context): t.Validation<Workflow> => {
+  if (!Array.isArray(u) || u.length !== 2) return t.failure(u, c, "Expected: [workflowName, [commands...]]");
 
   const [name, commands] = u;
-  if (typeof name !== "string") return t.failure(u, c, "Script name must be a string");
-  if (!Array.isArray(commands)) return t.failure(u, c, "Script commands must be an array");
+  if (typeof name !== "string") return t.failure(u, c, "Workflow name must be a string");
+  if (!Array.isArray(commands)) return t.failure(u, c, "Workflow commands must be an array");
 
   const decoded: Command[] = [];
   for (let i = 0; i < commands.length; i++) {
@@ -106,50 +105,14 @@ const validateScript = (u: unknown, c: t.Context): t.Validation<Script> => {
       ...c,
       { key: `[${i}]`, type: CommandCodec, actual: commands[i] },
     ]);
-    if (E.isLeft(result)) return result as t.Validation<Script>;
+    if (E.isLeft(result)) return result as t.Validation<Workflow>;
     decoded.push(result.right);
   }
 
   return t.success({ name, commands: decoded });
 };
 
-const encodeScript = (s: Script): unknown => [s.name, s.commands.map((cmd) => CommandCodec.encode(cmd))];
-
-export const ScriptJsonCodec = new t.Type<Script, unknown, unknown>("Script", isScript, validateScript, encodeScript);
-
-// WorkflowStrategy - JSON: { commands: [...], policy: [...] }
-const WorkflowStrategyCodec = t.type({
-  commands: t.array(CommandCodec),
-  policy: PolicyJsonCodec,
-});
-
-// Workflow - JSON: ["name", { primary: {...}, secondary: {...}, ... }]
-
-const isWorkflow = (u: unknown): u is Workflow => typeof u === "object" && u !== null && "name" in u;
-
-const validateWorkflow = (u: unknown, c: t.Context): t.Validation<Workflow> => {
-  if (!Array.isArray(u) || u.length !== 2) return t.failure(u, c, "Expected: [workflowName, { strategy: {...}, ... }]");
-
-  const [name, strategiesObj] = u;
-  if (typeof name !== "string") return t.failure(u, c, "Workflow name must be a string");
-
-  if (typeof strategiesObj !== "object" || strategiesObj === null || Array.isArray(strategiesObj))
-    return t.failure(u, c, "Workflow strategies must be an object");
-
-  const strategies: WorkflowStrategy[] = [];
-  for (const [key, value] of Object.entries(strategiesObj as Record<string, unknown>)) {
-    const result = WorkflowStrategyCodec.validate(value, [...c, { key, type: WorkflowStrategyCodec, actual: value }]);
-    if (E.isLeft(result)) return result as t.Validation<Workflow>;
-    strategies.push(result.right);
-  }
-
-  return t.success({ name, strategies });
-};
-
-const encodeWorkflow = (w: Workflow): unknown => [
-  w.name,
-  Object.fromEntries(w.strategies.map((p, i) => [i === 0 ? "primary" : `strategy_${i}`, p])),
-];
+const encodeWorkflow = (w: Workflow): unknown => [w.name, w.commands.map((cmd) => CommandCodec.encode(cmd))];
 
 export const WorkflowJsonCodec = new t.Type<Workflow, unknown, unknown>(
   "Workflow",

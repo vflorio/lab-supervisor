@@ -41,76 +41,51 @@
       ["limitRetries", 10]
     ]
   },
-  "recovery": {
-    "scripts": [
+  "workflows": [
+    [
+      // Avviando l'applicazione la connessione è automatica, bisogna eseguire questo flow manualmente in alcuni casi
+      "suitest-connect",
       [
-        // Avviando l'applicazione la connessione è automatica, bisogna eseguire questo flow manualmente in alcuni casi
-        "suitest-connect",
-        [
-          ["inputTap", { "x": 0.9, "y": 0.1 }], // tap connect button
-          ["inputTap", { "x": 0.5, "y": 0.5 }] // tap confirm
-        ]
-      ],
-      [
-        "suitest-set-experimental-profile",
-        [
-          ["inputTap", { "x": 2200, "y": 160 }], // tap  right-top corner icon (settings)
-          ["inputTap", { "x": 1000, "y": 440 }], // tap first setting (profile)
-          ["inputTap", { "x": 1000, "y": 640 }], // tap third entry (profile: experimental)
-          ["inputTap", { "x": 180, "y": 180 }] // tap left-top corner icon (back)
-        ]
+        ["inputTap", { "x": 0.9, "y": 0.1 }], // tap connect button
+        ["inputTap", { "x": 0.5, "y": 0.5 }] // tap confirm
       ]
     ],
-    "workflows": [
+    [
+      "suitest-set-experimental-profile",
       [
-        "android-suitest-test",
-        {
-          "primary": {
-            "commands": [
-              // wake screen up
-              ["wakeUp"],
-              // Ensure APp is running (start if not opened)
-              ["ensureActivity", "st.suite.camera", "st.suite.android.suitestcamera.MainActivity"],
-              ["run", "suitest-set-experimental-profile"]
-            ],
-            "policy": [
-              ["constantDelay", "500ms"],
-              ["exponentialBackoff", "500ms"],
-              ["capDelay", "30s"],
-              ["limitRetries", 10]
-            ]
-          }
-        }
-      ],
+        ["inputTap", { "x": 2200, "y": 160 }], // tap  right-top corner icon (settings)
+        ["inputTap", { "x": 1000, "y": 440 }], // tap first setting (profile)
+        ["inputTap", { "x": 1000, "y": 640 }], // tap third entry (profile: experimental)
+        ["inputTap", { "x": 180, "y": 180 }] // tap left-top corner icon (back)
+      ]
+    ],
+    [
+      "android-suitest-test",
       [
-        "android-suitest-camera",
-        {
-          "primary": {
-            "commands": [
-              ["restartApp", "com.suitest.android.camera"],
-              ["waitForActivity", "com.suitest.android.camera.CameraActivity"],
-              ["run", "suitest-connect"]
-            ],
-            "policy": [
-              ["constantDelay", "500ms"],
-              ["exponentialBackoff", "500ms"],
-              ["capDelay", "30s"],
-              ["limitRetries", 10]
-            ]
-          },
-          "secondary": {
-            "commands": [
-              ["reboot"],
-              ["waitForDevice"],
-              ["ensureActivity", "com.suitest.android.camera", "com.suitest.android.camera.CameraActivity"],
-              // ["waitForActivity", "com.suitest.android.camera.CameraActivity"],
-              ["run", "suitest-set-profile"],
-              ["run", "suitest-connect"]
-            ],
-            "policy": [["constantDelay", "60s"], ["limitRetries", 3]]
-          }
-        }
+        // wake screen up
+        ["wakeUp"],
+        // Ensure App is running (start if not opened)
+        ["ensureActivity", "st.suite.camera", "st.suite.android.suitestcamera.MainActivity"],
+        ["run", "suitest-set-experimental-profile"]
+      ]
+    ],
+    [
+      "android-suitest-camera",
+      [
+        ["restartApp", "com.suitest.android.camera"],
+        ["waitForActivity", "com.suitest.android.camera.CameraActivity"],
+        ["run", "suitest-connect"]
+      ]
+    ],
+    [
+      "android-suitest-camera-reboot",
+      [
+        ["reboot"],
+        ["waitForDevice"],
+        ["ensureActivity", "com.suitest.android.camera", "com.suitest.android.camera.CameraActivity"],
+        ["run", "suitest-set-experimental-profile"],
+        ["run", "suitest-connect"]
       ]
     ]
-  }
+  ]
 }
