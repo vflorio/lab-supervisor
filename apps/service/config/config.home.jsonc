@@ -66,8 +66,8 @@
   ],
   "recovery": [
     {
-      "label": "camera-recovery-demo",
       "domain": "suitest-camera",
+      "label": "camera-recovery-demo",
       "levels": [
         {
           "grace": "10s",

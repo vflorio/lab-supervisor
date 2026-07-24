@@ -1,6 +1,6 @@
 import type { Endomorphism } from "fp-ts/Endomorphism";
 import * as t from "io-ts";
-import * as NetworkTarget from "../../network-target";
+import * as Network from "../../network";
 import type { LabRegistry } from "./registry";
 
 // -------------------------------------------------------------------------------------
@@ -15,7 +15,7 @@ import type { LabRegistry } from "./registry";
 export const AdbEntryCodec = t.type({
   id: t.string,
   label: t.string,
-  target: NetworkTarget.Codec,
+  target: Network.Codec,
 });
 
 export type AdbEntry = t.TypeOf<typeof AdbEntryCodec>;

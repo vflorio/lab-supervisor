@@ -1,4 +1,4 @@
-import * as NetworkTarget from "@supervisor/core/network-target";
+import * as Network from "@supervisor/core/network";
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/lib/function";
 import { publicProcedure, router } from "../instance";
@@ -8,9 +8,9 @@ import * as Result from "../result";
 // Android router (ADB device management, live tail, SSE-based subscription)
 // -------------------------------------------------------------------------------------
 
-const targetInput = (value: unknown): NetworkTarget.Target =>
+const targetInput = (value: unknown): Network.Endpoint =>
   pipe(
-    NetworkTarget.Codec.decode(value),
+    Network.Codec.decode(value),
     E.getOrElseW(() => {
       throw new Error("Expected ADB target in <host>:<port> format");
     }),

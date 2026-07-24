@@ -1,6 +1,6 @@
 import * as Errors from "@supervisor/core/errors";
 import type * as Logger from "@supervisor/core/logger";
-import * as NetworkTarget from "@supervisor/core/network-target";
+import * as Network from "@supervisor/core/network";
 import type * as Predicates from "@supervisor/core/predicates/index";
 import * as Recovery from "@supervisor/core/recovery/index";
 import type * as Retry from "@supervisor/core/retry/retry";
@@ -24,8 +24,8 @@ const SUITEST_CAMERA_DOMAIN = "suitest-camera";
 
 // Risolve ogni videoCaptureDeviceId noto in registry al suo target ADB,
 // solo per le camere che hanno sia `videoCaptureDeviceId` che `adbId` valorizzati
-export const cameraTargetsFromRegistry = (registry: Db.LabRegistry): Readonly<Record<string, NetworkTarget.Target>> => {
-  const entries: Array<readonly [string, NetworkTarget.Target]> = [];
+export const cameraTargetsFromRegistry = (registry: Db.LabRegistry): Readonly<Record<string, Network.Endpoint>> => {
+  const entries: Array<readonly [string, Network.Endpoint]> = [];
 
   for (const camera of Object.values(registry.cameras)) {
     if (O.isNone(camera.videoCaptureDeviceId) || O.isNone(camera.adbId)) continue;
@@ -63,7 +63,7 @@ export interface RecoveryEnv {
   readonly spawn: Shell.Spawn;
   readonly tickPolicy: Retry.Policy;
   // Snapshot aggiornato dal chiamante (vedi service.ts) - Suitest video-capture-device id -> target ADB
-  readonly cameraTargets: () => Readonly<Record<string, NetworkTarget.Target>>;
+  readonly cameraTargets: () => Readonly<Record<string, Network.Endpoint>>;
 }
 
 const capabilitiesForDomain = (
@@ -80,8 +80,8 @@ const capabilitiesForDomain = (
     return (entityId) =>
       E.match(
         () => unresolvedCapabilities(entityId),
-        (target: NetworkTarget.Target) => WorkflowRunner.makeCapabilities(runnerEnv, target),
-      )(NetworkTarget.decode(entityId));
+        (target: Network.Endpoint) => WorkflowRunner.makeCapabilities(runnerEnv, target),
+      )(Network.decode(entityId));
   }
 
   if (domain === SUITEST_CAMERA_DOMAIN) {
@@ -113,8 +113,8 @@ export const startAll = (
       logger: env.logger.child(policy.label),
       stream: env.stream,
       workflows: env.workflows,
-      capabilitiesFor,
       tickPolicy: env.tickPolicy,
+      capabilitiesFor,
     });
 
     if (E.isLeft(result)) {

@@ -1,6 +1,6 @@
 import * as Machine from "@supervisor/core/state-machine/machine";
 import { match } from "ts-pattern";
-import type { ConnectionCommand, ConnectionEvent, TargetState } from "./model";
+import type { ConnectionEvent, ConnectionIntent, TargetState } from "./model";
 import { persistent, temporary, unknown } from "./model";
 
 // -------------------------------------------------------------------------------------
@@ -11,8 +11,8 @@ import { persistent, temporary, unknown } from "./model";
 // (self-loop senza comandi): rispecchia il fatto che un evento fuori sequenza (es. un handshake
 // che risponde dopo che il device è già tornato Unknown) non deve avere effetto.
 
-export const reduce: Machine.Reducer<TargetState, ConnectionEvent, ConnectionCommand> = (state, event) =>
-  match<[TargetState, ConnectionEvent], Machine.Transition<TargetState, ConnectionCommand>>([state, event])
+export const reduce: Machine.Reducer<TargetState, ConnectionEvent, ConnectionIntent> = (state, event) =>
+  match<[TargetState, ConnectionEvent], Machine.Transition<TargetState, ConnectionIntent>>([state, event])
     // Unknown -> Temporary
 
     // (State): Unknown -> (Event): TargetDiscovered -> (State): Temporary -> (Effect): ConnectTemporary

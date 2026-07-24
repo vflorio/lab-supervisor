@@ -4,21 +4,15 @@ import * as Predicates from "@supervisor/core/predicates/index";
 import type * as Retry from "@supervisor/core/retry/retry";
 import type * as AdbService from "@supervisor/core/services/adb";
 import * as E from "fp-ts/Either";
+import type * as IO from "fp-ts/IO";
 import * as Adb from "./adb";
+import type { AdbDeviceStream } from "./adb-stream";
 import * as SuitestCamera from "./suitest-camera";
 import * as SuitestControlUnit from "./suitest-control-unit";
 import * as SuitestDevice from "./suitest-device";
 
 export * as Adb from "./adb";
-
-// -------------------------------------------------------------------------------------
-// Composizione dei 4 tracker di monitoring, ognuno sulla propria policy configurabile.
-//
-// Ogni tracker gira come loop indipendente, "fire and forget": non vanno mai concatenati
-// nella catena RTE di service.ts che avvia l'ActivationRunner, perché quella catena non
-// si risolve mai durante il normale funzionamento (il tick dell'activation runner ritorna
-// solo dopo `stop()`) - un tracker incatenato dopo non partirebbe mai.
-// -------------------------------------------------------------------------------------
+export * as AdbStream from "./adb-stream";
 
 export interface TrackingPolicies {
   readonly adb: Retry.Policy;
@@ -30,18 +24,14 @@ export interface TrackingPolicies {
 export interface TrackingEnv {
   readonly logger: Logger.Tagged;
   readonly adbEnv: AdbService.AdbEnv;
+  readonly adbDeviceStream: AdbDeviceStream;
   readonly suitestConfig: Config.Suitest;
   readonly policies: TrackingPolicies;
   readonly stream: Predicates.PredicateStream;
 }
 
-export interface TrackingHandle {
-  readonly adbDeviceFeed: Adb.DeviceFeed;
-  readonly stop: () => void;
-}
-
-export const startAll = (env: TrackingEnv): TrackingHandle => {
-  const adb = Adb.start(env.logger.child("adb"), env.stream, env.policies.adb, env.adbEnv);
+export const startAll = (env: TrackingEnv): IO.IO<void> => {
+  const adb = Adb.run(env.logger.child("Tracker:adb"), env.stream, env.policies.adb, env.adbEnv, env.adbDeviceStream);
 
   const camera = Predicates.run(
     env.logger,
@@ -64,18 +54,17 @@ export const startAll = (env: TrackingEnv): TrackingHandle => {
     SuitestDevice.trackerConfig,
   )({ logger: env.logger.child("Tracker-Suitest:device"), suitestConfig: env.suitestConfig });
 
-  const handles = [adb.handle, camera, controlUnit, device];
+  const handles = [adb, camera, controlUnit, device];
 
   for (const handle of handles) {
     handle.start().then((result) => {
-      if (E.isLeft(result)) env.logger.error(`Tracking loop terminated unexpectedly: ${result.left.message}`)();
+      if (E.isLeft(result)) {
+        env.logger.error(`Tracking loop terminated unexpectedly: ${result.left.message}`)();
+      }
     });
   }
 
-  return {
-    adbDeviceFeed: adb.deviceFeed,
-    stop: () => {
-      for (const handle of handles) handle.stop();
-    },
+  return () => {
+    for (const handle of handles) handle.stop();
   };
 };

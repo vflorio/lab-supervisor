@@ -47,21 +47,21 @@ export const EqPort: Equality.Eq<PORT> = N.Eq;
 // Target = IP x PORT - validated "host:port" string <-> { ip, port } record
 // -------------------------------------------------------------------------------------
 
-export interface Target {
+export interface Endpoint {
   readonly ip: IP;
   readonly port: PORT;
 }
 
-const TARGET_REGEX = /^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+)$/;
+const ENDPOINT_REGEX = /^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+)$/;
 
-const isTarget = (u: unknown): u is Target =>
-  typeof u === "object" && u !== null && isIP((u as Target).ip) && isPort((u as Target).port);
+const isEndpoint = (u: unknown): u is Endpoint =>
+  typeof u === "object" && u !== null && isIP((u as Endpoint).ip) && isPort((u as Endpoint).port);
 
-export const Codec = new t.Type<Target, string, unknown>(
-  "NetworkTarget",
-  isTarget,
+export const Codec = new t.Type<Endpoint, string, unknown>(
+  "Endpoint",
+  isEndpoint,
   (u, c) => {
-    const match = typeof u === "string" ? TARGET_REGEX.exec(u) : null;
+    const match = typeof u === "string" ? ENDPOINT_REGEX.exec(u) : null;
     return match
       ? t.success({ ip: match[1] as IP, port: Number(match[2]) as PORT })
       : t.failure(u, c, "Expected <ip>:<port> (e.g. 192.168.0.1:1234)");
@@ -69,27 +69,27 @@ export const Codec = new t.Type<Target, string, unknown>(
   (target) => `${target.ip}:${target.port}`,
 );
 
-export const decode = (s: string): E.Either<Validation.ValidationError, Target> =>
+export const decode = (s: string): E.Either<Validation.ValidationError, Endpoint> =>
   pipe(Codec.decode(s), E.mapLeft(Validation.createValidationError));
 
-export const of = (ip: IP, port: PORT): Target => ({ ip, port });
+export const of = (ip: IP, port: PORT): Endpoint => ({ ip, port });
 
 // String form: usarla ogni volta che serve un rappresentazione testuale esplicita
 // (comandi shell, messaggi di log) - `Target` non è più una stringa, quindi la
 // conversione implicita via template literal/string concat non funziona più.
-export const format = (target: Target): string => Codec.encode(target);
+export const format = (target: Endpoint): string => Codec.encode(target);
 
 // Equality
 
-export const Eq: Equality.Eq<Target> = Equality.struct({ ip: EqIP, port: EqPort });
-export const EqByIp: Equality.Eq<Target> = Equality.contramap((target: Target) => target.ip)(EqIP);
+export const Eq: Equality.Eq<Endpoint> = Equality.struct({ ip: EqIP, port: EqPort });
+export const EqByIp: Equality.Eq<Endpoint> = Equality.contramap((target: Endpoint) => target.ip)(EqIP);
 
 // Updates
 
 export const withPort =
-  (port: PORT): Endomorphism<Target> =>
+  (port: PORT): Endomorphism<Endpoint> =>
   (target) => ({ ...target, port });
 
 export const withIp =
-  (ip: IP): Endomorphism<Target> =>
+  (ip: IP): Endomorphism<Endpoint> =>
   (target) => ({ ...target, ip });

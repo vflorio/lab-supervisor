@@ -5,7 +5,7 @@ import * as t from "io-ts";
 import { ActivationScheduleCodec } from "./activation/schedule";
 import { of } from "./errors";
 import { LogLevel } from "./logger";
-import * as NetworkTarget from "./network-target";
+import * as Network from "./network";
 import { RecoveryPolicyCodec } from "./recovery/codec";
 import { PolicyJsonCodec } from "./retry/codec";
 import { AdbEntryCodec, CameraEntryCodec, CandyboxEntryCodec, TvEntryCodec } from "./services/db";
@@ -60,7 +60,7 @@ export type Log = t.TypeOf<typeof LogCodec>; // Esportata e rinominato per servi
 
 // Configurazione connessione ADB
 const AdbCodec = t.type({
-  port: NetworkTarget.PortCodec,
+  port: Network.PortCodec,
   reconnect: PolicyJsonCodec,
 });
 

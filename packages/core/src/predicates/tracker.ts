@@ -1,6 +1,6 @@
 import * as E from "fp-ts/Either";
 import type * as RTE from "fp-ts/ReaderTaskEither";
-import { type AppError, format as formatError } from "../errors";
+import * as Errors from "../errors";
 import * as IntervalLoop from "../interval-loop";
 import * as Logger from "../logger";
 import type * as Retry from "../retry/retry";
@@ -12,7 +12,7 @@ import { factKey, type PredicateFact, type PredicateValue } from "./model";
 // entità, ed emette sullo stream solo i fatti il cui valore è realmente cambiato.
 // -------------------------------------------------------------------------------------
 
-export interface TrackerConfig<Env, Err extends AppError, RawItem> {
+export interface TrackerConfig<Env, Err extends Errors.AppError, RawItem> {
   readonly domain: string;
   readonly keyOf: (item: RawItem) => string;
   readonly toFacts: (item: RawItem) => Readonly<Record<string, PredicateValue>>;
@@ -58,7 +58,7 @@ export const diff =
 // Un fallimento del fetch viene loggato e ignorato (nessuna emissione),
 // il tracker riprova al prossimo tick
 export const run =
-  <Env, Error extends AppError, RawItem>(
+  <Env, Error extends Errors.AppError, RawItem>(
     logger: Logger.Tagged,
     stream: PredicateStream,
     policy: Retry.Policy,
@@ -74,7 +74,7 @@ export const run =
       const result = await config.fetch(env)();
 
       if (E.isLeft(result)) {
-        trackerLogger.error(`${config.domain} poll failed: ${formatError(result.left)}`)();
+        trackerLogger.error(`${config.domain} poll failed: ${Errors.format(result.left)}`)();
         return;
       }
 

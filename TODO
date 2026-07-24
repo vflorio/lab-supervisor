@@ -2,12 +2,6 @@
 - ui recovery/workflows
 - notifica
 
-Entità Suitest-Camera
-Entità ADB Network-Target
-
-State machine che combine ADB e Suitest-Camera, se una camera ha il target attivo, 
-la machine della suitest-camera può elaborare comandi, eseguire workflows etc
-
 
 ## Core
 

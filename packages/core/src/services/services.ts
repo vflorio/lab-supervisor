@@ -2,7 +2,7 @@ import type * as TE from "fp-ts/TaskEither";
 import type * as ConfigModel from "../config";
 import type { LogFeed } from "../log-stream";
 import type * as Logger from "../logger";
-import type * as NetworkTarget from "../network-target";
+import type * as Network from "../network";
 import type { PredicateFeed } from "../predicates/feed";
 import type * as Adb from "./adb";
 import type * as Db from "./db";
@@ -19,7 +19,7 @@ export interface AndroidDeviceSnapshot {
 
 export interface AndroidBridge {
   readonly devices: () => TE.TaskEither<Adb.Error, readonly AndroidDeviceSnapshot[]>;
-  readonly reboot: (target: NetworkTarget.Target) => TE.TaskEither<Adb.Error, void>;
+  readonly reboot: (target: Network.Endpoint) => TE.TaskEither<Adb.Error, void>;
   // Feed live alimentato dal tracker ADB centralizzato (apps/service/src/tracking/adb),
   // usato dalla subscription tRPC `android.devicesTail` invece di ripollare `adb devices`
   // in autonomia (era una fonte di poll ridondante rispetto al tracker).

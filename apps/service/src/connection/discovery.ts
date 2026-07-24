@@ -1,38 +1,35 @@
 import * as Errors from "@supervisor/core/errors";
 import * as Logger from "@supervisor/core/logger";
-import * as NetworkTarget from "@supervisor/core/network-target";
+import * as Network from "@supervisor/core/network";
 import * as Adb from "@supervisor/core/services/adb";
 import * as AvahiBrowse from "@supervisor/core/services/avahi-browse";
 import type * as Shell from "@supervisor/core/shell";
-import * as Machine from "@supervisor/core/state-machine/machine";
 import { pipe } from "fp-ts/function";
 import type * as P from "fp-ts/Predicate";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as RA from "fp-ts/ReadonlyArray";
 import * as TE from "fp-ts/TaskEither";
-import type { ConnectionEnv } from "./handle";
-import { handle } from "./handle";
-import type { ConnectionCommand, ConnectionEvent, TargetState } from "./model";
-import { isPersistent, unknown } from "./model";
-import { reduce } from "./reduce";
-import { onTransition } from "./tracing";
-
-export const machine: Machine.Machine<ConnectionEnv, never, TargetState, ConnectionEvent, ConnectionCommand> =
-  Machine.make(reduce, handle, onTransition);
+import type { AdbConnectionEnv } from "./adb-connection/interpret";
+import * as AdbConnectionMachine from "./adb-connection/machine";
+import * as AdbConnection from "./adb-connection/model";
 
 // -------------------------------------------------------------------------------------
-// Public API
+// Model
 // -------------------------------------------------------------------------------------
 
-export interface Env extends ConnectionEnv {
+export interface Env extends AdbConnectionEnv {
   // Determina se un determinato IP è noto al registry (controllato o meno)
   // un device completamente esterno al registry non va toccato, viene solo ignorato
-  readonly isControlled: P.Predicate<NetworkTarget.Target>;
+  readonly isControlled: P.Predicate<Network.Endpoint>;
   // Determina se un determinato IP è marcato come controllabile dal DB
-  readonly isKnown: P.Predicate<NetworkTarget.Target>;
+  readonly isKnown: P.Predicate<Network.Endpoint>;
 }
 
 export type DiscoveryError = Adb.Error | AvahiBrowse.AvahiBrowseError | Shell.ShellSpawnError;
+
+// -------------------------------------------------------------------------------------
+// Internal
+// -------------------------------------------------------------------------------------
 
 type Effect<A> = RTE.ReaderTaskEither<Env, DiscoveryError, A>;
 
@@ -58,46 +55,49 @@ const liftMdns =
   (env) =>
     effect({ logger: env.logger.child("mDNS"), spawn: env.spawn });
 
-const getConnectedAdbDevices: Effect<readonly NetworkTarget.Target[]> = (env) =>
+const getConnectedAdbDevices: Effect<readonly Network.Endpoint[]> = (env) =>
   pipe(
     Adb.devices({ logger: env.logger.child("ADB"), spawn: env.spawn }),
     TE.map((devices) => devices.filter((d) => d.status === "device").map((d) => d.target)),
   );
 
 const filterControlledOnly =
-  (devices: readonly NetworkTarget.Target[]): Effect<readonly NetworkTarget.Target[]> =>
+  (devices: readonly Network.Endpoint[]): Effect<readonly Network.Endpoint[]> =>
   ({ isControlled }) =>
     TE.right(devices.filter(isControlled));
 
 // Noti al registry ma non (più) controllati: vanno disconnessi. Un device sconosciuto al
 // registry viene invece ignorato (potrebbe essere un device esterno, non nostro).
 const filterKnownButUncontrolled =
-  (devices: readonly NetworkTarget.Target[]): Effect<readonly NetworkTarget.Target[]> =>
+  (devices: readonly Network.Endpoint[]): Effect<readonly Network.Endpoint[]> =>
   ({ isControlled, isKnown }) =>
     TE.right(devices.filter((target) => isKnown(target) && !isControlled(target)));
 
 // Best-effort: un fallimento in disconnessione non deve far fallire l'intero ciclo di discovery,
 // si logga soltanto (verrà ritentato al prossimo ciclo).
 const disconnectStray =
-  (target: NetworkTarget.Target): Effect<void> =>
+  (target: Network.Endpoint): Effect<void> =>
   (env) =>
     pipe(
       Adb.disconnect(target)({ logger: env.logger.child("ADB"), spawn: env.spawn }),
       TE.orElse((error) => {
-        env.logger.error(
-          `Failed to disconnect uncontrolled host ${NetworkTarget.format(target)}: ${Errors.format(error)}`,
-        )();
+        env.logger.error(`Failed to disconnect uncontrolled host ${Network.format(target)}: ${Errors.format(error)}`)();
         return TE.right<Adb.Error, void>(undefined);
       }),
     );
 
-// Applica un singolo device (già scoperto via mDNS) alla Target Machine, partendo da
-// Unknown, e ne ritorna lo stato finale (Persistent se la connessione ha avuto successo,
-// Unknown se ha fallito - vedi `reduce`/`handle`, che catchano i propri errori).
-const connect = (target: NetworkTarget.Target): Effect<TargetState> =>
-  Machine.dispatch(machine)(unknown(target.ip), { _tag: "TargetDiscovered", target });
+// -------------------------------------------------------------------------------------
+// Public API
+// -------------------------------------------------------------------------------------
 
-export const discoverAndConnect: Effect<readonly NetworkTarget.Target[]> = pipe(
+// Applica un singolo device (già scoperto via mDNS) alla Target Machine, partendo da
+// Unknown, e ne ritorna lo stato finale:
+//  - Persistent se la connessione ha avuto successo
+//  - Unknown se ha fallito
+export const connect = (target: Network.Endpoint): Effect<AdbConnection.TargetState> =>
+  AdbConnectionMachine.dispatch(AdbConnection.unknown(target.ip), { _tag: "TargetDiscovered", target });
+
+export const discoverAndConnect: Effect<readonly Network.Endpoint[]> = pipe(
   logInfo("Starting mDNS discovery"),
 
   RTE.bind("allConnected", () => getConnectedAdbDevices),
@@ -127,9 +127,7 @@ export const discoverAndConnect: Effect<readonly NetworkTarget.Target[]> = pipe(
     ),
   ),
 
-  RTE.bind("newTargets", ({ connected, discovered }) =>
-    RTE.of(RA.difference(NetworkTarget.EqByIp)(connected)(discovered)),
-  ),
+  RTE.bind("newTargets", ({ connected, discovered }) => RTE.of(RA.difference(Network.EqByIp)(connected)(discovered))),
   RTE.tap(({ newTargets }) =>
     newTargets.length > 0
       ? logInfo(`New targets to connect: ${JSON.stringify(newTargets)}`)
@@ -141,5 +139,9 @@ export const discoverAndConnect: Effect<readonly NetworkTarget.Target[]> = pipe(
 
   RTE.tap(() => logInfo("Discovery complete")),
   RTE.tap(({ resolved }) => logDebug(Logger.formatJsonLog([{ resolved }]))),
-  RTE.map(({ connected, resolved }) => [...connected, ...resolved.filter(isPersistent).map((s) => s.target)]),
+
+  RTE.map(({ connected, resolved }) => [
+    ...connected,
+    ...resolved.filter(AdbConnection.isPersistent).map((s) => s.target),
+  ]),
 );

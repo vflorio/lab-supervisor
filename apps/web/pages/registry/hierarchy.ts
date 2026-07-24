@@ -1,4 +1,4 @@
-import * as NetworkTarget from "@supervisor/core/network-target";
+import * as Network from "@supervisor/core/network";
 import * as O from "fp-ts/Option";
 import type { AdbDevice } from "../../hooks/useAdbDevices";
 import type { CameraView, ControlUnitView, Db, Hierarchy, TvGroup, TvView } from "./types";
@@ -7,10 +7,10 @@ import type { CameraView, ControlUnitView, Db, Hierarchy, TvGroup, TvView } from
 // distinto da `camera.suitest.online`, che riflette invece lo stato dell'app suitest-camera
 export function adbStatusFor(
   adbDevices: readonly AdbDevice[],
-  target: NetworkTarget.Target | undefined,
+  target: Network.Target | undefined,
 ): AdbDevice["status"] | null {
   if (!target) return null;
-  const formatted = NetworkTarget.format(target);
+  const formatted = Network.format(target);
   return adbDevices.find((d) => d.target === formatted)?.status ?? "disconnect";
 }
 

@@ -47,7 +47,7 @@ export interface Hierarchy {
 // manualmente dalla UI è un target ADB (es. un tablet), poi assegnabile a una camera.
 export interface NewAdbTargetForm {
   label: string;
-  target: string; // "ip:port", validato a runtime con NetworkTarget.decode
+  target: string; // "ip:port", validato a runtime con Network.decode
 }
 
 // Riconciliazione manuale camera <-> video-capture-device Suitest

@@ -1,6 +1,6 @@
 import * as Errors from "@supervisor/core/errors";
 import type * as Logger from "@supervisor/core/logger";
-import * as NetworkTarget from "@supervisor/core/network-target";
+import * as Network from "@supervisor/core/network";
 import * as Retry from "@supervisor/core/retry/retry";
 import * as Adb from "@supervisor/core/services/adb";
 import type * as Shell from "@supervisor/core/shell";
@@ -25,7 +25,7 @@ export type RunError = WorkflowInterpreter.WorkflowError;
 export const run =
   (env: WorkflowRunnerEnv) =>
   (workflow: string) =>
-  (target: NetworkTarget.Target): TE.TaskEither<RunError, void> =>
+  (target: Network.Endpoint): TE.TaskEither<RunError, void> =>
     pipe(
       WorkflowInterpreter.run(
         env.workflows,
@@ -36,15 +36,15 @@ export const run =
         capabilities: makeCapabilities(env, target),
       }),
 
-      TE.tapIO(() => env.logger.info(`Workflow "${workflow}" completed on ${NetworkTarget.format(target)}`)),
+      TE.tapIO(() => env.logger.info(`Workflow "${workflow}" completed on ${Network.format(target)}`)),
       TE.tapError((error) =>
-        TE.fromIO(env.logger.error(`Workflow failed on ${NetworkTarget.format(target)}: ${Errors.format(error)}`)),
+        TE.fromIO(env.logger.error(`Workflow failed on ${Network.format(target)}: ${Errors.format(error)}`)),
       ),
     );
 
 export const makeCapabilities = (
   env: WorkflowRunnerEnv,
-  target: NetworkTarget.Target,
+  target: Network.Endpoint,
 ): WorkflowInterpreter.CommandCapabilities => {
   const adbEnv: Adb.AdbEnv = {
     logger: env.logger.child("ADB"),
