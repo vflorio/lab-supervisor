@@ -78,6 +78,6 @@ export interface Services {
   readonly logger: Logger.Tagged; // Web -> Service
   // Feed live dei log di servizio (formattati come su console) per la subscription tRPC verso la web-app
   readonly logs: LogFeed; // Service -> Web
-  // Feed live dei predicati di monitoring (packages/core/src/predicates) per la subscription tRPC verso la web-app
+  // Feed live dei predicati di activation (packages/core/src/predicates) per la subscription tRPC verso la web-app
   readonly tracking: PredicateFeed; // Service -> Web
 }

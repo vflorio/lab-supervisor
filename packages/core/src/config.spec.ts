@@ -14,7 +14,7 @@ const validConfig = {
     tokenPassword: "token-password",
   },
   slack: { active: false, botToken: "token" },
-  monitoring: { polling: [["constantDelay", "30s"]] },
+  activation: { polling: [["constantDelay", "30s"]] },
   tracking: {
     adb: { polling: [["constantDelay", "5s"]] },
     suitestCamera: { polling: [["constantDelay", "20s"]] },

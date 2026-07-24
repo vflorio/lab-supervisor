@@ -1,7 +1,7 @@
 import * as ActivationRunner from "@supervisor/core/activation/runner";
 import * as ActivationSchedule from "@supervisor/core/activation/schedule";
 import type * as ConfigModel from "@supervisor/core/config";
-import * as Errors from "@supervisor/core/errors";
+import type * as Errors from "@supervisor/core/errors";
 import * as LogStream from "@supervisor/core/log-stream";
 import * as Logger from "@supervisor/core/logger";
 import type * as NetworkTarget from "@supervisor/core/network-target";
@@ -66,7 +66,7 @@ const parseConfigPolicies = (
 }> =>
   pipe(
     E.Do,
-    E.bind("activationPolicy", () => RetryPolicy.decode(config.monitoring.polling)),
+    E.bind("activationPolicy", () => RetryPolicy.decode(config.activation.polling)),
     E.bind("adbReconnectPolicy", () => RetryPolicy.decode(config.adb.reconnect)),
     E.bind("adbTrackingPolicy", () => RetryPolicy.decode(config.tracking.adb.polling)),
     E.bind("suitestCameraTrackingPolicy", () => RetryPolicy.decode(config.tracking.suitestCamera.polling)),
@@ -103,18 +103,14 @@ export const create: Effect<ServiceHandle> = pipe(
 
     const activationSchedule = ActivationSchedule.toSchedule(config.activationSchedule);
 
-    logger.info(`Config loaded - schedule: ${ActivationSchedule.format(config.activationSchedule)}`)();
-    logger.info(`Polling policy: ${RetryPolicy.formatPolicyJson(config.monitoring.polling)}`)();
+    logger.info(`Activation schedule: ${ActivationSchedule.format(config.activationSchedule)}`)();
+    logger.info(`Activation policy: ${RetryPolicy.formatPolicyJson(config.activation.polling)}`)();
 
     const slot = Schedule.toTimeSlot(new Date());
 
     pipe(
       IO.of(activationSchedule(slot)),
-      IO.flatMap((isActive) =>
-        isActive
-          ? logger.info("ACTIVE - currently inside work schedule")
-          : logger.info(`IDLE - waiting for (${ActivationSchedule.format(config.activationSchedule)})`),
-      ),
+      IO.flatMap((isActive) => (isActive ? logger.info("ACTIVE - currently inside work schedule") : constVoid)),
     )();
 
     const activationLog = logger.child("ActivationRunner");
@@ -209,10 +205,10 @@ export const create: Effect<ServiceHandle> = pipe(
     );
 
     const activationRunner = ActivationRunner.create(activationLog, activationSchedule, activationPolicy, {
-      onActive: pipe(
-        activationFlow,
-        TE.getOrElse((error) => T.fromIO(logger.error(`Activation flow failed: ${Errors.format(error)}`))),
-      ),
+      //onActive: pipe(
+      //  activationFlow,
+      //  TE.getOrElse((error) => T.fromIO(logger.error(`Activation flow failed: ${Errors.format(error)}`))),
+      //),
     });
 
     const trpcLog = logger.child("tRPC");

@@ -32,7 +32,7 @@ const SlackCodec = t.type({
 
 export type Slack = t.TypeOf<typeof SlackCodec>;
 
-// Configurazione monitoring con policy di polling
+// Configurazione activation con policy di polling
 const MonitoringCodec = t.type({
   polling: PolicyJsonCodec,
 });
@@ -92,7 +92,7 @@ const ServiceCodec = t.intersection([
     activationSchedule: ActivationScheduleCodec,
     suitest: SuitestCodec,
     slack: SlackCodec,
-    monitoring: MonitoringCodec,
+    activation: MonitoringCodec,
     tracking: TrackingCodec,
     adb: AdbCodec,
     log: LogCodec,

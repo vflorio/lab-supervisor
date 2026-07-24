@@ -4,7 +4,7 @@ import { tracked } from "@trpc/server";
 import { publicProcedure, router } from "../instance";
 
 // -------------------------------------------------------------------------------------
-// Tracking router (predicati di monitoring - live tail, SSE-based subscription)
+// Tracking router (predicati di activation - live tail, SSE-based subscription)
 // -------------------------------------------------------------------------------------
 
 export interface TrackingTailInput {

@@ -18,7 +18,7 @@
     "from": "00:00",
     "to": "23:59"
   },
-  "monitoring": {
+  "activation": {
     "polling": [["constantDelay", "30s"]] // loop principale
   },
   "tracking": {
