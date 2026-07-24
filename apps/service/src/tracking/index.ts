@@ -48,21 +48,21 @@ export const startAll = (env: TrackingEnv): TrackingHandle => {
     env.stream,
     env.policies.suitestCamera,
     SuitestCamera.trackerConfig,
-  )({ logger: env.logger.child("camera"), suitestConfig: env.suitestConfig });
+  )({ logger: env.logger.child("Tracker-Suitest:camera"), suitestConfig: env.suitestConfig });
 
   const controlUnit = Predicates.run(
     env.logger,
     env.stream,
     env.policies.suitestControlUnit,
     SuitestControlUnit.trackerConfig,
-  )({ logger: env.logger.child("control-unit"), suitestConfig: env.suitestConfig });
+  )({ logger: env.logger.child("Tracker-Suitest:control-unit"), suitestConfig: env.suitestConfig });
 
   const device = Predicates.run(
     env.logger,
     env.stream,
     env.policies.suitestDevice,
     SuitestDevice.trackerConfig,
-  )({ logger: env.logger.child("device"), suitestConfig: env.suitestConfig });
+  )({ logger: env.logger.child("Tracker-Suitest:device"), suitestConfig: env.suitestConfig });
 
   const handles = [adb.handle, camera, controlUnit, device];
 

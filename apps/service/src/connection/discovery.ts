@@ -32,7 +32,7 @@ export interface Env extends ConnectionEnv {
   readonly isKnown: P.Predicate<NetworkTarget.Target>;
 }
 
-export type DiscoveryError = Adb.AdbError | AvahiBrowse.AvahiBrowseError | Shell.ShellSpawnError;
+export type DiscoveryError = Adb.Error | AvahiBrowse.AvahiBrowseError | Shell.ShellSpawnError;
 
 type Effect<A> = RTE.ReaderTaskEither<Env, DiscoveryError, A>;
 
@@ -87,7 +87,7 @@ const disconnectStray =
         env.logger.error(
           `Failed to disconnect uncontrolled host ${NetworkTarget.format(target)}: ${Errors.format(error)}`,
         )();
-        return TE.right<Adb.AdbError, void>(undefined);
+        return TE.right<Adb.Error, void>(undefined);
       }),
     );
 

@@ -19,7 +19,7 @@
     "to": "23:59"
   },
   "monitoring": {
-    "polling": [["constantDelay", "60s"]] // loop principale
+    "polling": [["constantDelay", "30s"]] // loop principale
   },
   "tracking": {
     "adb": { "polling": [["constantDelay", "10s"]] }, // poll locale, nessun costo esterno
@@ -62,6 +62,11 @@
     ],
     ["open-developer-settings", [["wakeUp"], ["openDeveloperSettings"]]]
   ],
+  // Demo locale del Recovery Model: nessun device reale dietro camera-tv-1 (vedi il suo
+  // "adbId" più sotto, riusa apposta il target fittizio del "tablet"), quindi le pipeline
+  // qui sotto falliranno sempre - il punto è osservare nei log il ciclo
+  // trigger -> grace -> tentativo -> retry -> esaurimento, pilotabile flippando lo stato
+  // del video-capture-device mock (PUT http://localhost:3002/_admin/video-capture-devices/vcd-001)
   "recovery": [
     {
       "label": "camera-recovery-demo",
@@ -71,14 +76,14 @@
           "grace": "10s",
           "predicate": ["ref", "suitest_camera_connected"],
           "pipeline": ["workflow", "open-chrome"],
-          "retry": [["constantDelay", "10s"], ["limitRetries", 2]]
+          "retry": [["constantDelay", "2s"], ["limitRetries", 2]]
+        },
+        {
+          "grace": "30s",
+          "predicate": ["or", ["ref", "suitest_camera_recording"], ["ref", "suitest_camera_streaming"]],
+          "pipeline": ["or", ["workflow", "open-chrome"], ["workflow", "open-chrome-reboot"]],
+          "retry": [["constantDelay", "5s"], ["limitRetries", 2]]
         }
-        //{
-        //  "grace": "60s",
-        //  "predicate": ["or", ["ref", "suitest_camera_recording"], ["ref", "suitest_camera_streaming"]],
-        //  "pipeline": ["or", ["workflow", "open-chrome"], ["workflow", "open-chrome-reboot"]],
-        //  "retry": [["constantDelay", "5s"], ["limitRetries", 2]]
-        //}
       ]
     }
   ],
@@ -92,9 +97,45 @@
           "controlled": true,
           "videoCaptureDeviceId": null,
           "adbId": "192.168.1.4:5555"
+        },
+        // Camere Suitest (video-capture-device) già collegate ai mock TV - riconciliate a mano per test
+        {
+          "id": "camera-tv-1",
+          "label": "Camera_TV_1",
+          "controlled": false,
+          "videoCaptureDeviceId": "vcd-001",
+          // Riusa il target fittizio del "tablet" solo per esercitare il recovery in locale
+          // (nessun device reale dietro - vedi il blocco "recovery" più sopra)
+          "adbId": "192.168.1.4:5555"
+        },
+        {
+          "id": "camera-tv-2",
+          "label": "Camera_TV_2",
+          "controlled": false,
+          "videoCaptureDeviceId": "vcd-002",
+          "adbId": null
+        },
+        {
+          "id": "camera-tv-3",
+          "label": "Camera_TV_3",
+          "controlled": false,
+          "videoCaptureDeviceId": "vcd-003",
+          "adbId": null
+        },
+        {
+          "id": "camera-tv-4",
+          "label": "Camera_TV_4",
+          "controlled": false,
+          "videoCaptureDeviceId": "vcd-004",
+          "adbId": null
         }
       ],
-      "tvs": [{ "deviceId": "tv-001", "label": "TV_1", "controlled": false, "ip": "192.168.2.1" }],
+      "tvs": [
+        { "deviceId": "tv-001", "label": "TV_1", "controlled": false, "ip": "192.168.2.1" },
+        { "deviceId": "tv-002", "label": "TV_2", "controlled": false, "ip": "192.168.2.2" },
+        { "deviceId": "tv-003", "label": "TV_3", "controlled": false, "ip": "192.168.2.3" },
+        { "deviceId": "tv-004", "label": "TV_4", "controlled": false, "ip": "192.168.2.4" }
+      ],
       "adb": [{ "id": "192.168.1.4:5555", "label": "Tablet", "target": "192.168.1.4:5555" }]
     }
   }

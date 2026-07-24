@@ -6,6 +6,7 @@ describe("recovery/codec", () => {
   it("decodes a recovery policy with escalating levels", () => {
     const json = {
       label: "Recovery A",
+      domain: "suitest-camera",
       levels: [
         {
           grace: "1m",
@@ -48,6 +49,7 @@ describe("recovery/codec", () => {
   it("fails when a level is missing a required field", () => {
     const result = RecoveryPolicyCodec.decode({
       label: "Recovery A",
+      domain: "suitest-camera",
       levels: [{ grace: "1m", predicate: ["ref", "x"], pipeline: ["workflow", "y"] }],
     });
     expect(E.isLeft(result)).toBe(true);

@@ -62,7 +62,9 @@ const fetchPage = <A>(
     //    ? logger.debug(`  -> page ${page.page ?? 1}: ${page.values.length} items (total: ${page.total ?? "?"})`)
     //    : () => {},
     //),
-    TE.tapError((err) => (logger ? TE.fromIO(logger.error(`  ✗ ${format(err)}`)) : TE.right(undefined))),
+    TE.tapError((err) =>
+      logger ? TE.fromIO(logger.error(`PaginationFetchError: ${format(err)}`)) : TE.right(undefined),
+    ),
   );
 
 // -------------------------------------------------------------------------------------

@@ -1,3 +1,4 @@
+import { pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";
 import type { Logger } from "../logger";
 
@@ -108,6 +109,39 @@ export const retrying =
 
         return TE.flatMap(() => loop(next))(delay(next.previousDelay!));
       })(action);
+
+    return loop(initialStatus);
+  };
+
+// Come `retrying`, ma per azioni che per convenzione ritornano `true`/`false` invece di
+// fallire con un `Left` (es. Workflow/Pipeline, vedi workflow/pipeline-interpreter.ts):
+// ritenta finché l'esito non è `true` o la policy si esaurisce (nel qual caso ritorna `false`,
+// non un errore - un tentativo di recovery esaurito non è un errore applicativo).
+// Un vero `Left` (errore di configurazione, non un tentativo fallito) non viene ritentato.
+export const retryingUntil =
+  (policy: Policy, logger?: Logger) =>
+  <E>(action: TE.TaskEither<E, boolean>): TE.TaskEither<E, boolean> => {
+    const apply = applyPolicy(policy);
+
+    const loop = (status: Status): TE.TaskEither<E, boolean> =>
+      pipe(
+        action,
+        TE.flatMap((ok) => {
+          if (ok) return TE.right(true);
+
+          const next = apply(status);
+
+          const exhausted = next.previousDelay === null;
+          if (exhausted) {
+            logger?.debug(`Retry policy exhausted after ${status.iteration + 1} attempt(s), giving up`)();
+            return TE.right(false);
+          }
+
+          logger?.debug(`Retry attempt ${next.iteration} - next delay: ${next.previousDelay}ms`)();
+
+          return TE.flatMap(() => loop(next))(delay(next.previousDelay!));
+        }),
+      );
 
     return loop(initialStatus);
   };

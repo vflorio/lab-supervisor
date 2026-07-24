@@ -1,3 +1,4 @@
+import type * as Errors from "@supervisor/core/errors";
 import type * as Logger from "@supervisor/core/logger";
 import * as A from "fp-ts/Array";
 import * as E from "fp-ts/Either";
@@ -18,9 +19,11 @@ export interface AdbEnv {
   readonly spawn: Shell.Spawn;
 }
 
-export type AdbError = Shell.ShellSpawnError | { type: "AdbError"; message: string };
+export interface AdbError extends Errors.AppError<"AdbError"> {}
 
-type Effect<A> = RTE.ReaderTaskEither<AdbEnv, AdbError, A>;
+export type Error = Shell.ShellSpawnError | AdbError;
+
+type Effect<A> = RTE.ReaderTaskEither<AdbEnv, Error, A>;
 
 export interface Device {
   readonly target: NetworkTarget.Target;

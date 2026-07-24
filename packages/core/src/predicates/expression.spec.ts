@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import * as Expr from "./expr";
+import * as Expr from "./expression";
 
-describe("predicates/expr", () => {
+describe("predicates/expression", () => {
   const lookup = (facts: Record<string, boolean | string | number>) => (name: string) => facts[name];
 
   it("ref: resolves to true only when the predicate is exactly boolean true", () => {

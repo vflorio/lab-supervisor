@@ -12,16 +12,16 @@ import type { PredicateValue } from "./model";
 // Legge il valore corrente di un predicato per nome (`undefined` se non ancora noto)
 export type PredicateLookup = (name: string) => PredicateValue | undefined;
 
-export type PredicateExpr =
+export type PredicateExpression =
   | { readonly type: "ref"; readonly name: string }
   | { readonly type: "equals"; readonly name: string; readonly value: PredicateValue }
   | { readonly type: "includes"; readonly name: string; readonly value: string }
-  | { readonly type: "and"; readonly exprs: readonly PredicateExpr[] }
-  | { readonly type: "or"; readonly exprs: readonly PredicateExpr[] }
-  | { readonly type: "not"; readonly expr: PredicateExpr };
+  | { readonly type: "and"; readonly exprs: readonly PredicateExpression[] }
+  | { readonly type: "or"; readonly exprs: readonly PredicateExpression[] }
+  | { readonly type: "not"; readonly expr: PredicateExpression };
 
 // -------------------------------------------------------------------------------------
-// Compilazione - da PredicateExpr a Predicate<PredicateLookup>, "vero" = strada buona
+// Compilazione - da PredicateExpression a Predicate<PredicateLookup>, "vero" = strada buona
 // -------------------------------------------------------------------------------------
 
 const foldAnd = (predicates: readonly Predicate<PredicateLookup>[]): Predicate<PredicateLookup> =>
@@ -30,7 +30,7 @@ const foldAnd = (predicates: readonly Predicate<PredicateLookup>[]): Predicate<P
 const foldOr = (predicates: readonly Predicate<PredicateLookup>[]): Predicate<PredicateLookup> =>
   predicates.reduce((acc, p) => or(p)(acc));
 
-export const compile = (expr: PredicateExpr): Predicate<PredicateLookup> =>
+export const compile = (expr: PredicateExpression): Predicate<PredicateLookup> =>
   match(expr)
     .with(
       { type: "ref" },

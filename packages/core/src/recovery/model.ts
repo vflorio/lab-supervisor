@@ -1,5 +1,5 @@
 import type { DurationString } from "../date-time";
-import type { PredicateExpr } from "../predicates/expr";
+import type { PredicateExpression } from "../predicates/expression";
 import type { PolicyJson } from "../retry/codec";
 import type { Pipeline } from "../workflow/pipeline";
 
@@ -19,12 +19,16 @@ import type { Pipeline } from "../workflow/pipeline";
 
 export interface RecoveryLevel {
   readonly grace: DurationString;
-  readonly predicate: PredicateExpr;
+  readonly predicate: PredicateExpression;
   readonly pipeline: Pipeline;
   readonly retry: PolicyJson;
 }
 
 export interface RecoveryPolicy {
   readonly label: string;
+  // Dominio tracciato (vedi packages/core/src/predicates, es. "adb" | "suitest-camera" | ...) a
+  // cui la policy si applica - il motore a runtime la esegue per ogni entityId visto in quel
+  // dominio.
+  readonly domain: string;
   readonly levels: readonly RecoveryLevel[];
 }

@@ -7,8 +7,8 @@ import { persistent, temporary, unknown } from "./model";
 // Reducer
 // -------------------------------------------------------------------------------------
 
-// Le combinazioni (stato, evento) non previste dal diagramma sono ignorate (self-loop
-// senza comandi): rispecchia il fatto che un evento fuori sequenza (es. un handshake
+// Le combinazioni (stato, evento) non previste dal diagramma sono ignorate
+// (self-loop senza comandi): rispecchia il fatto che un evento fuori sequenza (es. un handshake
 // che risponde dopo che il device è già tornato Unknown) non deve avere effetto.
 
 export const reduce: Machine.Reducer<TargetState, ConnectionEvent, ConnectionCommand> = (state, event) =>

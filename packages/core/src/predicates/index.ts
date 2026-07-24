@@ -1,5 +1,5 @@
-export * from "./expr";
-export * from "./expr-codec";
+export * from "./expression";
+export * from "./expression-codec";
 export * from "./feed";
 export * from "./model";
 export * from "./tracker";

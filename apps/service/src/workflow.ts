@@ -11,10 +11,10 @@ import * as TE from "fp-ts/TaskEither";
 import type * as DeviceRegistry from "./registry";
 
 const mapWorkflowError = (
-  error: WorkflowInterpreter.WorkflowError | Adb.AdbError | Shell.ShellSpawnError | DeviceRegistry.SyncError,
+  error: WorkflowInterpreter.WorkflowError | Adb.Error | Shell.ShellSpawnError | DeviceRegistry.SyncError,
 ): WorkflowInterpreter.WorkflowError => WorkflowInterpreter.workflowError(error.message);
 
-interface WorkflowRunnerEnv {
+export interface WorkflowRunnerEnv {
   readonly logger: Logger.Tagged;
   readonly workflows: readonly Workflow[];
   readonly spawn: Shell.Spawn;
@@ -42,7 +42,7 @@ export const run =
       ),
     );
 
-const makeCapabilities = (
+export const makeCapabilities = (
   env: WorkflowRunnerEnv,
   target: NetworkTarget.Target,
 ): WorkflowInterpreter.CommandCapabilities => {

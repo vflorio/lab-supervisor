@@ -26,12 +26,19 @@ export interface Handle {
 // Si ferma se la policy è esaurita (torna null) - per le policy di tracking questo non
 // dovrebbe mai accadere in pratica (constantDelay/exponentialBackoff+capDelay, senza limitRetries),
 // stessa convenzione già in uso per `monitoring.polling`.
-export const create = (logger: Logger.Tagged, policy: Retry.Policy, onTick: () => void | Promise<void>): Handle => {
+export const create = (
+  logger: Logger.Tagged,
+  policy: Retry.Policy,
+  onTick: () => void | Promise<void>,
+  jobLabel?: string,
+): Handle => {
   const controller = new AbortController();
 
-  const pilLogger = logger.child("interval-loop");
+  const pilLogger = logger.child("Interval-Loop");
 
   let status: Retry.Status = Retry.initialStatus;
+
+  const formattedJobLabel = `Job: ${jobLabel || "Unknown "}`;
 
   const tick = async (): Promise<void> => {
     if (controller.signal.aborted) return;
@@ -46,7 +53,7 @@ export const create = (logger: Logger.Tagged, policy: Retry.Policy, onTick: () =
 
     status = { iteration: status.iteration + 1, previousDelay: delay };
 
-    pilLogger.debug(`Tick: ${status.iteration} - next delay: ${Logger.formatMs(delay)}`)();
+    pilLogger.debug(`${formattedJobLabel} - Tick: ${status.iteration} - Next delay: ${Logger.formatMs(delay)}`)();
 
     await sleep(delay);
 
@@ -55,11 +62,11 @@ export const create = (logger: Logger.Tagged, policy: Retry.Policy, onTick: () =
 
   return {
     start: pipe(
-      TE.fromIO(pilLogger.info("Starting")),
+      TE.fromIO(pilLogger.info(`Starting ${formattedJobLabel}`)),
       TE.flatMap(() => TE.tryCatch(() => tick(), Errors.fromUnknown("StartError"))),
     ),
     stop: pipe(
-      pilLogger.info("Stopped"),
+      pilLogger.info(`Stopping ${formattedJobLabel}`),
       IO.flatMap(() => () => controller.abort()),
     ),
   };

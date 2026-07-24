@@ -27,8 +27,8 @@ export interface ConnectionEnv {
 }
 
 const liftAdb =
-  <A>(effect: RTE.ReaderTaskEither<Adb.AdbEnv, Adb.AdbError | Shell.ShellSpawnError, A>) =>
-  (env: ConnectionEnv): TE.TaskEither<Adb.AdbError | Shell.ShellSpawnError, A> =>
+  <A>(effect: RTE.ReaderTaskEither<Adb.AdbEnv, Adb.Error | Shell.ShellSpawnError, A>) =>
+  (env: ConnectionEnv): TE.TaskEither<Adb.Error | Shell.ShellSpawnError, A> =>
     effect({ logger: env.logger.child("ADB"), spawn: env.spawn });
 
 const reasonOf = (error: { readonly message: string }): string => error.message;

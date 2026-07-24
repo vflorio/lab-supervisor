@@ -1,5 +1,6 @@
 import * as IO from "fp-ts/IO";
-import { constVoid, pipe } from "fp-ts/lib/function";
+import { pipe } from "fp-ts/lib/function";
+import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
 import { type AppError, fromUnknown } from "../errors";
 import type * as Logger from "../logger";
@@ -27,11 +28,11 @@ export const create = (
   policy: Retry.Policy,
   // Status change, vengono chiamati ad ogni tick
   {
-    onActive = constVoid,
-    onInactive = constVoid,
+    onActive = T.of(void 0),
+    onInactive = T.of(void 0),
   }: {
-    onActive?: () => void | Promise<void>;
-    onInactive?: () => void | Promise<void>;
+    onActive?: T.Task<void>;
+    onInactive?: T.Task<void>;
   },
 ) => {
   const controller = new AbortController();

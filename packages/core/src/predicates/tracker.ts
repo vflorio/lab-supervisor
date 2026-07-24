@@ -54,9 +54,9 @@ export const diff =
     return { changed, next };
   };
 
-// Effettivo: fetch -> diff contro lo snapshot in closure -> emette i fatti cambiati -> ripete
-// sull'IntervalLoop. Un fallimento del fetch viene loggato e ignorato (nessuna emissione),
-// il tracker riprova al prossimo tick - stesso spirito "auto-risanante" di connection/handle.ts.
+// Effettivo: fetch -> diff contro lo snapshot in closure -> emette i fatti cambiati -> ripete sull'IntervalLoop.
+// Un fallimento del fetch viene loggato e ignorato (nessuna emissione),
+// il tracker riprova al prossimo tick
 export const run =
   <Env, Error extends AppError, RawItem>(
     logger: Logger.Tagged,
@@ -68,7 +68,7 @@ export const run =
     const diffFor = diff<RawItem>(config.domain, config.keyOf, config.toFacts);
     let snapshot: ReadonlyMap<string, PredicateValue> = new Map();
 
-    const trackerLogger = logger.child(`tracker`);
+    const trackerLogger = logger.child("Tracker");
 
     const tick = async (): Promise<void> => {
       const result = await config.fetch(env)();
@@ -87,5 +87,5 @@ export const run =
       for (const fact of changed) stream.emit(fact);
     };
 
-    return IntervalLoop.create(trackerLogger, policy, tick);
+    return IntervalLoop.create(trackerLogger, policy, tick, `(Tracker) ${config.domain}`);
   };

@@ -60,21 +60,24 @@ const controlUnit = (index: number): ControlUnit => ({
 const seedDevices: Device[] = [
   // CU 1
   tv(1, [1]),
-  tv(2, [1]),
-
-  // CU 2
-  tv(3, [2]),
-  tv(4, [2]),
+  //tv(2, [1]),
+  //
+  //// CU 2
+  //tv(3, [2]),
+  //tv(4, [2]),
 ];
 
 const seedVideoCaptureDevices: VideoCaptureDevice[] = [
   videoCaptureDevice(1, 1),
-  videoCaptureDevice(2, 2),
-  videoCaptureDevice(3, 3),
-  videoCaptureDevice(4, 4),
+  //videoCaptureDevice(2, 2),
+  //videoCaptureDevice(3, 3),
+  //videoCaptureDevice(4, 4),
 ];
 
-const seedControlUnits: ControlUnit[] = [controlUnit(1), controlUnit(2)];
+const seedControlUnits: ControlUnit[] = [
+  controlUnit(1),
+  //controlUnit(2)
+];
 
 // -------------------------------------------------------------------------------------
 // Store

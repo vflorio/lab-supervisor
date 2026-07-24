@@ -56,7 +56,7 @@ const fetchSuitestListsOrSkip = (
     TE.map(O.some),
     TE.orElse((err) =>
       pipe(
-        TE.fromIO(logger.warn(`Suitest fetch failed, sync skipped: ${Errors.format(err)}`)),
+        TE.fromIO(logger.warn(`List fetch failed, sync skipped: ${Errors.format(err)}`)),
         TE.map((): O.Option<Db.SuitestLists> => O.none),
       ),
     ),

@@ -1,16 +1,16 @@
 import * as E from "fp-ts/Either";
 import { describe, expect, it } from "vitest";
-import { PredicateExprCodec } from "./expr-codec";
+import { PredicateExpressionCodec } from "./expression-codec";
 
-describe("predicates/expr-codec", () => {
+describe("predicates/expression-codec", () => {
   it("decodes a ref", () => {
-    const result = PredicateExprCodec.decode(["ref", "suitest_camera_connected"]);
+    const result = PredicateExpressionCodec.decode(["ref", "suitest_camera_connected"]);
     expect(result).toStrictEqual(E.right({ type: "ref", name: "suitest_camera_connected" }));
   });
 
   it("decodes nested or/not", () => {
     const json = ["or", ["ref", "suitest_camera_recording"], ["not", ["ref", "suitest_control_unit_online"]]];
-    const result = PredicateExprCodec.decode(json);
+    const result = PredicateExpressionCodec.decode(json);
     expect(E.isRight(result)).toBe(true);
     if (E.isRight(result)) {
       expect(result.right).toStrictEqual({
@@ -24,7 +24,7 @@ describe("predicates/expr-codec", () => {
   });
 
   it("rejects an empty and/or", () => {
-    const result = PredicateExprCodec.decode(["and"]);
+    const result = PredicateExpressionCodec.decode(["and"]);
     expect(E.isLeft(result)).toBe(true);
   });
 
@@ -36,6 +36,6 @@ describe("predicates/expr-codec", () => {
         { type: "equals" as const, name: "b", value: "ready" },
       ],
     };
-    expect(PredicateExprCodec.decode(PredicateExprCodec.encode(expr))).toStrictEqual(E.right(expr));
+    expect(PredicateExpressionCodec.decode(PredicateExpressionCodec.encode(expr))).toStrictEqual(E.right(expr));
   });
 });

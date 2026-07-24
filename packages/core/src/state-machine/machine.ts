@@ -47,8 +47,8 @@ export const make = <Env, Err, S, E, C>(
 // -------------------------------------------------------------------------------------
 // Orchestratore / interprete dichiarativo
 // -------------------------------------------------------------------------------------
-// dispatch applica un evento allo stato corrente tramite il reducer, poi esegue
-// in sequenza i comandi generati.
+// dispatch applica un evento allo stato corrente tramite il reducer,
+// poi esegue in sequenza i comandi generati.
 // Ogni comando può produrre nuovi eventi, che vengono ridispatchati ricorsivamente
 // sullo stesso riduttore fino al punto fisso (nessun nuovo evento prodotto).
 // L'orchestratore stesso non contiene logica di dominio: si limita a

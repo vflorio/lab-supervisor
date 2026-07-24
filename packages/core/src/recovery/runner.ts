@@ -1,0 +1,106 @@
+import * as E from "fp-ts/Either";
+import { pipe } from "fp-ts/function";
+import { format } from "../errors";
+import * as IntervalLoop from "../interval-loop";
+import type * as Logger from "../logger";
+import type { PredicateEntry, PredicateFeed, PredicateValue } from "../predicates/index";
+import type { PolicyDecodeError } from "../retry/codec";
+import type { Policy } from "../retry/retry";
+import type { CommandCapabilities } from "../workflow/interpreter";
+import type { Workflow } from "../workflow/workflow";
+import { type CompiledLevel, compileLevels } from "./compile";
+import * as EntityRunner from "./entity-runner";
+import type { RecoveryPolicy } from "./model";
+
+// -------------------------------------------------------------------------------------
+// Orchestrazione multi-entità: osserva il PredicateFeed dal vivo, filtra per il dominio
+// della policy, crea un EntityRunner per ogni entityId incontrato e lo guida sia sui
+// cambi di predicato sia su un tick periodico (necessario per rilevare un grace period
+// scaduto anche quando nessun nuovo fatto arriva).
+// -------------------------------------------------------------------------------------
+
+export interface RecoveryRunnerEnv {
+  readonly logger: Logger.Tagged;
+  readonly stream: PredicateFeed;
+  readonly workflows: readonly Workflow[];
+  readonly capabilitiesFor: (entityId: string) => CommandCapabilities;
+  // Cadenza del tick periodico di ri-osservazione (per rilevare grace scaduti senza nuovi fatti)
+  readonly tickPolicy: Policy;
+  readonly now?: () => number;
+}
+
+export interface RecoveryRunnerHandle {
+  readonly stop: () => void;
+}
+
+export const start = (
+  policy: RecoveryPolicy,
+  env: RecoveryRunnerEnv,
+): E.Either<PolicyDecodeError, RecoveryRunnerHandle> =>
+  pipe(
+    compileLevels(policy.levels),
+    E.map((compiledLevels: readonly CompiledLevel[]) => {
+      const now = env.now ?? Date.now;
+      const factsByEntity = new Map<string, Map<string, PredicateValue>>();
+      const runnersByEntity = new Map<string, EntityRunner.EntityRunner>();
+
+      const runnerFor = (entityId: string): EntityRunner.EntityRunner => {
+        const existing = runnersByEntity.get(entityId);
+        if (existing) return existing;
+
+        const created = EntityRunner.create(compiledLevels, {
+          logger: env.logger.child(entityId),
+          workflows: env.workflows,
+          capabilities: env.capabilitiesFor(entityId),
+        });
+        runnersByEntity.set(entityId, created);
+        return created;
+      };
+
+      const lookupFor =
+        (entityId: string) =>
+        (name: string): PredicateValue | undefined =>
+          factsByEntity.get(entityId)?.get(name);
+
+      const observeEntity = async (entityId: string): Promise<void> => {
+        await runnerFor(entityId).observe(lookupFor(entityId), now());
+      };
+
+      const applyEntry = (entry: PredicateEntry): void => {
+        if (entry.domain !== policy.domain) return;
+
+        const facts = factsByEntity.get(entry.entityId) ?? new Map<string, PredicateValue>();
+        facts.set(entry.name, entry.value);
+        factsByEntity.set(entry.entityId, facts);
+      };
+
+      for (const entry of env.stream.snapshot()) applyEntry(entry);
+
+      const unsubscribe = env.stream.subscribe((entry) => {
+        if (entry.domain !== policy.domain) return;
+
+        applyEntry(entry);
+        void observeEntity(entry.entityId).catch((error) =>
+          env.logger.error(`Recovery policy "${policy.label}": observe failed - ${format(error)}`)(),
+        );
+      });
+
+      const tickLoop = IntervalLoop.create(
+        env.logger.child("recovery-tick"),
+        env.tickPolicy,
+        async () => {
+          for (const entityId of factsByEntity.keys()) await observeEntity(entityId);
+        },
+        `(Recovery) ${policy.label}`,
+      );
+
+      void tickLoop.start();
+
+      return {
+        stop: () => {
+          unsubscribe();
+          tickLoop.stop();
+        },
+      };
+    }),
+  );
