@@ -1,6 +1,8 @@
 import * as Network from "@supervisor/core/network";
+import * as Retry from "@supervisor/core/retry/retry";
 import { pipe } from "fp-ts/function";
-import * as RTE from "fp-ts/ReaderTaskEither";
+import type * as RTE from "fp-ts/ReaderTaskEither";
+import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
 import type { AdbConnectionMachineEnv } from "../adb-connection/interpret";
 import * as AdbConnection from "../adb-connection/model";
@@ -32,9 +34,28 @@ const toEvents =
           },
         ];
 
+// Ritenta l'intero tentativo (risoluzione mDNS + handshake temporaneo + tcpip + handshake
+// persistente - non solo la fase tcpip:5555, già ritentata internamente da adb-connection/
+// interpret.ts per la sua unica ConnectPersistent) finché non si ottiene Persistent, con la
+// stessa policy usata per la riconnessione. TargetResolution.connect non fallisce mai (Err =
+// never): un tentativo esaurito ritorna comunque l'ultimo ConnectionState raggiunto (Unknown),
+// da cui deriviamo ConnectionFailed - mai un errore.
+export const interpretWithPolicy =
+  (policy: Retry.Policy) =>
+  (intent: AndroidBridgeIntent): RTE.ReaderTaskEither<AndroidBridgeMachineEnv, never, readonly AndroidBridgeEvent[]> =>
+  (env) =>
+    match(intent)
+      .with({ _tag: "Connect" }, ({ host }) =>
+        pipe(
+          TargetResolution.connect(host)(env),
+          Retry.retryingWhile(policy, env.logger)(AdbConnection.isPersistent),
+          TE.map(toEvents(host)),
+        ),
+      )
+      .exhaustive();
+
 export const interpret = (
   intent: AndroidBridgeIntent,
 ): RTE.ReaderTaskEither<AndroidBridgeMachineEnv, never, readonly AndroidBridgeEvent[]> =>
-  match(intent)
-    .with({ _tag: "Connect" }, ({ host }) => pipe(TargetResolution.connect(host), RTE.map(toEvents(host))))
-    .exhaustive();
+  (env) =>
+    interpretWithPolicy(env.adbReconnectPolicy)(intent)(env);

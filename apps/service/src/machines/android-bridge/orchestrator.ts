@@ -4,8 +4,8 @@ import * as Adb from "@supervisor/core/services/adb";
 import type { LabRegistry } from "@supervisor/core/services/db";
 import { pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";
-import * as ConnectionGating from "../../gating";
-import type { AdbDeviceFeed } from "../../tracking/adb-stream";
+import type { AdbDeviceFeed } from "../../adb/adb-stream";
+import * as Gating from "../../gating";
 import type { AndroidBridgeMachineEnv } from "./interpret";
 import * as AndroidBridgeMachine from "./machine";
 import * as AndroidBridge from "./model";
@@ -24,7 +24,7 @@ import * as AndroidBridge from "./model";
 // -------------------------------------------------------------------------------------
 
 export interface Handle {
-  readonly reconcile: (registry: LabRegistry) => TE.TaskEither<never, void>;
+  readonly reconcile: (registry: LabRegistry) => TE.TaskEither<Adb.Error, void>;
   readonly acceptsCommands: (cameraId: string) => boolean;
   readonly snapshot: () => ReadonlyMap<string, AndroidBridge.AndroidBridgeState>;
   readonly stop: () => void;
@@ -40,39 +40,43 @@ export const create = (env: AndroidBridgeMachineEnv, adbDeviceStream: AdbDeviceF
 
   // Best-effort: un fallimento in disconnessione non deve far fallire l'intero reconcile,
   // si logga soltanto (verrà ritentato al prossimo ciclo)
-  const disconnectStray = (target: Network.Endpoint): TE.TaskEither<never, void> =>
+  const disconnectStray = (target: Network.Endpoint): TE.TaskEither<Adb.Error, void> =>
     pipe(
       Adb.disconnect(target)({ logger: env.logger.child("ADB"), spawn: env.spawn }),
-      TE.orElse((error) => {
-        env.logger.error(`Failed to disconnect uncontrolled host ${Network.format(target)}: ${Errors.format(error)}`)();
-        return TE.right<never, void>(undefined);
-      }),
+      TE.orElseFirstIOK((error) =>
+        env.logger.error(`Failed to disconnect stray host ${Network.format(target)}: ${Errors.format(error)}`),
+      ),
     );
 
-  // Host noti al registry ma non (più) controllati -> disconnessi. Un host del tutto esterno
-  // al registry viene ignorato (potrebbe non essere nostro)
-  const reconcileStray = (registry: LabRegistry): TE.TaskEither<never, void> => {
-    const knownHosts = ConnectionGating.cameraHosts(registry);
-    const controlledHosts = new Set(ConnectionGating.controlledCameraHosts(registry));
-
-    const stray = adbDeviceStream
-      .snapshot()
-      .filter((d) => d.status === "device")
-      .filter((d) => knownHosts.includes(d.target.ip) && !controlledHosts.has(d.target.ip))
-      .map((d) => d.target);
-
-    if (stray.length === 0) return TE.right(undefined);
-
-    env.logger.info(`Disconnecting known-but-uncontrolled hosts: ${stray.map((t) => Network.format(t)).join(", ")}`)();
-
-    return pipe(TE.sequenceSeqArray(stray.map(disconnectStray)), TE.asUnit);
-  };
+  const reconcileStray = (registry: LabRegistry): TE.TaskEither<Adb.Error, void> =>
+    pipe(
+      TE.Do,
+      TE.bind("knownHosts", () => TE.right(Gating.cameraHosts(registry))),
+      TE.bind("controlledHosts", () => TE.right(Gating.controlledCameraHosts(registry))),
+      TE.map(({ knownHosts, controlledHosts }) =>
+        adbDeviceStream
+          .snapshot()
+          .filter((d) => d.status === "device")
+          .filter((d) => knownHosts.includes(d.target.ip) && !controlledHosts.includes(d.target.ip))
+          .map((d) => d.target),
+      ),
+      TE.flatMap((stray) =>
+        stray.length > 0
+          ? pipe(
+              TE.Do,
+              TE.flatMapIO(() => env.logger.info(`Disconnecting stray hosts: ${stray.map(Network.format).join(", ")}`)),
+              TE.flatMap(() => TE.sequenceSeqArray(stray.map(disconnectStray))),
+            )
+          : TE.right(undefined),
+      ),
+      TE.asUnit,
+    );
 
   // Aggiunge le camere appena diventate controlled (Disconnected, pronte al primo reconnect),
   // rimuove quelle non più controlled (il loro eventuale host resta gestito da reconcileStray),
   // e ritenta la connessione di ogni istanza attualmente Disconnected. Sequenziale (1 alla
   // volta) per non aprire connessioni ADB in parallelo, stessa convenzione di discovery.ts.
-  const reconcileControlled = (controlledHosts: ReadonlyMap<string, Network.Host>): TE.TaskEither<never, void> => {
+  const reconcileControlled = (controlledHosts: ReadonlyMap<string, Network.Host>): TE.TaskEither<Adb.Error, void> => {
     for (const [id, host] of controlledHosts) {
       if (!states.has(id)) states.set(id, AndroidBridge.disconnected(id, host, "not yet connected"));
     }
@@ -84,14 +88,13 @@ export const create = (env: AndroidBridgeMachineEnv, adbDeviceStream: AdbDeviceF
 
     return pipe(
       TE.sequenceSeqArray(
-        toRetry.map(
-          ([id, state]): TE.TaskEither<never, void> =>
-            pipe(
-              AndroidBridgeMachine.dispatch(state, { _tag: "ReconnectRequested" })(env),
-              TE.map((next) => {
-                states.set(id, next);
-              }),
-            ),
+        toRetry.map(([id, state]) =>
+          pipe(
+            AndroidBridgeMachine.dispatch(state, { _tag: "ReconnectRequested" })(env),
+            TE.map((next) => {
+              states.set(id, next);
+            }),
+          ),
         ),
       ),
       TE.asUnit,
@@ -114,7 +117,8 @@ export const create = (env: AndroidBridgeMachineEnv, adbDeviceStream: AdbDeviceF
   return {
     reconcile: (registry) =>
       pipe(
-        reconcileControlled(ConnectionGating.controlledCameraHostsById(registry)),
+        TE.Do,
+        TE.flatMap(() => reconcileControlled(Gating.controlledCameraHostsById(registry))),
         TE.flatMap(() => reconcileStray(registry)),
       ),
     acceptsCommands: (cameraId) => {

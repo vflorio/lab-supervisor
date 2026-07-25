@@ -8,18 +8,15 @@ import * as Retry from "./retry/retry";
 // -------------------------------------------------------------------------------------
 // Interval Loop
 // Motore minimale per un ciclo `onTick` a cadenza guidata da una Retry.Policy, senza
-// alcuna nozione di schedule/orario di lavoro (a differenza di activation/runner.ts,
-// che combina le due cose): un tracker di monitoring deve poter girare in continuo.
+// alcuna nozione di schedule/orario di lavoro (a differenza di apps/service/src/machines/
+// activation.ts, che combina le due cose): un tracker di monitoring deve poter girare in continuo.
 // -------------------------------------------------------------------------------------
 
 export interface StartError extends Errors.AppError<"StartError"> {}
 
-export type StartTask = TE.TaskEither<StartError, void>;
-export type StopIO = IO.IO<void>;
-
 export interface Handle {
-  readonly start: StartTask;
-  readonly stop: StopIO;
+  readonly start: TE.TaskEither<StartError, void>;
+  readonly stop: IO.IO<void>;
 }
 
 // Esegue `onTick` ripetutamente, con delay tra i tick determinato dalla policy.

@@ -152,6 +152,21 @@ export const tagged =
 export const create = (level: LogLevel, transports: readonly Transport[], network = false): Tagged =>
   build({ configuredLevel: level, transports, depth: 0, network });
 
+// Silenzia un logger: stessa interfaccia (`Tagged`), ogni metodo diventa un IO no-op
+const mutedIO: IO.IO<void> = () => undefined;
+
+export const muted = (_logger: Tagged): Tagged => {
+  const muted: Tagged = {
+    debug: () => mutedIO,
+    info: () => mutedIO,
+    warn: () => mutedIO,
+    error: () => mutedIO,
+    logNetwork: () => mutedIO,
+    child: () => muted,
+  };
+  return muted;
+};
+
 // -------------------------------------------------------------------------------------
 // ANSI rendering (terminal transports only)
 // -------------------------------------------------------------------------------------

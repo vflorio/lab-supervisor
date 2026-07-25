@@ -32,13 +32,6 @@ const SlackCodec = t.type({
 
 export type Slack = t.TypeOf<typeof SlackCodec>;
 
-// Configurazione activation con policy di polling
-const MonitoringCodec = t.type({
-  polling: PolicyJsonCodec,
-});
-
-export type Monitoring = t.TypeOf<typeof MonitoringCodec>;
-
 // Configurazione dei tracker di predicati (packages/core/src/predicates): una policy di
 // polling indipendente per dominio, ognuno interrogato a una cadenza propria
 const TrackingCodec = t.type({
@@ -92,7 +85,6 @@ const ServiceCodec = t.intersection([
     activationSchedule: ActivationScheduleCodec,
     suitest: SuitestCodec,
     slack: SlackCodec,
-    activation: MonitoringCodec,
     tracking: TrackingCodec,
     adb: AdbCodec,
     log: LogCodec,

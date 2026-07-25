@@ -57,7 +57,7 @@ export const diff =
 // Effettivo: fetch -> diff contro lo snapshot in closure -> emette i fatti cambiati -> ripete sull'IntervalLoop.
 // Un fallimento del fetch viene loggato e ignorato (nessuna emissione),
 // il tracker riprova al prossimo tick
-export const run =
+export const create =
   <Env, Error extends Errors.AppError, RawItem>(
     logger: Logger.Tagged,
     stream: PredicateStream,

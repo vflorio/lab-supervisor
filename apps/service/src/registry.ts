@@ -61,6 +61,14 @@ const fetchSuitestListsOrSkip = (
     ),
   );
 
+export const read = (env: RegistrySyncEnv): TE.TaskEither<Db.DbError, Db.Database> =>
+  pipe(
+    // Usiamo Db.init e non Db.read per gestire automaticamente la ricreazione del file
+    // in caso di corruzione in runtime
+    Db.init(env.dbPath, env.seedDevices)(env.fsEnv),
+    TE.tapIO(() => env.logger.info("Registry read")),
+  );
+
 // Registry sync:
 //  init db
 //    |> fetch suitest (skippato se irraggiungibile, vedi sopra)

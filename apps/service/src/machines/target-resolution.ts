@@ -109,7 +109,7 @@ const onTransition: Machine.TransitionHook<TargetResolutionMachineEnv, never, Re
       ? TE.right(undefined)
       : TE.fromIO(
           (to._tag === "NotFound" ? env.logger.child("Resolution").warn : env.logger.child("Resolution").info)(
-            `Event = [${describeEvent(event)}]\nTransition = [${describeState(from)} -> ${describeState(to)}]`,
+            `State Machine\n  -> Event = [${describeEvent(event)}]\n  -> Transition = [${describeState(from)} -> ${describeState(to)}]`,
           ),
         );
 

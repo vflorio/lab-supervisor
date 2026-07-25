@@ -42,8 +42,8 @@ export const onTransition: Machine.TransitionHook<AdbConnectionMachineEnv, never
       : TE.fromIO(
           (isRegression(from, to)
             ? //
-              env.logger.child("Connection").error
-            : env.logger.child("Connection").info)(
-            `Event = [${describeEvent(event)}]\nTransition = [${describeState(from)} -> ${describeState(to)}]`,
+              env.logger.child("ADB-Connection").error
+            : env.logger.child("ADB-Connection").info)(
+            `State Machine\n  -> Event = [${describeEvent(event)}]\n  -> Transition = [${describeState(from)} -> ${describeState(to)}]`,
           ),
         );

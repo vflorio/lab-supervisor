@@ -40,6 +40,6 @@ export const onTransition: Machine.TransitionHook<
     ? TE.right(undefined)
     : TE.fromIO(
         (isRegression(from, to) ? env.logger.child("AndroidBridge").error : env.logger.child("AndroidBridge").info)(
-          `Event = [${describeEvent(event)}]\nTransition = [${describeState(from)} -> ${describeState(to)}]`,
+          `State Machine\n  -> Event = [${describeEvent(event)}]\n  -> Transition = [${describeState(from)} -> ${describeState(to)}]`,
         ),
       );

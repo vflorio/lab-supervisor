@@ -1,4 +1,4 @@
-import * as ConfigModel from "@supervisor/core/config";
+import * as Config from "@supervisor/core/config";
 import type * as LogStream from "@supervisor/core/log-stream";
 import type * as Logger from "@supervisor/core/logger";
 import * as Network from "@supervisor/core/network";
@@ -9,10 +9,10 @@ import type * as Services from "@supervisor/core/services/services";
 import { pipe } from "fp-ts/function";
 import * as RA from "fp-ts/ReadonlyArray";
 import * as TE from "fp-ts/TaskEither";
+import type * as AdbStream from "./adb/adb-stream";
 import * as Node from "./node";
-import type * as Tracking from "./tracking";
 
-const toDeviceSnaphot = (devices: readonly Adb.Device[]): readonly Services.AndroidDeviceSnapshot[] =>
+const toDeviceSnapshot = (devices: readonly Adb.Device[]): readonly Services.AndroidDeviceSnapshot[] =>
   pipe(
     devices,
     RA.map((device) => ({
@@ -21,13 +21,21 @@ const toDeviceSnaphot = (devices: readonly Adb.Device[]): readonly Services.Andr
     })),
   );
 
-export const createServices = (
-  config: ConfigModel.Service,
-  trpcLog: Logger.Tagged,
-  trackingHandle: Tracking.StopTracking,
-  logStream: LogStream.LogStream,
-  predicateStream: Predicates.PredicateFeed,
-): Services.Services => ({
+export type Deps = {
+  readonly config: Config.Service;
+  readonly trpcLog: Logger.Tagged;
+  readonly adbDeviceStream: AdbStream.AdbDeviceStream;
+  readonly logStream: LogStream.LogStream;
+  readonly predicateStream: Predicates.PredicateFeed;
+};
+
+export const createServices = ({
+  config,
+  trpcLog,
+  adbDeviceStream,
+  logStream,
+  predicateStream,
+}: Deps): Services.Services => ({
   // Servizio di logging persistente per web-app
   logger: trpcLog.child("web"),
 
@@ -38,7 +46,7 @@ export const createServices = (
   tracking: predicateStream,
 
   // TODO: Servizi di gestione delle dispositivi android
-  android: android(trpcLog, trackingHandle),
+  android: android(trpcLog, adbDeviceStream),
 
   // TODO: Servizio di DNS-SD (Service Discovery)
   mdns: {},
@@ -51,13 +59,13 @@ export const createServices = (
 
   // Config di servizio in sola lettura (già redatta - mai esporre credenziali raw)
   settings: {
-    getConfig: () => ConfigModel.redact(config),
+    getConfig: () => Config.redact(config),
   },
 });
 
-const android = (trpcLog: Logger.Tagged, trackingHandle: Tracking.StopTracking): Services.AndroidBridge => ({
+const android = (trpcLog: Logger.Tagged, stream: AdbStream.AdbDeviceStream): Services.AndroidBridge => ({
   // Recupera la lista dei device connessi tramite ADB
-  devices: () => pipe(Adb.devices({ logger: trpcLog, spawn: Node.spawn }), TE.map(toDeviceSnaphot)),
+  devices: () => pipe(Adb.devices({ logger: trpcLog, spawn: Node.spawn }), TE.map(toDeviceSnapshot)),
 
   // Riavvia un device tramite ADB
   reboot: (target) => Adb.reboot(target)({ logger: trpcLog, spawn: Node.spawn }),
@@ -65,8 +73,8 @@ const android = (trpcLog: Logger.Tagged, trackingHandle: Tracking.StopTracking):
   // Live feed dei device ADB alimentato dal tracker centralizzato (apps/service/src/tracking/adb):
   // consolidato qui per evitare che `android.devicesTail` ripolli `adb devices` per conto proprio
   devicesFeed: {
-    subscribe: (listener) => trackingHandle.adbDeviceFeed.subscribe((devices) => listener(toDeviceSnaphot(devices))),
-    snapshot: () => toDeviceSnaphot(trackingHandle.adbDeviceFeed.snapshot()),
+    subscribe: (listener) => stream.subscribe((devices) => listener(toDeviceSnapshot(devices))),
+    snapshot: () => toDeviceSnapshot(stream.snapshot()),
   },
 });
 
