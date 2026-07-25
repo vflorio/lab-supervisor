@@ -9,19 +9,18 @@ import type * as Schedule from "@supervisor/core/schedule";
 import type * as Validation from "@supervisor/core/validation";
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
+import * as IO from "fp-ts/IO";
+import * as O from "fp-ts/Option";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
 import * as AdbStream from "./adb/adb-stream";
-import * as AdbTracking from "./adb/adb-tracking";
 import * as Config from "./config";
 import * as ServiceLogger from "./logger";
 import * as Activation from "./machines/activation";
-import * as AndroidBridgeOrchestrator from "./machines/android-bridge/orchestrator";
-import * as Node from "./node";
-import * as Registry from "./registry";
+import type * as Node from "./node";
+import * as ServiceLifecycle from "./service-lifecycle";
 import { createServices } from "./services";
-import * as SuitestTracking from "./suitest/tracking";
 import * as Trpc from "./trpc";
 
 // -------------------------------------------------------------------------------------
@@ -85,15 +84,7 @@ export const create: Effect<ServiceHandle> = pipe(
   RTE.bind("config", () => loadConfig),
   RTE.bind("policies", ({ config }) => parseConfigPolicies(config)),
 
-  RTE.flatMap(({ config, policies }) => {
-    const {
-      adbReconnectPolicy,
-      adbTrackingPolicy,
-      suitestCameraTrackingPolicy,
-      suitestControlUnitTrackingPolicy,
-      suitestDeviceTrackingPolicy,
-    } = policies;
-
+  RTE.map(({ config, policies }) => {
     const logStream = LogStream.createLogStream();
     const logger = pipe(ServiceLogger.create(config.log, [logStream.transport]), Logger.tagged("Service"));
 
@@ -108,45 +99,9 @@ export const create: Effect<ServiceHandle> = pipe(
     logger.info(`Activation schedule: ${ActivationSchedule.format(config.activationSchedule)}`)();
 
     const activationLog = logger.child("Activation");
-    // const workflowLog = activationLog.child("Discovery").child("Workflow");
 
     const predicateStream = Predicates.createPredicateStream();
-
-    const trackingLog = logger.child("Tracking");
-
     const adbDeviceStream = AdbStream.createAdbDeviceStream();
-
-    const adbTracking = AdbTracking.create({
-      logger: trackingLog,
-      predicateStream,
-      adbDeviceStream,
-      adbEnv: { logger: trackingLog.child("Tracker-ADB"), spawn: Node.spawn },
-      policy: adbTrackingPolicy,
-    });
-
-    const suitestTracking = SuitestTracking.create({
-      logger: trackingLog,
-      suitestConfig: config.suitest,
-      stream: predicateStream,
-      policies: {
-        suitestCamera: suitestCameraTrackingPolicy,
-        suitestControlUnit: suitestControlUnitTrackingPolicy,
-        suitestDevice: suitestDeviceTrackingPolicy,
-      },
-    });
-
-    // Snapshot risolto ad ogni tick di activation
-    //   const cameraTargets: Readonly<Record<string, Network.Endpoint>> = {};
-
-    // const recoveryLog = logger.child("Recovery");
-    //const recoveryHandles = RecoveryService.startAll(config.recovery ?? [], {
-    //  logger: recoveryLog,
-    //  stream: predicateStream,
-    //  workflows: config.workflows,
-    //  spawn: Node.spawn,
-    //  tickPolicy: RetryPolicy.constantDelay(5000),
-    //  cameraTargets: () => cameraTargets,
-    //});
 
     const trpcLog = logger.child("tRPC");
     const trpcServer = Trpc.startServer({
@@ -156,85 +111,57 @@ export const create: Effect<ServiceHandle> = pipe(
       services: createServices({ config, trpcLog, adbDeviceStream, logStream, predicateStream }),
     });
 
-    //  const runWorkflow: (targets: readonly Network.Endpoint[]) => TE.TaskEither<Workflow.RunError, void> = flow(
-    //    RA.traverse(TE.ApplicativeSeq)(
-    //      Workflow.run({
-    //        logger: workflowLog,
-    //        spawn: Node.spawn,
-    //        workflows: config.workflows,
-    //      })("open-developer-settings"),
-    //    ),
-    //    TE.asUnit,
-    //  );
+    let active: O.Option<ServiceLifecycle.ActiveLifecycle> = O.none;
 
-    // Connection Manager Machine
-    //
-    const androidBridge = AndroidBridgeOrchestrator.create(
-      { logger: activationLog.child("AndroidBridge"), spawn: Node.spawn, adbPort: config.adb.port, adbReconnectPolicy },
+    const lifecycleDeps: ServiceLifecycle.Deps = {
+      logger: activationLog,
+      config,
+      policies,
+      predicateStream,
       adbDeviceStream,
-    );
+    };
 
-    // SOLO DEBUG: decoupling android
-    const loop = () =>
+    const clearActive: IO.IO<void> = () => {
+      active = O.none;
+    };
+
+    const deactivateIfActive: IO.IO<void> = () =>
       pipe(
-        Registry.read({
-          logger: activationLog.child("Registry"),
-          suitestConfig: config.suitest,
-          dbPath: config.registry.dbPath,
-          seedDevices: config.registry.devices,
-          fsEnv: Node.fsEnv,
-        }),
-        // La riconciliazione è decoupled perché dipende dallo stato di .controlled nel registry
-        TE.flatMap((db) => androidBridge.reconcile(db.lab)),
-      )().then(() => setTimeout(loop, 1000));
-
-    //loop();
-
-    // activationFlow gira una volta sola all'ingresso in fase Active (Activation è edge-triggered,
-    // non richiama più onActive ad ogni tick): risincronizza il registry (init db se non esiste
-    // + refresh Suitest). La riconciliazione continua delle connessioni android-bridge è
-    // decoupled dalla fase di activation (vedi `loop` sopra).
-    const activationFlow: TE.TaskEither<Errors.AppError, void> = pipe(
-      Registry.sync({
-        logger: activationLog.child("Registry"),
-        suitestConfig: config.suitest,
-        dbPath: config.registry.dbPath,
-        seedDevices: config.registry.devices,
-        fsEnv: Node.fsEnv,
-      }),
-      TE.flatMapIO(() => logger.info("Activation flow completed")),
-    );
-
-    const deactivationFlow: TE.TaskEither<Errors.AppError, void> = pipe(
-      trpcServer.stop,
-      TE.flatMapIO(() => adbTracking.stop),
-      TE.flatMapIO(() => suitestTracking.stop),
-      //TE.flatMapIO(() => () => recoveryHandles.forEach((h) => h.stop())),
-    );
+        active,
+        O.match(() => IO.of(undefined), ServiceLifecycle.deactivateActiveLifecycle),
+      )();
 
     const activationRunner = Activation.create(activationLog, activationSchedule, {
       onActive: pipe(
-        activationFlow,
-        TE.getOrElse((error) => T.fromIO(logger.error(`Activation flow failed: ${Errors.format(error)}`))),
+        ServiceLifecycle.createActiveLifecycle(lifecycleDeps),
+        TE.tapIO((lifecycle) => () => {
+          active = O.some(lifecycle);
+        }),
+        TE.map(() => undefined),
+        TE.getOrElse((error) => T.fromIO(activationLog.error(`Activation flow failed: ${Errors.format(error)}`))),
       ),
 
-      onInactive: pipe(
-        deactivationFlow,
-        TE.getOrElse((error) => T.fromIO(logger.error(`Deactivation flow failed: ${Errors.format(error)}`))),
+      onInactive: T.fromIO(
+        pipe(
+          deactivateIfActive,
+          IO.flatMap(() => clearActive),
+        ),
       ),
     });
 
-    return RTE.fromTaskEither(
-      pipe(
-        activationRunner.start,
-        TE.map(() => ({
-          stop: () =>
-            pipe(
-              TE.fromIO(activationRunner.stop),
-              TE.flatMapIO(() => logger.info("stop completed")),
-            ),
-        })),
-      ),
-    );
+    // Il loop dello schedule (come i tracker in service-lifecycle.ts) non risolve finché non
+    // viene fermato: va avviato in background, la ServiceHandle va ritornata subito - stessa
+    // convenzione di `void adbTracking.start()`.
+    activationRunner.start();
+
+    return {
+      stop: () =>
+        pipe(
+          TE.fromIO(activationRunner.stop),
+          TE.flatMapIO(() => deactivateIfActive),
+          TE.flatMap(() => trpcServer.stop),
+          TE.flatMapIO(() => logger.info("stop completed")),
+        ),
+    };
   }),
 );

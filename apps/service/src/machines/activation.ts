@@ -152,9 +152,5 @@ export const create = (
     if (result._tag === "Right") state = result.right;
   };
 
-  // Muto: un job infinito a cadenza 1s non deve spammare il log di IntervalLoop ad ogni tick -
-  // le transizioni di fase restano comunque visibili (onTransition usa `logger`, non muted).
-  const loop = IntervalLoop.create(Logger.muted(logger), Retry.constantDelay(1000), tick, "Activation");
-
-  return { start: loop.start, stop: loop.stop };
+  return IntervalLoop.create(Logger.muted(logger), Retry.constantDelay(1000), tick);
 };
