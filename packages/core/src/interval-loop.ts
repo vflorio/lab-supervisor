@@ -44,7 +44,7 @@ export const create = (
 
     const delay = policy(status);
     if (delay === null) {
-      pilLogger.info("Policy exhausted - stopping")();
+      pilLogger.info(`${formattedJobLabel} exhausted - stopping`)();
       return;
     }
 
@@ -70,3 +70,12 @@ export const create = (
 };
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+// -------------------------------------------------------------------------------------
+// Detach: esegue un TaskEither in background, senza attendere il risultato
+// -------------------------------------------------------------------------------------
+export const detach =
+  <A>(task: TE.TaskEither<Errors.AppError<any>, A>): IO.IO<void> =>
+  () => {
+    void task();
+  };

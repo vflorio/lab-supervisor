@@ -1,10 +1,12 @@
 import type * as ConfigModel from "@supervisor/core/config";
-import type * as IntervalLoop from "@supervisor/core/interval-loop";
+import * as Errors from "@supervisor/core/errors";
+import * as IntervalLoop from "@supervisor/core/interval-loop";
 import type * as Logger from "@supervisor/core/logger";
 import type * as Predicates from "@supervisor/core/predicates/index";
 import type * as RetryPolicy from "@supervisor/core/retry/retry";
-import type * as Db from "@supervisor/core/services/db";
-import { pipe } from "fp-ts/function";
+import * as Retry from "@supervisor/core/retry/retry";
+import * as E from "fp-ts/Either";
+import { constVoid, flow, pipe } from "fp-ts/function";
 import * as IO from "fp-ts/IO";
 import * as TE from "fp-ts/TaskEither";
 import type * as AdbStream from "./adb/adb-stream";
@@ -35,7 +37,7 @@ export interface Policies {
   readonly suitestDeviceTrackingPolicy: RetryPolicy.Policy;
 }
 
-export interface Deps {
+export interface Env {
   readonly logger: Logger.Tagged;
   readonly config: ConfigModel.Service;
   readonly policies: Policies;
@@ -47,69 +49,96 @@ export interface ActiveLifecycle {
   readonly adbTracking: IntervalLoop.Handle;
   readonly suitestTracking: IntervalLoop.Handle;
   readonly androidBridge: AndroidBridgeOrchestrator.Handle;
+  readonly reconcileLoop: IntervalLoop.Handle;
 }
 
-export type CreateError = IntervalLoop.StartError | Registry.SyncError;
+export type CreateError = Registry.SyncError;
 
 // -------------------------------------------------------------------------------------
 // Internal
 // -------------------------------------------------------------------------------------
 
+const readRegistry = (env: Env) =>
+  Registry.read({
+    logger: env.logger.child("Registry"),
+    suitestConfig: env.config.suitest,
+    dbPath: env.config.registry.dbPath,
+    seedDevices: env.config.registry.devices,
+    fsEnv: Node.fsEnv,
+  });
+
+// Se la policy viene esaurita senza connetterci,
+const createReconcileLoop = (env: Env, androidBridge: AndroidBridgeOrchestrator.Handle): IntervalLoop.Handle => {
+  const reconcileLog = env.logger.child("AndroidBridge");
+
+  const tick = pipe(
+    readRegistry(env),
+    TE.orElseFirstIOK((error) => reconcileLog.error(`Reconcile: registry read failed - ${Errors.format(error)}`)),
+    TE.flatMap((registry) =>
+      pipe(
+        androidBridge.reconcile(registry.lab),
+        TE.orElseFirstIOK((error) => reconcileLog.error(`Reconcile failed: ${Errors.format(error)}`)),
+      ),
+    ),
+    TE.match(constVoid, constVoid),
+  );
+
+  return IntervalLoop.create(reconcileLog, Retry.constantDelay(5000), tick, "(AndroidBridge) reconcile");
+};
+
 const createResources =
-  (deps: Deps): IO.IO<ActiveLifecycle> =>
+  (env: Env): IO.IO<ActiveLifecycle> =>
   () => {
-    const trackingLog = deps.logger.child("Tracking");
+    const trackingLog = env.logger.child("Tracking");
+
+    const androidBridge = AndroidBridgeOrchestrator.create(
+      {
+        logger: env.logger.child("AndroidBridge"),
+        spawn: Node.spawn,
+        adbPort: env.config.adb.port,
+        adbReconnectPolicy: env.policies.adbReconnectPolicy,
+      },
+      env.adbDeviceStream,
+    );
 
     const adbTracking = AdbTracking.create({
       logger: trackingLog,
-      predicateStream: deps.predicateStream,
-      adbDeviceStream: deps.adbDeviceStream,
+      predicateStream: env.predicateStream,
+      adbDeviceStream: env.adbDeviceStream,
       adbEnv: { logger: trackingLog.child("Tracker-ADB"), spawn: Node.spawn },
-      policy: deps.policies.adbTrackingPolicy,
+      policy: env.policies.adbTrackingPolicy,
     });
 
     const suitestTracking = SuitestTracking.create({
       logger: trackingLog,
-      suitestConfig: deps.config.suitest,
-      stream: deps.predicateStream,
+      suitestConfig: env.config.suitest,
+      stream: env.predicateStream,
       policies: {
-        suitestCamera: deps.policies.suitestCameraTrackingPolicy,
-        suitestControlUnit: deps.policies.suitestControlUnitTrackingPolicy,
-        suitestDevice: deps.policies.suitestDeviceTrackingPolicy,
+        suitestCamera: env.policies.suitestCameraTrackingPolicy,
+        suitestControlUnit: env.policies.suitestControlUnitTrackingPolicy,
+        suitestDevice: env.policies.suitestDeviceTrackingPolicy,
       },
     });
 
-    // Sottoscrive adbDeviceStream nel momento stesso in cui viene costruito: se un passo
-    // successivo di createActiveLifecycle fallisce, questa subscription va disfatta esplicitamente
-    // (stopResources), altrimenti resta appesa oltre la finestra active che l'ha creata.
-    const androidBridge = AndroidBridgeOrchestrator.create(
-      {
-        logger: deps.logger.child("AndroidBridge"),
-        spawn: Node.spawn,
-        adbPort: deps.config.adb.port,
-        adbReconnectPolicy: deps.policies.adbReconnectPolicy,
-      },
-      deps.adbDeviceStream,
-    );
+    const reconcileLoop = createReconcileLoop(env, androidBridge);
 
-    return { adbTracking, suitestTracking, androidBridge };
+    return { androidBridge, adbTracking, suitestTracking, reconcileLoop };
   };
 
-const startTrackers = ({
-  adbTracking,
-  suitestTracking,
-}: ActiveLifecycle): TE.TaskEither<IntervalLoop.StartError | Db.DbError, void> =>
-  pipe(
-    TE.Do,
-    TE.flatMap(() => adbTracking.start),
-    TE.flatMap(() => suitestTracking.start),
+const startBackgroundLoops = ({ adbTracking, suitestTracking, reconcileLoop }: ActiveLifecycle): IO.IO<void> =>
+  IntervalLoop.detach(
+    pipe(
+      [adbTracking.start, suitestTracking.start, reconcileLoop.start],
+      TE.traverseArray(flow(IntervalLoop.detach, TE.fromIO)),
+    ),
   );
 
-const stopResources = ({ adbTracking, suitestTracking, androidBridge }: ActiveLifecycle): IO.IO<void> =>
+const stopResources = ({ adbTracking, suitestTracking, androidBridge, reconcileLoop }: ActiveLifecycle): IO.IO<void> =>
   pipe(
     IO.Do,
     IO.flatMap(() => adbTracking.stop),
     IO.flatMap(() => suitestTracking.stop),
+    IO.flatMap(() => reconcileLoop.stop),
     IO.flatMap(() => androidBridge.stop),
   );
 
@@ -117,23 +146,20 @@ const stopResources = ({ adbTracking, suitestTracking, androidBridge }: ActiveLi
 // Public
 // -------------------------------------------------------------------------------------
 
-export const createActiveLifecycle = (deps: Deps): TE.TaskEither<CreateError, ActiveLifecycle> =>
+export const createActiveLifecycle = (env: Env): TE.TaskEither<CreateError, ActiveLifecycle> =>
   pipe(
-    TE.fromIO(createResources(deps)),
-    TE.tap(startTrackers),
-    TE.tap((lifecycle) =>
-      pipe(
-        Registry.sync({
-          logger: deps.logger.child("Registry"),
-          suitestConfig: deps.config.suitest,
-          dbPath: deps.config.registry.dbPath,
-          seedDevices: deps.config.registry.devices,
-          fsEnv: Node.fsEnv,
-        }),
-        TE.tapIO(() => deps.logger.info("Activation flow completed")),
-        TE.orElseFirstIOK(() => stopResources(lifecycle)),
-      ),
-    ),
+    // Unico passo che può fallire: nessuna risorsa viene creata prima che sia riuscito,
+    // quindi non serve alcun rollback in caso di errore (nulla da disfare).
+    Registry.sync({
+      logger: env.logger.child("Registry"),
+      suitestConfig: env.config.suitest,
+      dbPath: env.config.registry.dbPath,
+      seedDevices: env.config.registry.devices,
+      fsEnv: Node.fsEnv,
+    }),
+    TE.tapIO(() => env.logger.info("Activation flow completed")),
+    TE.flatMap(() => TE.fromIO(createResources(env))),
+    TE.tapIO(startBackgroundLoops),
   );
 
 export const deactivateActiveLifecycle = (lifecycle: ActiveLifecycle): IO.IO<void> => stopResources(lifecycle);

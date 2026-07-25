@@ -36,8 +36,7 @@
       ["constantDelay", "400ms"],
       ["exponentialBackoff", "800ms"],
       ["capDelay", "60s"],
-      //["limitRetries", 10]
-      ["limitRetries", 3]
+      ["limitRetries", 10]
     ]
   },
   "workflows": [

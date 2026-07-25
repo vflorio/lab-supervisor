@@ -113,7 +113,7 @@ export const create: Effect<ServiceHandle> = pipe(
 
     let active: O.Option<ServiceLifecycle.ActiveLifecycle> = O.none;
 
-    const lifecycleDeps: ServiceLifecycle.Deps = {
+    const lifecycleDeps: ServiceLifecycle.Env = {
       logger: activationLog,
       config,
       policies,
@@ -137,7 +137,7 @@ export const create: Effect<ServiceHandle> = pipe(
         TE.tapIO((lifecycle) => () => {
           active = O.some(lifecycle);
         }),
-        TE.map(() => undefined),
+        TE.asUnit,
         TE.getOrElse((error) => T.fromIO(activationLog.error(`Activation flow failed: ${Errors.format(error)}`))),
       ),
 
@@ -149,9 +149,6 @@ export const create: Effect<ServiceHandle> = pipe(
       ),
     });
 
-    // Il loop dello schedule (come i tracker in service-lifecycle.ts) non risolve finché non
-    // viene fermato: va avviato in background, la ServiceHandle va ritornata subito - stessa
-    // convenzione di `void adbTracking.start()`.
     activationRunner.start();
 
     return {
