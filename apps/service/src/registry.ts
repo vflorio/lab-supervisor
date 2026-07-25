@@ -44,9 +44,8 @@ const fetchSuitestLists = (
   );
 };
 
-// Se Suitest non è raggiungibile, non blocca la sync: ritorna None (warning, non un errore
-// fatale), dato che il dominio applicativo (lab) è preconfigurabile e operabile offline
-// indipendentemente da Suitest.
+// Dominio applicativo (lab) è preconfigurabile e operabile offline indipendentemente da Suitest
+// quindi se è offline, ritorniamo None
 const fetchSuitestListsOrSkip = (
   logger: Logger.Tagged,
   suitestConfig: Config.Suitest,
@@ -67,11 +66,11 @@ const fetchSuitestListsOrSkip = (
 //    |> fetch suitest (skippato se irraggiungibile, vedi sopra)
 //    |> replace mirror + auto-import control unit
 //    |> write
-export const sync = (env: RegistrySyncEnv): TE.TaskEither<SyncError, Db.Db> =>
+export const sync = (env: RegistrySyncEnv): TE.TaskEither<SyncError, Db.Database> =>
   pipe(
     // Init db (crea file JSON se non esiste)
     Db.init(env.dbPath, env.seedDevices)(env.fsEnv),
-    TE.tapIO(() => env.logger.info("Device Registry DB initialized")),
+    TE.tapIO(() => env.logger.info("Registry initialized")),
 
     TE.flatMap((currentDb) =>
       pipe(

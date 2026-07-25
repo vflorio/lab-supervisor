@@ -4,23 +4,20 @@ import type * as ConfigModel from "@supervisor/core/config";
 import * as Errors from "@supervisor/core/errors";
 import * as LogStream from "@supervisor/core/log-stream";
 import * as Logger from "@supervisor/core/logger";
-import type * as Network from "@supervisor/core/network";
 import * as Predicates from "@supervisor/core/predicates/index";
 import * as RetryPolicy from "@supervisor/core/retry/retry";
 import * as Schedule from "@supervisor/core/schedule";
-import type * as Db from "@supervisor/core/services/db";
 import type * as Validation from "@supervisor/core/validation";
 import * as E from "fp-ts/Either";
 import { flow, pipe } from "fp-ts/function";
 import * as IO from "fp-ts/IO";
-import type * as P from "fp-ts/Predicate";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as RA from "fp-ts/ReadonlyArray";
 import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
 import * as Config from "./config";
-import * as Connection from "./connection";
 import * as ServiceLogger from "./logger";
+import * as AndroidBridgeOrchestrator from "./machines/android-bridge/orchestrator";
 import * as Node from "./node";
 import * as RecoveryService from "./recovery";
 import * as Registry from "./registry";
@@ -122,8 +119,7 @@ export const create: Effect<ServiceHandle> = pipe(
     )();
 
     const activationLog = logger.child("ActivationRunner");
-    const discoveryLog = activationLog.child("Discovery");
-    const workflowLog = discoveryLog.child("Workflow");
+    // const workflowLog = activationLog.child("Discovery").child("Workflow");
 
     const predicateStream = Predicates.createPredicateStream();
     const adbDeviceStream = TrackingService.AdbStream.createAdbDeviceStream();
@@ -142,11 +138,11 @@ export const create: Effect<ServiceHandle> = pipe(
         suitestDevice: suitestDeviceTrackingPolicy,
       },
     });
-
+    stopTracking();
     // Snapshot risolto ad ogni tick di activation
-    const cameraTargets: Readonly<Record<string, Network.Endpoint>> = {};
+    //   const cameraTargets: Readonly<Record<string, Network.Endpoint>> = {};
 
-    const recoveryLog = logger.child("Recovery");
+    // const recoveryLog = logger.child("Recovery");
     //const recoveryHandles = RecoveryService.startAll(config.recovery ?? [], {
     //  logger: recoveryLog,
     //  stream: predicateStream,
@@ -164,48 +160,35 @@ export const create: Effect<ServiceHandle> = pipe(
       services: createServices(config, trpcLog, stopTracking, logStream, predicateStream),
     });
 
-    const runWorkflow: (targets: readonly Network.Endpoint[]) => TE.TaskEither<Workflow.RunError, void> = flow(
-      RA.traverse(TE.ApplicativeSeq)(
-        Workflow.run({
-          logger: workflowLog,
-          spawn: Node.spawn,
-          workflows: config.workflows,
-        })("open-developer-settings"),
-      ),
-      TE.asUnit,
-    );
-
-    type ConnectPredicates = {
-      // Determina se un determinato IP è noto al registry (controllato o meno)
-      // un device completamente esterno al registry non va toccato, viene solo ignorato
-      isControlled: P.Predicate<Network.Endpoint>;
-      // Determina se un determinato IP è marcato come controllabile dal DB
-      isKnown: P.Predicate<Network.Endpoint>;
-    };
-
-    const toConnectDevicePredicates = (db: Db.Db): TE.TaskEither<Errors.AppError, ConnectPredicates> => {
-      // Aggiorna lo snapshot usato dalle capabilities del recovery per il dominio suitest-camera
-      // cameraTargets = RecoveryService.cameraTargetsFromRegistry(db.lab);
-
-      return pipe(
-        TE.Do,
-        TE.bind("knownHosts", () => TE.right(Connection.cameraHosts(db.lab))),
-        TE.bind("controlledHosts", () => TE.right(Connection.controlledCameraHosts(db.lab))),
-        TE.map(({ controlledHosts, knownHosts }) => ({
-          isKnown: (target: Network.Endpoint) => knownHosts.includes(target.ip),
-          isControlled: (target: Network.Endpoint) => controlledHosts.includes(target.ip),
-        })),
-      );
-    };
+    //  const runWorkflow: (targets: readonly Network.Endpoint[]) => TE.TaskEither<Workflow.RunError, void> = flow(
+    //    RA.traverse(TE.ApplicativeSeq)(
+    //      Workflow.run({
+    //        logger: workflowLog,
+    //        spawn: Node.spawn,
+    //        workflows: config.workflows,
+    //      })("open-developer-settings"),
+    //    ),
+    //    TE.asUnit,
+    //  );
 
     // Connection Manager Machine
-
-    //Entità Suitest-Camera
-    //Entità ADB Network-Target
     //
-    //State machine che combine ADB e Suitest-Camera, se una camera ha il target attivo,
-    //la machine della suitest-camera può elaborare comandi, eseguire workflows etc
+    // Entità Suitest-Camera / Entità ADB Network-Target: per ogni camera controlled del
+    // lab-registry, l'orchestrator android-bridge (machines/android-bridge) mantiene una FSM
+    // che si connette e resta Idle finché la connessione ADB è viva. Una camera nota al
+    // registry ma non (più) controllata viene disconnessa
+    // attivamente (concetto "known" recuperato da connection/gating.ts); un device del tutto
+    // esterno al registry viene ignorato. Se la connessione cade, l'orchestrator lo rileva via
+    // adbDeviceStream (già polled da tracking/adb.ts) e riflette lo stato: acceptsCommands
+    // torna false finché il prossimo tick di activation non la riconnette.
+    const androidBridge = AndroidBridgeOrchestrator.create(
+      { logger: activationLog.child("AndroidBridge"), spawn: Node.spawn, adbPort: config.adb.port, adbReconnectPolicy },
+      adbDeviceStream,
+    );
 
+    // activationFlow gira ad ogni tick di ActivationRunner (cadenza activationPolicy =
+    // config.activation.polling, gated da activationSchedule): risincronizza il registry
+    // (init db se non esiste + refresh Suitest) e riconcilia le connessioni android-bridge.
     const activationFlow: TE.TaskEither<Errors.AppError, void> = pipe(
       Registry.sync({
         logger: activationLog.child("Registry"),
@@ -214,24 +197,11 @@ export const create: Effect<ServiceHandle> = pipe(
         seedDevices: config.registry.devices,
         fsEnv: Node.fsEnv,
       }),
-      TE.flatMap(toConnectDevicePredicates),
-      TE.flatMap(({ isControlled, isKnown }) =>
-        pipe(
-          // Questo Diventa qualcosa con LAN o simile
-          Connection.discoverAndConnect({
-            logger: discoveryLog,
-            adbPort: config.adb.port,
-            adbReconnectPolicy,
-            spawn: Node.spawn,
-            isControlled,
-            isKnown,
-          }),
-          TE.flatMap(runWorkflow),
-        ),
-      ),
+      TE.flatMap((db) => androidBridge.reconcile(db.lab)),
+      TE.flatMapIO(() => logger.info("Activation flow completed")),
     );
 
-    const decativationFlow: TE.TaskEither<Errors.AppError, void> = pipe(
+    const deactivationFlow: TE.TaskEither<Errors.AppError, void> = pipe(
       trpcServer.stop,
       TE.flatMapIO(() => stopTracking),
       //TE.flatMapIO(() => () => recoveryHandles.forEach((h) => h.stop())),
@@ -244,7 +214,7 @@ export const create: Effect<ServiceHandle> = pipe(
       ),
 
       onInactive: pipe(
-        decativationFlow,
+        deactivationFlow,
         TE.getOrElse((error) => T.fromIO(logger.error(`Deactivation flow failed: ${Errors.format(error)}`))),
       ),
     });

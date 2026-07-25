@@ -36,30 +36,30 @@ export interface MdnsDiscovery {}
 export interface Notifications {}
 
 export interface DeviceRegistry {
-  readonly getAll: () => TE.TaskEither<Db.DbError, Db.Db>;
+  readonly getAll: () => TE.TaskEither<Db.DbError, Db.Database>;
 
   readonly candyboxes: {
-    readonly update: (input: Db.CandyboxUpdateInput) => TE.TaskEither<Db.DbError, Db.Db>;
-    readonly add: (entry: Db.CandyboxEntry) => TE.TaskEither<Db.DbError, Db.Db>;
-    readonly remove: (id: string) => TE.TaskEither<Db.DbError, Db.Db>;
+    readonly update: (input: Db.CandyboxUpdateInput) => TE.TaskEither<Db.DbError, Db.Database>;
+    readonly add: (entry: Db.CandyboxEntry) => TE.TaskEither<Db.DbError, Db.Database>;
+    readonly remove: (id: string) => TE.TaskEither<Db.DbError, Db.Database>;
   };
 
   readonly cameras: {
-    readonly update: (input: Db.CameraUpdateInput) => TE.TaskEither<Db.DbError, Db.Db>;
-    readonly add: (entry: Db.CameraEntry) => TE.TaskEither<Db.DbError, Db.Db>;
-    readonly remove: (id: string) => TE.TaskEither<Db.DbError, Db.Db>;
+    readonly update: (input: Db.CameraUpdateInput) => TE.TaskEither<Db.DbError, Db.Database>;
+    readonly add: (entry: Db.CameraEntry) => TE.TaskEither<Db.DbError, Db.Database>;
+    readonly remove: (id: string) => TE.TaskEither<Db.DbError, Db.Database>;
   };
 
   readonly tvs: {
-    readonly update: (input: Db.TvUpdateInput) => TE.TaskEither<Db.DbError, Db.Db>;
-    readonly add: (entry: Db.TvEntry) => TE.TaskEither<Db.DbError, Db.Db>;
-    readonly remove: (deviceId: string) => TE.TaskEither<Db.DbError, Db.Db>;
+    readonly update: (input: Db.TvUpdateInput) => TE.TaskEither<Db.DbError, Db.Database>;
+    readonly add: (entry: Db.TvEntry) => TE.TaskEither<Db.DbError, Db.Database>;
+    readonly remove: (deviceId: string) => TE.TaskEither<Db.DbError, Db.Database>;
   };
 
   readonly adb: {
-    readonly update: (input: Db.AdbUpdateInput) => TE.TaskEither<Db.DbError, Db.Db>;
-    readonly add: (entry: Db.AdbEntry) => TE.TaskEither<Db.DbError, Db.Db>;
-    readonly remove: (id: string) => TE.TaskEither<Db.DbError, Db.Db>;
+    readonly update: (input: Db.AdbUpdateInput) => TE.TaskEither<Db.DbError, Db.Database>;
+    readonly add: (entry: Db.AdbEntry) => TE.TaskEither<Db.DbError, Db.Database>;
+    readonly remove: (id: string) => TE.TaskEither<Db.DbError, Db.Database>;
   };
 }
 

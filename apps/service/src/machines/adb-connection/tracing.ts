@@ -2,8 +2,8 @@ import * as Network from "@supervisor/core/network";
 import type * as Machine from "@supervisor/core/state-machine/machine";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
-import type { AdbConnectionEnv } from "./interpret";
-import type { ConnectionEvent, TargetState } from "./model";
+import type { AdbConnectionMachineEnv } from "./interpret";
+import type { ConnectionEvent, ConnectionState } from "./model";
 
 // -------------------------------------------------------------------------------------
 // Tracing - visibilità automatica sulle transizioni di fase (debugging)
@@ -11,7 +11,7 @@ import type { ConnectionEvent, TargetState } from "./model";
 // Logga solo quando cambia la "fase" (`_tag`): i passaggi interni alla stessa fase
 // (es. handshake temporaneo ok -> configura tcpip) non generano rumore.
 
-const describeState = (state: TargetState): string =>
+const describeState = (state: ConnectionState): string =>
   match(state)
     .with({ _tag: "Unknown" }, (s) => `Unknown(${s.host})`)
     .with({ _tag: "Temporary" }, (s) => `Temporary(${Network.format(s.target)})`)
@@ -32,9 +32,10 @@ const describeEvent = (event: ConnectionEvent): string =>
 
 // Tornare a Unknown da una fase più avanzata è una regressione (persa la connessione o
 // fallito l'handshake)
-const isRegression = (from: TargetState, to: TargetState): boolean => from._tag !== "Unknown" && to._tag === "Unknown";
+const isRegression = (from: ConnectionState, to: ConnectionState): boolean =>
+  from._tag !== "Unknown" && to._tag === "Unknown";
 
-export const onTransition: Machine.TransitionHook<AdbConnectionEnv, never, TargetState, ConnectionEvent> =
+export const onTransition: Machine.TransitionHook<AdbConnectionMachineEnv, never, ConnectionState, ConnectionEvent> =
   (from, event, to) => (env) =>
     from._tag === to._tag
       ? TE.right(undefined)
@@ -43,6 +44,6 @@ export const onTransition: Machine.TransitionHook<AdbConnectionEnv, never, Targe
             ? //
               env.logger.child("Connection").error
             : env.logger.child("Connection").info)(
-            `Event = [${describeEvent(event)}] | Transition = [${describeState(from)} -> ${describeState(to)}]`,
+            `Event = [${describeEvent(event)}]\nTransition = [${describeState(from)} -> ${describeState(to)}]`,
           ),
         );

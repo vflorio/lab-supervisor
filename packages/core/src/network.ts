@@ -93,3 +93,33 @@ export const withPort =
 export const withIp =
   (ip: IP): Endomorphism<Endpoint> =>
   (target) => ({ ...target, ip });
+
+// -------------------------------------------------------------------------------------
+// HOST = IP soltanto - un target di rete la cui porta non è (ancora) nota
+// (es. prima della risoluzione mDNS, vedi target-resolution)
+// -------------------------------------------------------------------------------------
+
+export interface Host {
+  readonly ip: IP;
+}
+
+const isHost = (u: unknown): u is Host => typeof u === "object" && u !== null && isIP((u as Host).ip);
+
+export const HostCodec = new t.Type<Host, string, unknown>(
+  "Host",
+  isHost,
+  (u, c) =>
+    typeof u === "string" && isIP(u)
+      ? t.success({ ip: u })
+      : t.failure(u, c, "Expected an IPv4 address (e.g. 192.168.0.1)"),
+  (host) => host.ip,
+);
+
+export const decodeHost = (s: string): E.Either<Validation.ValidationError, Host> =>
+  pipe(HostCodec.decode(s), E.mapLeft(Validation.createValidationError));
+
+export const host = (ip: IP): Host => ({ ip });
+
+export const formatHost = (h: Host): string => h.ip;
+
+export const EqHostByIp: Equality.Eq<Host> = Equality.contramap((h: Host) => h.ip)(EqIP);

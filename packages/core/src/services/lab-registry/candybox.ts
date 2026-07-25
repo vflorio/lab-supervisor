@@ -3,7 +3,6 @@ import * as t from "io-ts";
 import type { ControlUnit } from "../suitest";
 import type { LabRegistry } from "./registry";
 
-// TODO Questo diventa Candybox per distinguerlo meglio dal dominio di Suitest
 // -------------------------------------------------------------------------------------
 // Model
 // -------------------------------------------------------------------------------------

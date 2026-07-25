@@ -6,16 +6,16 @@ import type * as Network from "@supervisor/core/network";
 
 // State machine: le decisioni di flusso (quale stato segue quale evento)
 
-export type TargetState =
+export type ConnectionState =
   | { readonly _tag: "Unknown"; readonly host: string }
   | { readonly _tag: "Temporary"; readonly target: Network.Endpoint }
   | { readonly _tag: "Persistent"; readonly target: Network.Endpoint };
 
-export const unknown = (host: string): TargetState => ({ _tag: "Unknown", host });
-export const temporary = (target: Network.Endpoint): TargetState => ({ _tag: "Temporary", target });
-export const persistent = (target: Network.Endpoint): TargetState => ({ _tag: "Persistent", target });
+export const unknown = (host: string): ConnectionState => ({ _tag: "Unknown", host });
+export const temporary = (target: Network.Endpoint): ConnectionState => ({ _tag: "Temporary", target });
+export const persistent = (target: Network.Endpoint): ConnectionState => ({ _tag: "Persistent", target });
 
-export const isPersistent = (state: TargetState): state is { _tag: "Persistent"; target: Network.Endpoint } =>
+export const isPersistent = (state: ConnectionState): state is { _tag: "Persistent"; target: Network.Endpoint } =>
   state._tag === "Persistent";
 
 export type ConnectionEvent =

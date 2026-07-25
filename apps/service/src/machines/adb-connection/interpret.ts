@@ -19,7 +19,7 @@ import type { ConnectionEvent, ConnectionIntent } from "./model";
 // la state machine è quindi auto-risanante, un device che fallisce la connessione
 // torna semplicemente a Unknown senza far fallire l'intero ciclo di discovery.
 
-export interface AdbConnectionEnv {
+export interface AdbConnectionMachineEnv {
   readonly logger: Logger.Tagged;
   readonly adbPort: Network.PORT;
   readonly adbReconnectPolicy: Retry.Policy;
@@ -28,7 +28,7 @@ export interface AdbConnectionEnv {
 
 const liftAdb =
   <A>(effect: RTE.ReaderTaskEither<Adb.AdbEnv, Adb.Error | Shell.ShellSpawnError, A>) =>
-  (env: AdbConnectionEnv): TE.TaskEither<Adb.Error | Shell.ShellSpawnError, A> =>
+  (env: AdbConnectionMachineEnv): TE.TaskEither<Adb.Error | Shell.ShellSpawnError, A> =>
     effect({ logger: env.logger.child("ADB"), spawn: env.spawn });
 
 const reasonOf = (error: { readonly message: string }): string => error.message;
@@ -40,7 +40,7 @@ const toEvents = <A>(
   TE.match((error) => onLeft(reasonOf(error)), onRight);
 
 export const interpret =
-  (intent: ConnectionIntent): RTE.ReaderTaskEither<AdbConnectionEnv, never, readonly ConnectionEvent[]> =>
+  (intent: ConnectionIntent): RTE.ReaderTaskEither<AdbConnectionMachineEnv, never, readonly ConnectionEvent[]> =>
   (env) =>
     TE.fromTask(
       match(intent)
