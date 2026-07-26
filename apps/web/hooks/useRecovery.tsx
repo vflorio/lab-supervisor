@@ -72,11 +72,14 @@ export function useRecovery(): RecoveryContextValue {
   return ctx;
 }
 
-// Tripwire di (domain, entityId) il cui ultimo esito è "exhausted": intervento manuale
-// necessario prima che possa ripartire (vedi RecoveryIntervention.tsx per badge + reset).
+// Tripwire di (domain, entityId) fermo in uno stato terminale che richiede intervento
+// manuale prima di poter ripartire (vedi RecoveryIntervention.tsx per badge + reset).
 export function useRecoveryIntervention(domain: string, entityId: string): readonly RecoveryStatusEntry[] {
   const { table } = useRecovery();
   return Array.from(table.values()).filter(
-    (entry) => entry.domain === domain && entry.entityId === entityId && entry.outcome === "exhausted",
+    (entry) =>
+      entry.domain === domain &&
+      entry.entityId === entityId &&
+      (entry.state === "exhausted" || entry.state === "fatalError"),
   );
 }

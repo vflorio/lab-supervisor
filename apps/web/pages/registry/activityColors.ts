@@ -2,32 +2,24 @@ import type { ActivityColor } from "../../components/ActivityStatus";
 
 // -------------------------------------------------------------------------------------
 // Mapping status -> colore per ciascuna ActivitySource -
-// un solo posto per riga così i tre indicatori (recovery/workflow/adb) restano coerenti tra
+// un solo posto per riga così i due indicatori (recovery/adb) restano coerenti tra
 // CameraRow/TvRow/ControlUnitCard invece di reinventare la palette in ciascuna row.
 // -------------------------------------------------------------------------------------
 
-// Stati del tripwire di recovery (source "recovery")
+// Stati del tripwire di recovery (source "recovery", vedi
+// @supervisor/core/recovery/tripwire-machine#TripwireState) - "exhausted"/"fatalError" sono
+// entrambi terminali e richiedono intervento manuale (vedi RecoveryIntervention.tsx), da cui
+// lo stesso colore "error" per entrambi.
 export const recoveryColorFor = (status: string | undefined): ActivityColor => {
   switch (status) {
     case "healthy":
       return "success";
     case "pending":
       return "warning";
-    case "fired":
-      return "error";
-    default:
-      return "disabled";
-  }
-};
-
-// Esito della pipeline innescata da un tripwire "fired" (source "workflow")
-export const workflowColorFor = (status: string | undefined): ActivityColor => {
-  switch (status) {
-    case "running":
+    case "recovering":
       return "info";
-    case "succeeded":
-      return "success";
     case "exhausted":
+    case "fatalError":
       return "error";
     default:
       return "disabled";

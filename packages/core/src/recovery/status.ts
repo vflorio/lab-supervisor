@@ -1,10 +1,12 @@
+import type { AppError } from "../errors";
 import type { TripwireState } from "./tripwire-machine";
 
 // -------------------------------------------------------------------------------------
-// Status feed - broadcast delle transizioni di ogni tripwire (healthy/pending/fired) e
-// dell'esito di un tentativo di recovery (succeeded/exhausted). Ricalca predicates/feed.ts
-// (ring buffer + subscribe/history, più uno snapshot "valore corrente"): un "outcome" non è
-// un evento a parte, è la stessa entry con `state: "fired"` a cui si aggiunge `outcome`.
+// Status feed - broadcast delle transizioni di ogni tripwire (healthy/pending/recovering/
+// exhausted/fatalError - vedi tripwire-machine.ts#TripwireState). Ricalca predicates/feed.ts
+// (ring buffer + subscribe/history, più uno snapshot "valore corrente"): ogni transizione,
+// incluso l'esito di un tentativo di recovery, è la STESSA entry con un nuovo `state` - non
+// un side-channel separato come il vecchio campo `outcome`.
 // -------------------------------------------------------------------------------------
 
 export interface RecoveryStatusEntry {
@@ -15,7 +17,8 @@ export interface RecoveryStatusEntry {
   readonly entityId: string;
   readonly tripwireIndex: number;
   readonly state: TripwireState["tag"];
-  readonly outcome?: "succeeded" | "exhausted";
+  // Presente solo quando state === "fatalError"
+  readonly error?: AppError;
 }
 
 // Chiave univoca dell'"ultimo stato noto" per un tripwire, usata per indicizzare lo snapshot

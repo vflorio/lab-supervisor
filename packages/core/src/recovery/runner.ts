@@ -11,6 +11,7 @@ import type { Workflow } from "../workflow/workflow";
 import { type CompiledTripwire, compileTripwires } from "./compile";
 import * as EntityRunner from "./entity-runner";
 import type { RecoveryPolicy } from "./model";
+import type * as TripwireMachine from "./tripwire-machine";
 
 // -------------------------------------------------------------------------------------
 // Orchestrazione multi-entità: osserva il PredicateFeed dal vivo, filtra per il dominio
@@ -27,9 +28,9 @@ export interface RecoveryRunnerEnv {
   // Cadenza del tick periodico di ri-osservazione (per rilevare grace scaduti senza nuovi fatti)
   readonly tickPolicy: Policy;
   readonly now?: () => number;
-  // Notifica opzionale ad ogni transizione/esito di un tripwire, per un'entità - vedi
-  // EntityRunner.StatusEvent per la forma dell'evento
-  readonly onStatus?: (entityId: string, tripwireIndex: number, event: EntityRunner.StatusEvent) => void;
+  // Notifica opzionale ad ogni transizione di un tripwire, per un'entità - lo stato intero
+  // (incluso l'esito di un tentativo di recovery, non più un side-channel separato)
+  readonly onStatus?: (entityId: string, tripwireIndex: number, state: TripwireMachine.TripwireState) => void;
 }
 
 export interface RecoveryRunnerHandle {
@@ -58,7 +59,7 @@ export const start = (
           logger: env.logger.child(entityId),
           workflows: env.workflows,
           capabilities: env.capabilitiesFor(entityId),
-          onStatus: env.onStatus && ((tripwireIndex, event) => env.onStatus!(entityId, tripwireIndex, event)),
+          onStatus: env.onStatus && ((tripwireIndex, state) => env.onStatus!(entityId, tripwireIndex, state)),
         });
         runnersByEntity.set(entityId, created);
         return created;

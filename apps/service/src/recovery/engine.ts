@@ -28,8 +28,10 @@ import * as Target from "./target";
 //  sullo stesso PredicateFeed, ed emette sullo stesso RecoveryStream.
 //
 // Ogni transizione di stato alimenta anche il notify dispatcher :
-// "immediate" quando il tripwire scatta (entra in "fired"), "exhausted" quando i retry sono
-// esauriti senza successo - nessun altro stato genera notifiche.
+// "immediate" quando il tripwire scatta (entra in "recovering"), "exhausted" quando i retry
+// sono esauriti senza successo o la pipeline fallisce con un errore vero ("fatalError" riusa
+// lo stesso NotifyLifecycle - merita almeno la stessa attenzione di un retry esaurito) -
+// nessun altro stato genera notifiche.
 // -------------------------------------------------------------------------------------
 
 const TICK_POLICY: RetryPolicy.Policy = RetryPolicy.constantDelay(1000);
@@ -53,45 +55,17 @@ export interface Handle {
   readonly reset: (policyLabel: string, entityId: string, tripwireIndex: number) => boolean;
 }
 
-// Deriva il NotifyLifecycle (se presente) da uno StatusEvent del motore di recovery
-// - "immediate" alla transizione in "fired"
-// - "exhausted" quando l'outcome della pipeline è terminata
-// nessun altro evento (in particolare un outcome "succeeded") notifica.
-const lifecycleOf = (event: Recovery.StatusEvent): O.Option<NotifyLifecycle> =>
-  match(event)
-    .with({ type: "transition", state: "fired" }, (): O.Option<NotifyLifecycle> => O.some("immediate"))
-    .with({ type: "outcome", outcome: "exhausted" }, (): O.Option<NotifyLifecycle> => O.some("exhausted"))
+// Deriva il NotifyLifecycle (se presente) dal tag di TripwireState raggiunto -
+// "immediate" quando il tripwire scatta (entra in "recovering")
+// "exhausted" quando i retry sono esauriti O la pipeline fallisce con un errore vero
+// (fatalError riusa lo stesso lifecycle: nessun NotifyLifecycle dedicato per ora, vedi TODO)
+// nessun altro stato notifica (in particolare un ritorno a "healthy" non notifica).
+const lifecycleOf = (tag: Recovery.TripwireState["tag"]): O.Option<NotifyLifecycle> =>
+  match(tag)
+    .with("recovering", (): O.Option<NotifyLifecycle> => O.some("immediate"))
+    .with("exhausted", (): O.Option<NotifyLifecycle> => O.some("exhausted"))
+    .with("fatalError", (): O.Option<NotifyLifecycle> => O.some("exhausted"))
     .otherwise((): O.Option<NotifyLifecycle> => O.none);
-
-// Traduce uno StatusEvent nella entry piatta attesa da RecoveryStream:
-// (l'invariante "un outcome è sempre in stato fired" è reso esplicito qui)
-const statusFieldsOf = (
-  event: Recovery.StatusEvent,
-): { readonly state: Recovery.RecoveryStatusEntry["state"]; readonly outcome?: "succeeded" | "exhausted" } =>
-  match(event)
-    .with({ type: "transition" }, ({ state }) => ({ state }))
-    .with({ type: "outcome" }, ({ outcome }) => ({ state: "fired" as const, outcome }))
-    .exhaustive();
-
-// Traduce uno StatusEvent nelle attività osservabili:
-// ogni transizione alimenta l'attività "recovery" (stato del tripwire);
-// l'ingresso in "fired" alimenta anche "workflow" (la pipeline di recovery è partita, status "running");
-// un outcome la conclude con l'esito stesso ("succeeded"/"exhausted");
-// stessa distinzione tra transition/outcome già usata sopra da statusFieldsOf.
-const activityEntriesOf = (
-  event: Recovery.StatusEvent,
-): readonly { readonly source: "recovery" | "workflow"; readonly status: string }[] =>
-  match(event)
-    .with({ type: "transition" }, ({ state }) =>
-      state === "fired"
-        ? [
-            { source: "recovery" as const, status: state },
-            { source: "workflow" as const, status: "running" },
-          ]
-        : [{ source: "recovery" as const, status: state }],
-    )
-    .with({ type: "outcome" }, ({ outcome }) => [{ source: "workflow" as const, status: outcome }])
-    .exhaustive();
 
 export const start = (env: Env): E.Either<StartError, Handle> => {
   const notifyLog = env.logger.child("Notify");
@@ -173,7 +147,7 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
           workflows: env.config.workflows,
           capabilitiesFor: Capabilities.capabilitiesFor(policy.domain, capabilitiesEnv),
           tickPolicy: TICK_POLICY,
-          onStatus: (entityId, tripwireIndex, event) => {
+          onStatus: (entityId, tripwireIndex, state) => {
             const source: NotifyStream.NotifyEventSource = {
               policy: policy.label,
               domain: policy.domain,
@@ -181,14 +155,16 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
               tripwireIndex,
             };
 
-            env.recoveryStream.emit({ ...source, ...statusFieldsOf(event) });
+            env.recoveryStream.emit({
+              ...source,
+              state: state.tag,
+              ...(state.tag === "fatalError" ? { error: state.error } : {}),
+            });
 
-            for (const activity of activityEntriesOf(event)) {
-              env.activityStream.emit({ entityId, ...activity });
-            }
+            env.activityStream.emit({ entityId, source: "recovery", status: state.tag });
 
             pipe(
-              lifecycleOf(event),
+              lifecycleOf(state.tag),
               O.match(
                 () => {},
                 (lifecycle) => {

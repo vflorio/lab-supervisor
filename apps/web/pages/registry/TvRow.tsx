@@ -6,7 +6,7 @@ import { ActivityStat } from "../../components/ActivityStat";
 import { ActivityStatus } from "../../components/ActivityStatus";
 import { PredicateStat } from "../../components/PredicateStat";
 import { RecoveryInterventionBadge, RecoveryResetButtons } from "../../components/RecoveryIntervention";
-import { recoveryColorFor, workflowColorFor } from "./activityColors";
+import { recoveryColorFor } from "./activityColors";
 import { CameraRow } from "./CameraRow";
 import { adbStatusFor } from "./hierarchy";
 import type { RowActions, TvGroup } from "./types";
@@ -72,11 +72,11 @@ export function TvRow({
         ]}
         context={
           <ActivityStatus
-            source="workflow"
+            source="recovery"
             entityId={tv.deviceId}
-            label="Recovery workflow"
+            label="Recovery status"
             icon={<Bolt fontSize="small" />}
-            colorFor={workflowColorFor}
+            colorFor={recoveryColorFor}
           />
         }
         actions={[

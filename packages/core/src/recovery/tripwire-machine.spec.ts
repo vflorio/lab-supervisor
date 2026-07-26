@@ -29,10 +29,10 @@ describe("recovery/tripwire-machine reduce", () => {
     expect(result).toStrictEqual(Machine.transition(pending));
   });
 
-  it("fires exactly when the grace boundary is reached, emitting runRecovery", () => {
+  it("fires (recovering) exactly when the grace boundary is reached, emitting runRecovery", () => {
     const pending: TripwireMachine.TripwireState = { tag: "pending", since: 100 };
     const result = reduce(pending, { tag: "observe", healthy: false, now: 100 + GRACE, lookup });
-    expect(result).toStrictEqual(Machine.transition({ tag: "fired" }, [{ tag: "runRecovery", lookup }]));
+    expect(result).toStrictEqual(Machine.transition({ tag: "recovering" }, [{ tag: "runRecovery", lookup }]));
   });
 
   it("resets to healthy from pending on a healthy observation", () => {
@@ -41,58 +41,88 @@ describe("recovery/tripwire-machine reduce", () => {
     expect(result).toStrictEqual(Machine.transition(TripwireMachine.initial));
   });
 
-  it("stays fired (no re-fire) while observations remain unhealthy", () => {
-    const fired: TripwireMachine.TripwireState = { tag: "fired" };
-    const result = reduce(fired, { tag: "observe", healthy: false, now: 999_999, lookup });
-    expect(result).toStrictEqual(Machine.transition(fired));
+  it("stays recovering (no re-fire) while observed again before the outcome arrives", () => {
+    const recovering: TripwireMachine.TripwireState = { tag: "recovering" };
+    const result = reduce(recovering, { tag: "observe", healthy: false, now: 999_999, lookup });
+    expect(result).toStrictEqual(Machine.transition(recovering));
   });
 
-  it("resets to healthy from fired once the predicate recovers", () => {
-    const fired: TripwireMachine.TripwireState = { tag: "fired" };
-    const result = reduce(fired, { tag: "observe", healthy: true, now: 999_999, lookup });
+  it("resets to healthy from recovering once the predicate recovers", () => {
+    const recovering: TripwireMachine.TripwireState = { tag: "recovering" };
+    const result = reduce(recovering, { tag: "observe", healthy: true, now: 999_999, lookup });
+    expect(result).toStrictEqual(Machine.transition(TripwireMachine.initial));
+  });
+
+  it("moves to healthy on a succeeded recoveryOutcome from recovering", () => {
+    const recovering: TripwireMachine.TripwireState = { tag: "recovering" };
+    const result = reduce(recovering, { tag: "recoveryOutcome", outcome: "succeeded" });
+    expect(result).toStrictEqual(Machine.transition(TripwireMachine.initial));
+  });
+
+  it("moves to exhausted on an exhausted recoveryOutcome from recovering", () => {
+    const recovering: TripwireMachine.TripwireState = { tag: "recovering" };
+    const result = reduce(recovering, { tag: "recoveryOutcome", outcome: "exhausted" });
+    expect(result).toStrictEqual(Machine.transition({ tag: "exhausted" }));
+  });
+
+  it("moves to fatalError, carrying the error, on a fatalError recoveryOutcome from recovering", () => {
+    const recovering: TripwireMachine.TripwireState = { tag: "recovering" };
+    const error = { type: "WorkflowError", message: "boom" };
+    const result = reduce(recovering, { tag: "recoveryOutcome", outcome: "fatalError", error });
+    expect(result).toStrictEqual(Machine.transition({ tag: "fatalError", error }));
+  });
+
+  it("stays exhausted (no re-fire) while observations remain unhealthy", () => {
+    const exhausted: TripwireMachine.TripwireState = { tag: "exhausted" };
+    const result = reduce(exhausted, { tag: "observe", healthy: false, now: 999_999, lookup });
+    expect(result).toStrictEqual(Machine.transition(exhausted));
+  });
+
+  it("resets to healthy from exhausted once the predicate recovers on its own", () => {
+    const exhausted: TripwireMachine.TripwireState = { tag: "exhausted" };
+    const result = reduce(exhausted, { tag: "observe", healthy: true, now: 999_999, lookup });
+    expect(result).toStrictEqual(Machine.transition(TripwireMachine.initial));
+  });
+
+  it("stays fatalError (preserving the error) while observations remain unhealthy", () => {
+    const error = { type: "WorkflowError", message: "boom" };
+    const fatalError: TripwireMachine.TripwireState = { tag: "fatalError", error };
+    const result = reduce(fatalError, { tag: "observe", healthy: false, now: 999_999, lookup });
+    expect(result).toStrictEqual(Machine.transition(fatalError));
+  });
+
+  it("resets to healthy from fatalError once the predicate recovers on its own", () => {
+    const fatalError: TripwireMachine.TripwireState = { tag: "fatalError", error: { type: "X", message: "boom" } };
+    const result = reduce(fatalError, { tag: "observe", healthy: true, now: 999_999, lookup });
     expect(result).toStrictEqual(Machine.transition(TripwireMachine.initial));
   });
 });
 
 describe("recovery/tripwire-machine make + dispatch", () => {
-  it("invokes the handler and reports success when the tripwire fires", async () => {
-    const results: boolean[] = [];
-    const machine = TripwireMachine.make(
-      GRACE,
-      () => TE.right(true),
-      (ok) => results.push(ok),
-    );
+  it("invokes the handler and reaches healthy again when the tripwire fires and recovery succeeds", async () => {
+    const machine = TripwireMachine.make(GRACE, () => TE.right(true));
 
     const pending: TripwireMachine.TripwireState = { tag: "pending", since: 0 };
     const result = await Machine.dispatch(machine)(pending, { tag: "observe", healthy: false, now: GRACE, lookup })(
       undefined,
     )();
 
-    expect(result).toStrictEqual(E.right({ tag: "fired" }));
-    expect(results).toEqual([true]);
+    expect(result).toStrictEqual(E.right(TripwireMachine.initial));
   });
 
-  it("reports failure when the underlying recovery exhausts without success", async () => {
-    const results: boolean[] = [];
-    const machine = TripwireMachine.make(
-      GRACE,
-      () => TE.right(false),
-      (ok) => results.push(ok),
-    );
+  it("reaches exhausted when the underlying recovery exhausts without success", async () => {
+    const machine = TripwireMachine.make(GRACE, () => TE.right(false));
 
     const pending: TripwireMachine.TripwireState = { tag: "pending", since: 0 };
-    await Machine.dispatch(machine)(pending, { tag: "observe", healthy: false, now: GRACE, lookup })(undefined)();
+    const result = await Machine.dispatch(machine)(pending, { tag: "observe", healthy: false, now: GRACE, lookup })(
+      undefined,
+    )();
 
-    expect(results).toEqual([false]);
+    expect(result).toStrictEqual(E.right({ tag: "exhausted" }));
   });
 
   it("does not invoke the handler when the tripwire merely stays pending", async () => {
-    const results: boolean[] = [];
-    const machine = TripwireMachine.make(
-      GRACE,
-      () => TE.right(true),
-      (ok) => results.push(ok),
-    );
+    const machine = TripwireMachine.make(GRACE, () => TE.right(true));
 
     const pending: TripwireMachine.TripwireState = { tag: "pending", since: 0 };
     const result = await Machine.dispatch(machine)(pending, {
@@ -103,21 +133,37 @@ describe("recovery/tripwire-machine make + dispatch", () => {
     })(undefined)();
 
     expect(result).toStrictEqual(E.right(pending));
-    expect(results).toEqual([]);
   });
 
-  it("propagates a real Left from the underlying recovery action", async () => {
-    const machine = TripwireMachine.make(
-      GRACE,
-      () => TE.left({ type: "WorkflowError", message: "boom" }),
-      () => {},
-    );
+  // Prima di questo refactor un vero Left della pipeline propagava come Left del dispatch
+  // stesso ed entity-runner.ts lo inghiottiva in un log, invisibile a valle. Ora diventa una
+  // transizione reale (fatalError), sempre un Right: questa inversione è la prova che il bug
+  // è chiuso, non solo un cambio cosmetico dell'ADT.
+  it("turns a real Left from the underlying recovery action into a fatalError transition, not a dispatch Left", async () => {
+    const error = { type: "WorkflowError", message: "boom" };
+    const machine = TripwireMachine.make(GRACE, () => TE.left(error));
 
     const pending: TripwireMachine.TripwireState = { tag: "pending", since: 0 };
     const result = await Machine.dispatch(machine)(pending, { tag: "observe", healthy: false, now: GRACE, lookup })(
       undefined,
     )();
 
-    expect(E.isLeft(result)).toBe(true);
+    expect(result).toStrictEqual(E.right({ tag: "fatalError", error }));
+  });
+
+  it("reports every transition, in order, through the onTransition hook - including the intermediate 'recovering' state", async () => {
+    const transitions: string[] = [];
+    const onTransition: Machine.TransitionHook<unknown, never, TripwireMachine.TripwireState, TripwireMachine.Event> =
+      (from, _event, to) => () => {
+        if (from.tag !== to.tag) transitions.push(`${from.tag}->${to.tag}`);
+        return TE.right(undefined);
+      };
+
+    const machine = TripwireMachine.make(GRACE, () => TE.right(false), onTransition);
+
+    const pending: TripwireMachine.TripwireState = { tag: "pending", since: 0 };
+    await Machine.dispatch(machine)(pending, { tag: "observe", healthy: false, now: GRACE, lookup })(undefined)();
+
+    expect(transitions).toEqual(["pending->recovering", "recovering->exhausted"]);
   });
 });

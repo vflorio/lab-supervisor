@@ -9,7 +9,7 @@
 // diverse finché una fase successiva non li unifica.
 // -------------------------------------------------------------------------------------
 
-export type ActivitySource = "recovery" | "workflow" | "adb";
+export type ActivitySource = "recovery" | "adb";
 
 export interface ActivityEntry {
   readonly id: number;

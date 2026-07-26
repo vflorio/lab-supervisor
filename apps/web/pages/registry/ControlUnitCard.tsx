@@ -5,7 +5,7 @@ import { ActivityStat } from "../../components/ActivityStat";
 import { ActivityStatus } from "../../components/ActivityStatus";
 import { PredicateStat } from "../../components/PredicateStat";
 import { RecoveryInterventionBadge, RecoveryResetButtons } from "../../components/RecoveryIntervention";
-import { recoveryColorFor, workflowColorFor } from "./activityColors";
+import { recoveryColorFor } from "./activityColors";
 import { TvRow } from "./TvRow";
 import type { CuGroup, RowActions } from "./types";
 
@@ -50,11 +50,11 @@ export function ControlUnitCard({
         ]}
         context={
           <ActivityStatus
-            source="workflow"
+            source="recovery"
             entityId={group.cu.id}
-            label="Recovery workflow"
+            label="Recovery status"
             icon={<Bolt fontSize="small" />}
-            colorFor={workflowColorFor}
+            colorFor={recoveryColorFor}
           />
         }
         actions={[

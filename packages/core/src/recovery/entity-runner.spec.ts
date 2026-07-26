@@ -5,6 +5,7 @@ import type * as Interpreter from "../workflow/interpreter";
 import * as Compile from "./compile";
 import * as EntityRunner from "./entity-runner";
 import type { RecoveryTripwire } from "./model";
+import type * as TripwireMachine from "./tripwire-machine";
 
 // -------------------------------------------------------------------------------------
 // Nessun timer reale: il tempo è solo un numero passato a `observe`.
@@ -119,7 +120,7 @@ describe("recovery/entity-runner", () => {
     await runner.observe(lookup, 999); // ancora sotto grace
     expect(calls).toEqual([]);
 
-    await runner.observe(lookup, 1000); // grace raggiunta -> fired, esegue la pipeline, il predicate torna vero
+    await runner.observe(lookup, 1000); // grace raggiunta -> recovering, esegue la pipeline, il predicate torna vero
     expect(calls).toEqual(["reboot"]);
 
     await runner.observe(lookup, 1001); // predicate vero -> reset a healthy, non ri-esegue
@@ -168,7 +169,7 @@ describe("recovery/entity-runner", () => {
 
   it("does not report success when the pipeline runs cleanly but the predicate stays false", async () => {
     const calls: string[] = [];
-    const outcomes: Array<"succeeded" | "exhausted"> = [];
+    const outcomes: Array<TripwireMachine.TripwireState["tag"]> = [];
     const warnings: string[] = [];
     const tripwires: readonly RecoveryTripwire[] = [
       {
@@ -194,8 +195,8 @@ describe("recovery/entity-runner", () => {
           return TE.right(undefined);
         },
       }),
-      onStatus: (_index, event) => {
-        if (event.type === "outcome") outcomes.push(event.outcome);
+      onStatus: (_index, state) => {
+        if (state.tag === "exhausted" || state.tag === "fatalError") outcomes.push(state.tag);
       },
     });
 
@@ -211,6 +212,46 @@ describe("recovery/entity-runner", () => {
       "recovery pipeline completed successfully, but predicate is still false",
       "recovery pipeline completed successfully, but predicate is still false",
     ]);
+  });
+
+  // Prima di questo refactor un vero Left della pipeline (errore di configurazione/bug, non un
+  // tentativo fallito - qui: un riferimento a un workflow inesistente, vedi
+  // workflow/pipeline-interpreter.ts#interpretLeaf) risaliva fino a `observe()` come Left del
+  // dispatch, dove veniva solo loggato: nessun onStatus, invisibile a RecoveryStream/Activity/UI.
+  // Ora diventa una transizione `fatalError` reale, riportata come qualunque altra transizione.
+  // (Un comando che fallisce, es. reboot() -> TE.left, non basta a riprodurlo: viene assorbito
+  // in "ranOk: false" da interpretLeaf - vedi il test "retries the pipeline..." sopra, che usa
+  // esattamente questo per esercitare i retry normali, non un errore fatale.)
+  it("reports a fatalError transition instead of silently swallowing a real pipeline error", async () => {
+    const transitions: TripwireMachine.TripwireState[] = [];
+    const tripwires: readonly RecoveryTripwire[] = [
+      {
+        grace: GRACE,
+        predicate: { type: "ref", name: "connected" },
+        pipeline: { type: "workflow", workflowName: "does-not-exist" },
+        retry: [
+          ["constantDelay", "1ms"],
+          ["limitRetries", 3],
+        ],
+      },
+    ];
+
+    const runner = EntityRunner.create(compileOrThrow(tripwires), {
+      logger: noopLogger as any,
+      workflows: [], // il workflow referenziato non è registrato -> Left di configurazione
+      capabilities: capabilitiesWith({}),
+      onStatus: (_index, state) => transitions.push(state),
+    });
+
+    const lookup = () => false;
+    await runner.observe(lookup, 0);
+    await runner.observe(lookup, 1000); // grace raggiunta -> risoluzione del workflow fallisce con un vero Left
+
+    expect(transitions.map((s) => s.tag)).toEqual(["pending", "recovering", "fatalError"]);
+    expect(transitions[transitions.length - 1]).toStrictEqual({
+      tag: "fatalError",
+      error: { type: "WorkflowError", message: 'Workflow not found: "does-not-exist"' },
+    });
   });
 
   it("runs independent tripwires independently, based on each tripwire's own predicate and grace", async () => {

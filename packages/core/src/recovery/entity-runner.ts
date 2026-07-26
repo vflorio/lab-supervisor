@@ -1,6 +1,7 @@
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";
+import { match } from "ts-pattern";
 import { type AppError, format } from "../errors";
 import type * as Logger from "../logger";
 import type { PredicateLookup } from "../predicates/expression";
@@ -15,25 +16,25 @@ import * as TripwireMachine from "./tripwire-machine";
 // -------------------------------------------------------------------------------------
 // Elabora ogni tripwire di un'entità (es. un device) in base al proprio predicate,
 // alla propria macchina a stati e al proprio logger.
+//
+// Ogni cambio di stato (incluso l'esito di un tentativo di recovery) passa da un solo canale:
+// il `TransitionHook` passato a TripwireMachine.make (stesso meccanismo di
+// machines/android-bridge/activity.ts#forwardToActivity) - niente diffing "prima/dopo" fatto
+// a mano qui, niente side-channel che può arrivare fuori ordine.
 // -------------------------------------------------------------------------------------
-
-export type StatusEvent =
-  | { readonly type: "transition"; readonly state: TripwireMachine.TripwireState["tag"] }
-  | { readonly type: "outcome"; readonly outcome: "succeeded" | "exhausted" };
 
 export interface EntityRunnerEnv {
   readonly logger: Logger.Tagged;
   readonly workflows: readonly Workflow[];
   readonly capabilities: CommandCapabilities;
-  readonly onStatus?: (tripwireIndex: number, event: StatusEvent) => void;
+  readonly onStatus?: (tripwireIndex: number, state: TripwireMachine.TripwireState) => void;
 }
 
 export interface EntityRunner {
   readonly observe: (lookup: PredicateLookup, now: number) => Promise<void>;
-  // Riarma un tripwire "fired" (torna a `healthy`) sul presupposto che l'operatore abbia
-  // risolto il problema fisico dopo un esaurimento dei retry - il prossimo `observe` lo
-  // rivaluta da zero (nuovo grace period se il predicate risulta ancora falso). `false` se
-  // l'indice non corrisponde a nessun tripwire di questa entità.
+  // Riarma un tripwire "exhausted"/"fatalError" (torna a `healthy`) sul presupposto che
+  // l'operatore abbia risolto il problema fisico - il prossimo `observe` lo rivaluta da zero.
+  // `false` se l'indice non corrisponde a nessun tripwire di questa entità.
   readonly reset: (tripwireIndex: number) => boolean;
 }
 
@@ -41,14 +42,25 @@ interface TripwireInstance {
   readonly predicate: CompiledTripwire["predicate"];
   readonly machine: Machine.Machine<
     unknown,
-    AppError,
+    never,
     TripwireMachine.TripwireState,
-    TripwireMachine.Observe,
+    TripwireMachine.Event,
     TripwireMachine.RunRecovery
   >;
   readonly logger: Logger.Tagged;
   state: TripwireMachine.TripwireState;
 }
+
+// Messaggio leggibile per ogni transizione - solo per il log di servizio, non alimenta lo
+// stato: `onStatus` riceve sempre lo stato intero, è lui a decidere cosa mostrare a valle.
+const describeTransition = (from: TripwireMachine.TripwireState, to: TripwireMachine.TripwireState): string =>
+  match(to)
+    .with({ tag: "healthy" }, () => (from.tag === "recovering" ? "recovery succeeded" : "predicate healthy again"))
+    .with({ tag: "pending" }, () => "predicate unhealthy, grace period started")
+    .with({ tag: "recovering" }, () => "grace elapsed, running recovery pipeline")
+    .with({ tag: "exhausted" }, () => "recovery exhausted retries without success")
+    .with({ tag: "fatalError" }, (s) => `recovery pipeline failed: ${format(s.error)}`)
+    .exhaustive();
 
 export const create = (compiledTripwires: readonly CompiledTripwire[], env: EntityRunnerEnv): EntityRunner => {
   const workflowEnv: WorkflowEnv = {
@@ -81,18 +93,23 @@ export const create = (compiledTripwires: readonly CompiledTripwire[], env: Enti
         ),
       );
 
-    const machine = TripwireMachine.make(tripwire.graceMs, runRecoveryFor, (succeeded) => {
-      tripwireLogger.info(succeeded ? "recovery succeeded" : "recovery exhausted retries without success")();
-      env.onStatus?.(index, { type: "outcome", outcome: succeeded ? "succeeded" : "exhausted" });
-    });
+    const onTransition: Machine.TransitionHook<unknown, never, TripwireMachine.TripwireState, TripwireMachine.Event> =
+      (from, _event, to) => () => {
+        if (from.tag === to.tag) return TE.right(undefined);
+
+        tripwireLogger.info(describeTransition(from, to))();
+        env.onStatus?.(index, to);
+        return TE.right(undefined);
+      };
+
+    const machine = TripwireMachine.make(tripwire.graceMs, runRecoveryFor, onTransition);
 
     return { predicate: tripwire.predicate, machine, logger: tripwireLogger, state: TripwireMachine.initial };
   });
 
   const observe = async (lookup: PredicateLookup, now: number): Promise<void> => {
-    for (const [index, instance] of instances.entries()) {
+    for (const instance of instances) {
       const healthy = instance.predicate(lookup);
-      const previousTag = instance.state.tag;
       const result = await Machine.dispatch(instance.machine)(instance.state, {
         tag: "observe",
         healthy,
@@ -100,11 +117,14 @@ export const create = (compiledTripwires: readonly CompiledTripwire[], env: Enti
         lookup,
       })(undefined)();
 
+      // Err = never per la macchina del tripwire (vedi tripwire-machine.ts#makeHandler): un
+      // vero errore della pipeline è oggi una transizione fatalError (un Right), non più un
+      // Left del dispatch - questo ramo non dovrebbe più essere raggiungibile, resta solo come
+      // rete di sicurezza difensiva.
       if (E.isRight(result)) {
         instance.state = result.right;
-        if (result.right.tag !== previousTag) env.onStatus?.(index, { type: "transition", state: result.right.tag });
       } else {
-        instance.logger.error(`dispatch failed: ${format(result.left)}`)();
+        instance.logger.error(`dispatch failed unexpectedly: ${format(result.left)}`)();
       }
     }
   };
@@ -113,9 +133,9 @@ export const create = (compiledTripwires: readonly CompiledTripwire[], env: Enti
     const instance = instances[tripwireIndex];
     if (!instance) return false;
 
-    const previousTag = instance.state.tag;
+    const previous = instance.state;
     instance.state = TripwireMachine.initial;
-    if (previousTag !== "healthy") env.onStatus?.(tripwireIndex, { type: "transition", state: "healthy" });
+    if (previous.tag !== "healthy") env.onStatus?.(tripwireIndex, TripwireMachine.initial);
     return true;
   };
 

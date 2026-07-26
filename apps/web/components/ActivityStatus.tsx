@@ -6,8 +6,7 @@ import { useActivity } from "../hooks/useActivity";
 
 // -------------------------------------------------------------------------------------
 // "Cosa sta facendo un sottosistema per questa entità adesso" (vedi Activity.ActivityEntry) -
-// per la colonna `context` di EntryRow (stessa forma visiva della "Assigned ADB" già usata
-// lì): icona colorata in base allo stato + label/valore. Nessuna entry ancora presente per
+// per la colonna `context` di EntryRow. Nessuna entry ancora presente per
 // (source, entityId) è uno stato legittimo ("idle"), non un errore - la entity potrebbe
 // semplicemente non aver ancora generato attività di quel tipo.
 // -------------------------------------------------------------------------------------

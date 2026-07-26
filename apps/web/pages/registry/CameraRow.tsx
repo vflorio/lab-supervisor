@@ -9,7 +9,7 @@ import { ActivityStatus } from "../../components/ActivityStatus";
 import { PredicateStat } from "../../components/PredicateStat";
 import { RecoveryInterventionBadge, RecoveryResetButtons } from "../../components/RecoveryIntervention";
 import type { AdbDevice } from "../../hooks/useAdbDevices";
-import { adbBridgeColorFor, recoveryColorFor, workflowColorFor } from "./activityColors";
+import { adbBridgeColorFor, recoveryColorFor } from "./activityColors";
 import type { CameraView, DeviceKind } from "./types";
 
 const RECOVERY_DOMAIN = "suitest-camera";
@@ -137,7 +137,7 @@ export function CameraRow({
           direction="row"
           sx={{ width: "100%", gap: 2, flexWrap: "wrap", justifyContent: "space-between", alignItems: "center" }}
         >
-          {adbAddress && (
+          {/*adbAddress && (
             <Stack sx={{ flexDirection: "row", gap: 1, alignItems: "center", minWidth: 0 }}>
               <Usb fontSize="small" color="disabled" />
               <Box sx={{ minWidth: 0 }}>
@@ -149,6 +149,15 @@ export function CameraRow({
                 </Typography>
               </Box>
             </Stack>
+          )}*/}
+          {videoCaptureDeviceId && (
+            <ActivityStatus
+              source="recovery"
+              entityId={videoCaptureDeviceId}
+              label="Recovery status"
+              icon={<Bolt fontSize="small" />}
+              colorFor={recoveryColorFor}
+            />
           )}
           {camera.adb && (
             <ActivityStatus
@@ -159,15 +168,7 @@ export function CameraRow({
               colorFor={adbBridgeColorFor}
             />
           )}
-          {videoCaptureDeviceId && (
-            <ActivityStatus
-              source="workflow"
-              entityId={videoCaptureDeviceId}
-              label="Recovery workflow"
-              icon={<Bolt fontSize="small" />}
-              colorFor={workflowColorFor}
-            />
-          )}
+          <div />
         </Stack>
       }
       actions={actions}
