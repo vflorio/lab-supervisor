@@ -34,6 +34,9 @@ export interface RecoveryRunnerEnv {
 
 export interface RecoveryRunnerHandle {
   readonly stop: () => void;
+  // Riarma il tripwire di un'entità dopo un esaurimento dei retry - vedi EntityRunner.reset.
+  // `false` se l'entità non è mai stata osservata da questo runner (nessun EntityRunner creato).
+  readonly reset: (entityId: string, tripwireIndex: number) => boolean;
 }
 
 export const start = (
@@ -106,6 +109,7 @@ export const start = (
           unsubscribe();
           tickLoop.stop();
         },
+        reset: (entityId, tripwireIndex) => runnersByEntity.get(entityId)?.reset(tripwireIndex) ?? false,
       };
     }),
   );

@@ -27,9 +27,33 @@ const recoveryTailInput = (value: unknown): RecoveryTailInput => {
 // Quante voci di backlog inviare a un client che si collega per la prima volta (senza lastEventId)
 const HISTORY_REPLAY_SIZE = 200;
 
+export interface RecoveryResetInput {
+  readonly policy: string;
+  readonly entityId: string;
+  readonly tripwireIndex: number;
+}
+
+const recoveryResetInput = (value: unknown): RecoveryResetInput => {
+  if (value == null || typeof value !== "object") throw new Error("Expected recovery reset input to be an object");
+
+  const { policy, entityId, tripwireIndex } = value as Record<string, unknown>;
+  if (typeof policy !== "string") throw new Error("Expected policy to be a string");
+  if (typeof entityId !== "string") throw new Error("Expected entityId to be a string");
+  if (typeof tripwireIndex !== "number") throw new Error("Expected tripwireIndex to be a number");
+
+  return { policy, entityId, tripwireIndex };
+};
+
 export const recoveryRouter = router({
   // Ultimo stato noto per ogni (policy, domain, entityId, tripwireIndex)
   snapshot: publicProcedure.query(({ ctx }) => ctx.services.recovery.snapshot()),
+
+  // Riarma manualmente un tripwire dopo un esaurimento dei retry (intervento manuale) - vedi
+  // Services.recoveryReset. `false` se il servizio non è active o l'entità/tripwire non
+  // risultano mai osservati: non un errore di programma, quindi non un throw.
+  reset: publicProcedure
+    .input(recoveryResetInput)
+    .mutation(({ ctx, input }) => ctx.services.recoveryReset(input.policy, input.entityId, input.tripwireIndex)),
 
   // Live tail delle transizioni - stessa forma di trackingRouter.tail
   tail: publicProcedure.input(recoveryTailInput).subscription(async function* ({

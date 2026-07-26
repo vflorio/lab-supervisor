@@ -82,6 +82,10 @@ export interface Services {
   readonly tracking: PredicateFeed; // Service -> Web
   // Feed delle transizioni di stato del motore di recovery
   readonly recovery: RecoveryFeed; // Service -> Web
+  // Riarma il tripwire di un'entità dopo un esaurimento dei retry (intervento manuale) -
+  // `false` se il servizio non è "active" (nessun motore di recovery in esecuzione) o se
+  // l'entità/tripwire indicati non sono mai stati osservati. Web -> Service
+  readonly recoveryReset: (policyLabel: string, entityId: string, tripwireIndex: number) => boolean;
   // Feed delle notifiche
   readonly notifications: NotifyFeed; // Service -> Web
   // Feed di activity tracing (cosa fa l'entità in un dato momento)

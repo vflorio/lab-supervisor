@@ -25,6 +25,7 @@ import { useData } from "vike-react/useData";
 import { Section } from "../../components/Section";
 import { type AdbDevice, useAdbDevices } from "../../hooks/useAdbDevices";
 import { useServiceLogger } from "../../hooks/useServiceLogger";
+import { trpc } from "../../trpc/client";
 import type { Data } from "../index/+data";
 import { AddDeviceDialog } from "./AddDeviceDialog";
 import { AssignCameraDialog } from "./AssignCameraDialog";
@@ -134,6 +135,16 @@ function HierarchyView({ db, adbDevices }: { db: Database; adbDevices: readonly 
       return result;
     }, setError);
 
+  // Riarma un tripwire "exhausted" (intervento manuale): a differenza delle altre mutation di
+  // questa view non fa `reload()` (mutate()) - non tocca il registry su disco, l'esito arriva
+  // dallo stream live di recovery/activity già sottoscritto (vedi RecoveryIntervention.tsx).
+  const handleResetRecovery = (policy: string, entityId: string, tripwireIndex: number) => {
+    log(`User reset recovery tripwire for ${entityId} (policy "${policy}")`, "warn");
+    void trpc.recovery.reset.mutate({ policy, entityId, tripwireIndex }).then((succeeded) => {
+      if (!succeeded) setError(`Reset failed: no active recovery runner for "${entityId}"`);
+    });
+  };
+
   const handleAdd = () =>
     mutate(async () => {
       if (!newAdbTarget.label)
@@ -216,6 +227,7 @@ function HierarchyView({ db, adbDevices }: { db: Database; adbDevices: readonly 
             onDelete={handleDelete}
             onAssignCamera={setAssigningCamera}
             onLinkCamera={handleLinkCamera}
+            onResetRecovery={handleResetRecovery}
           />
         ))}
 
@@ -239,6 +251,7 @@ function HierarchyView({ db, adbDevices }: { db: Database; adbDevices: readonly 
                   onDelete={handleDelete}
                   onAssignCamera={setAssigningCamera}
                   onLinkCamera={handleLinkCamera}
+                  onResetRecovery={handleResetRecovery}
                 />
               ))}
             </Box>
@@ -261,6 +274,7 @@ function HierarchyView({ db, adbDevices }: { db: Database; adbDevices: readonly 
                   onDelete={handleDelete}
                   onAssign={() => setAssigningCamera(camera)}
                   onLink={() => handleLinkCamera(camera)}
+                  onResetRecovery={handleResetRecovery}
                 />
               ))}
             </Box>

@@ -30,6 +30,11 @@ export interface EntityRunnerEnv {
 
 export interface EntityRunner {
   readonly observe: (lookup: PredicateLookup, now: number) => Promise<void>;
+  // Riarma un tripwire "fired" (torna a `healthy`) sul presupposto che l'operatore abbia
+  // risolto il problema fisico dopo un esaurimento dei retry - il prossimo `observe` lo
+  // rivaluta da zero (nuovo grace period se il predicate risulta ancora falso). `false` se
+  // l'indice non corrisponde a nessun tripwire di questa entità.
+  readonly reset: (tripwireIndex: number) => boolean;
 }
 
 interface TripwireInstance {
@@ -104,5 +109,15 @@ export const create = (compiledTripwires: readonly CompiledTripwire[], env: Enti
     }
   };
 
-  return { observe };
+  const reset = (tripwireIndex: number): boolean => {
+    const instance = instances[tripwireIndex];
+    if (!instance) return false;
+
+    const previousTag = instance.state.tag;
+    instance.state = TripwireMachine.initial;
+    if (previousTag !== "healthy") env.onStatus?.(tripwireIndex, { type: "transition", state: "healthy" });
+    return true;
+  };
+
+  return { observe, reset };
 };

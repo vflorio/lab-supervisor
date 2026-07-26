@@ -64,4 +64,5 @@ export interface RowActions {
   onDelete: (kind: DeviceKind, id: string) => void;
   onAssignCamera: (camera: CameraView) => void;
   onLinkCamera: (camera: CameraView) => void;
+  onResetRecovery: (policy: string, entityId: string, tripwireIndex: number) => void;
 }

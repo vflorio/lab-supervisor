@@ -5,10 +5,13 @@ import * as O from "fp-ts/Option";
 import { ActivityStat } from "../../components/ActivityStat";
 import { ActivityStatus } from "../../components/ActivityStatus";
 import { PredicateStat } from "../../components/PredicateStat";
+import { RecoveryInterventionBadge, RecoveryResetButtons } from "../../components/RecoveryIntervention";
 import { recoveryColorFor, workflowColorFor } from "./activityColors";
 import { CameraRow } from "./CameraRow";
 import { adbStatusFor } from "./hierarchy";
 import type { RowActions, TvGroup } from "./types";
+
+const RECOVERY_DOMAIN = "suitest-device";
 
 export function TvRow({
   group,
@@ -18,6 +21,7 @@ export function TvRow({
   onDelete,
   onAssignCamera,
   onLinkCamera,
+  onResetRecovery,
 }: { group: TvGroup } & RowActions) {
   const { tv } = group;
   const inUseLabel = tv.inUseBy?.email ?? tv.inUseBy?.orgName ?? tv.inUseBy?.tokenName;
@@ -33,7 +37,7 @@ export function TvRow({
         indicators={[
           <PredicateStat
             key="s"
-            domain="suitest-device"
+            domain={RECOVERY_DOMAIN}
             entityId={tv.deviceId}
             name="suitest_device_status"
             label="Device status"
@@ -50,7 +54,7 @@ export function TvRow({
           />,
           <PredicateStat
             key="u"
-            domain="suitest-device"
+            domain={RECOVERY_DOMAIN}
             entityId={tv.deviceId}
             name="suitest_device_in_use"
             label="In use"
@@ -64,6 +68,7 @@ export function TvRow({
             label="Tripwire"
             colorFor={recoveryColorFor}
           />,
+          <RecoveryInterventionBadge key="mi" domain={RECOVERY_DOMAIN} entityId={tv.deviceId} />,
         ]}
         context={
           <ActivityStatus
@@ -74,6 +79,9 @@ export function TvRow({
             colorFor={workflowColorFor}
           />
         }
+        actions={[
+          <RecoveryResetButtons key="mr" domain={RECOVERY_DOMAIN} entityId={tv.deviceId} onReset={onResetRecovery} />,
+        ]}
         onToggle={() => onToggle("tv", tv.deviceId, tv.controlled)}
         onEdit={() => onEdit("tv", tv.deviceId, tv.label)}
         onDelete={() => onDelete("tv", tv.deviceId)}
@@ -90,6 +98,7 @@ export function TvRow({
               onDelete={onDelete}
               onAssign={() => onAssignCamera(camera)}
               onLink={() => onLinkCamera(camera)}
+              onResetRecovery={onResetRecovery}
             />
           ))}
         </Box>

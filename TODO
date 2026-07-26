@@ -1,7 +1,4 @@
 # TODO
-- ui recovery/workflows
-- notifica
-
 
 ## Core
 
@@ -45,7 +42,7 @@
 - [X] Post-boot startup sequence: avvio Suitest app + esposizione ADB-TCP
     - [X] ADB over wifi automation
     - [X] Avvia suitest-camera, imposta profilo experimental-wide, e premi tasto connect (le coordinate considerare orientamento schermo)
-- [ ] Verifica camera stream dopo recovery
+- [X] Verifica camera stream dopo recovery (gestito tramite predicati)
 - [ ] Comando wait/sleep nella config workflow (per tap-scripting e timing)
 - [ ] Comando ensureOrientation: determinare orientamento corrente e validare (es. ensureOrientation(Landscape))
 - [ ] Coordinate relative per inputTap: accettare coordinate normalizzate (0.0–1.0) oltre ad assolute
@@ -57,18 +54,18 @@
 - [X] Retry model (constant, exponential, limit, cap)
 - [X] Generic retry runner: tentativi configurabili, delay, strategia per device type
 - [X] Backoff strategy (fixed / exponential)
-- [ ] Marcare device come "intervento manuale necessario" dopo esaurimento retry
+- [X] Marcare device come "intervento manuale necessario" dopo esaurimento retry
 
 ## Notifications
 
 - [X] Slack client
-- [ ] Notification payload builder: info device, motivo failure, riepilogo tentativi recovery
+- [X] Notification payload builder: info device, motivo failure, riepilogo tentativi recovery
 - [X] Invio notifica al termine dei retry senza successo
 - [X] Invio notifica immediata per failure critici (configurabile per policy)
 
 ## Operational Safety
 
-- [ ] Flag maintenance mode manuale: impedire recovery automatico per device spento manualmente
+- [X] Flag maintenance mode manuale: impedire recovery automatico per device spento manualmente (gestito tramite db .controlled)
 - [X] State machine centralizzata per gestione policy: il servizio opera in base a stati finiti (active, paused, recovering) - es. pausa automatica su perdita connettività (connection tracker)
 
 ## Service / Runtime
@@ -79,7 +76,7 @@
 - [X] Gestione graceful shutdown/restart
 - [X] Device registry stabile: database locale [device-name, ip-statico] al posto di discovery puramente mDNS
 - [ ] Gestione ricaduta connettività del servizio: monitoraggio e recovery della propria connessione di rete
-- [ ] Integrazione invio notifiche Slack nel loop principale del servizio
+- [X] Integrazione invio notifiche Slack
 
 # Nice to have
 

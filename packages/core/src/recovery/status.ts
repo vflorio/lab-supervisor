@@ -18,8 +18,11 @@ export interface RecoveryStatusEntry {
   readonly outcome?: "succeeded" | "exhausted";
 }
 
-const keyOf = (entry: Pick<RecoveryStatusEntry, "policy" | "domain" | "entityId" | "tripwireIndex">): string =>
-  `${entry.policy}:${entry.domain}:${entry.entityId}:${entry.tripwireIndex}`;
+// Chiave univoca dell'"ultimo stato noto" per un tripwire, usata per indicizzare lo snapshot
+// corrente - stesso schema di predicates/model.ts#factKey / activity/model.ts#activityKey.
+export const recoveryKey = (
+  entry: Pick<RecoveryStatusEntry, "policy" | "domain" | "entityId" | "tripwireIndex">,
+): string => `${entry.policy}:${entry.domain}:${entry.entityId}:${entry.tripwireIndex}`;
 
 export interface RecoveryFeed {
   readonly subscribe: (listener: (entry: RecoveryStatusEntry) => void) => () => void;
@@ -42,7 +45,7 @@ export const createRecoveryStream = (bufferSize = 1000): RecoveryStream => {
   const emit: RecoveryStream["emit"] = (fact) => {
     const entry: RecoveryStatusEntry = { ...fact, id: nextId++, timestamp: Date.now() };
 
-    current.set(keyOf(entry), entry);
+    current.set(recoveryKey(entry), entry);
     buffer.push(entry);
     if (buffer.length > bufferSize) buffer.shift();
 

@@ -47,6 +47,10 @@ export type StartError = PolicyDecodeError;
 
 export interface Handle {
   readonly stop: () => void;
+  // Riarma il tripwire di un'entità dopo un esaurimento dei retry (intervento manuale) -
+  // instrada verso il RecoveryRunnerHandle della policy corrispondente. `false` se la policy
+  // non esiste (più) o se l'entità non è mai stata osservata da quella policy.
+  readonly reset: (policyLabel: string, entityId: string, tripwireIndex: number) => boolean;
 }
 
 // Deriva il NotifyLifecycle (se presente) da uno StatusEvent del motore di recovery
@@ -162,50 +166,56 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
   return pipe(
     env.config.recovery ?? [],
     E.traverseArray((policy) =>
-      Recovery.start(policy, {
-        logger: env.logger.child(`RecoveryPolicy:${policy.label}`),
-        stream: env.predicateStream,
-        workflows: env.config.workflows,
-        capabilitiesFor: Capabilities.capabilitiesFor(policy.domain, capabilitiesEnv),
-        tickPolicy: TICK_POLICY,
-        onStatus: (entityId, tripwireIndex, event) => {
-          const source: NotifyStream.NotifyEventSource = {
-            policy: policy.label,
-            domain: policy.domain,
-            entityId,
-            tripwireIndex,
-          };
+      pipe(
+        Recovery.start(policy, {
+          logger: env.logger.child(`RecoveryPolicy:${policy.label}`),
+          stream: env.predicateStream,
+          workflows: env.config.workflows,
+          capabilitiesFor: Capabilities.capabilitiesFor(policy.domain, capabilitiesEnv),
+          tickPolicy: TICK_POLICY,
+          onStatus: (entityId, tripwireIndex, event) => {
+            const source: NotifyStream.NotifyEventSource = {
+              policy: policy.label,
+              domain: policy.domain,
+              entityId,
+              tripwireIndex,
+            };
 
-          env.recoveryStream.emit({ ...source, ...statusFieldsOf(event) });
+            env.recoveryStream.emit({ ...source, ...statusFieldsOf(event) });
 
-          for (const activity of activityEntriesOf(event)) {
-            env.activityStream.emit({ entityId, ...activity });
-          }
+            for (const activity of activityEntriesOf(event)) {
+              env.activityStream.emit({ entityId, ...activity });
+            }
 
-          pipe(
-            lifecycleOf(event),
-            O.match(
-              () => {},
-              (lifecycle) => {
-                const rules = policy.tripwires[tripwireIndex]?.notify ?? [];
-                // onStatus è un callback sincrono del motore di recovery (deriva da un IO
-                // dentro entity-runner.ts) - non può essere await-ato qui. Il dispatch
-                // resta comunque un Task singolo e breve (una richiesta HTTP per rule),
-                // non un loop di lunga durata come IntervalLoop: "detach and forget" è
-                // sufficiente, non serve un Handle/stop dedicato.
-                void notify(source, lifecycle, rules)();
-              },
-            ),
-          );
-        },
-      }),
+            pipe(
+              lifecycleOf(event),
+              O.match(
+                () => {},
+                (lifecycle) => {
+                  const rules = policy.tripwires[tripwireIndex]?.notify ?? [];
+                  // onStatus è un callback sincrono del motore di recovery (deriva da un IO
+                  // dentro entity-runner.ts) - non può essere await-ato qui. Il dispatch
+                  // resta comunque un Task singolo e breve (una richiesta HTTP per rule),
+                  // non un loop di lunga durata come IntervalLoop: "detach and forget" è
+                  // sufficiente, non serve un Handle/stop dedicato.
+                  void notify(source, lifecycle, rules)();
+                },
+              ),
+            );
+          },
+        }),
+        E.map((handle): readonly [string, Recovery.RecoveryRunnerHandle] => [policy.label, handle]),
+      ),
     ),
-    E.map(
-      (handles): Handle => ({
+    E.map((entries): Handle => {
+      const handles = new Map(entries);
+      return {
         stop: () => {
-          for (const handle of handles) handle.stop();
+          for (const handle of handles.values()) handle.stop();
         },
-      }),
-    ),
+        reset: (policyLabel, entityId, tripwireIndex) =>
+          handles.get(policyLabel)?.reset(entityId, tripwireIndex) ?? false,
+      };
+    }),
   );
 };

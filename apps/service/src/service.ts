@@ -116,6 +116,17 @@ export const create: Effect<ServiceHandle> = pipe(
     const notifyStream = Notify.createNotifyStream();
     const activityStream = Activity.createActivityStream();
 
+    let active: O.Option<ServiceLifecycle.ActiveLifecycle> = O.none;
+
+    // Il motore di recovery esiste solo mentre il servizio è "active" (vedi ActiveLifecycle) -
+    // instrada verso di esso solo se attivo, altrimenti non c'è nulla da riarmare.
+    const resetRecovery = (policyLabel: string, entityId: string, tripwireIndex: number): boolean =>
+      pipe(
+        active,
+        O.map((lifecycle) => lifecycle.recovery.reset(policyLabel, entityId, tripwireIndex)),
+        O.getOrElse(() => false),
+      );
+
     const trpcLog = logger.child("tRPC");
     const trpcServer = Trpc.startServer({
       port: config.trpc.port,
@@ -130,10 +141,9 @@ export const create: Effect<ServiceHandle> = pipe(
         recoveryStream,
         notifyStream,
         activityStream,
+        resetRecovery,
       }),
     });
-
-    let active: O.Option<ServiceLifecycle.ActiveLifecycle> = O.none;
 
     const clearActive: IO.IO<void> = () => {
       active = O.none;

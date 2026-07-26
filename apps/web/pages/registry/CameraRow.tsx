@@ -7,9 +7,12 @@ import type { ReactNode } from "react";
 import { ActivityStat } from "../../components/ActivityStat";
 import { ActivityStatus } from "../../components/ActivityStatus";
 import { PredicateStat } from "../../components/PredicateStat";
+import { RecoveryInterventionBadge, RecoveryResetButtons } from "../../components/RecoveryIntervention";
 import type { AdbDevice } from "../../hooks/useAdbDevices";
 import { adbBridgeColorFor, recoveryColorFor, workflowColorFor } from "./activityColors";
 import type { CameraView, DeviceKind } from "./types";
+
+const RECOVERY_DOMAIN = "suitest-camera";
 
 export function CameraRow({
   camera,
@@ -19,6 +22,7 @@ export function CameraRow({
   onDelete,
   onAssign,
   onLink,
+  onResetRecovery,
 }: {
   camera: CameraView;
   adbStatus: AdbDevice["status"] | null;
@@ -27,6 +31,7 @@ export function CameraRow({
   onDelete: (kind: DeviceKind, id: string) => void;
   onAssign: () => void;
   onLink: () => void;
+  onResetRecovery: (policy: string, entityId: string, tripwireIndex: number) => void;
 }) {
   const connectivity: ReactNode[] = [];
   const activity: ReactNode[] = [];
@@ -38,7 +43,7 @@ export function CameraRow({
     connectivity.push(
       <PredicateStat
         key="pc"
-        domain="suitest-camera"
+        domain={RECOVERY_DOMAIN}
         entityId={videoCaptureDeviceId}
         name="suitest_camera_connected"
         label="Camera status"
@@ -49,7 +54,7 @@ export function CameraRow({
     activity.push(
       <PredicateStat
         key="pr"
-        domain="suitest-camera"
+        domain={RECOVERY_DOMAIN}
         entityId={videoCaptureDeviceId}
         name="suitest_camera_recording"
         label="Recording"
@@ -58,7 +63,7 @@ export function CameraRow({
       />,
       <PredicateStat
         key="pl"
-        domain="suitest-camera"
+        domain={RECOVERY_DOMAIN}
         entityId={videoCaptureDeviceId}
         name="suitest_camera_streaming"
         label="Streaming"
@@ -73,6 +78,15 @@ export function CameraRow({
         entityId={videoCaptureDeviceId}
         label="Tripwire"
         colorFor={recoveryColorFor}
+      />,
+      <RecoveryInterventionBadge key="mi" domain={RECOVERY_DOMAIN} entityId={videoCaptureDeviceId} />,
+    );
+    actions.push(
+      <RecoveryResetButtons
+        key="mr"
+        domain={RECOVERY_DOMAIN}
+        entityId={videoCaptureDeviceId}
+        onReset={onResetRecovery}
       />,
     );
   } else {

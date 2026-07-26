@@ -4,9 +4,12 @@ import { EntryRow, entryRowGridSx, entryRowSubgridSx } from "@supervisor/ui/Entr
 import { ActivityStat } from "../../components/ActivityStat";
 import { ActivityStatus } from "../../components/ActivityStatus";
 import { PredicateStat } from "../../components/PredicateStat";
+import { RecoveryInterventionBadge, RecoveryResetButtons } from "../../components/RecoveryIntervention";
 import { recoveryColorFor, workflowColorFor } from "./activityColors";
 import { TvRow } from "./TvRow";
 import type { CuGroup, RowActions } from "./types";
+
+const RECOVERY_DOMAIN = "suitest-control-unit";
 
 export function ControlUnitCard({
   group,
@@ -16,6 +19,7 @@ export function ControlUnitCard({
   onDelete,
   onAssignCamera,
   onLinkCamera,
+  onResetRecovery,
 }: { group: CuGroup } & RowActions) {
   return (
     <Paper variant="outlined" sx={{ ...entryRowGridSx, p: 2, rowGap: 1 }}>
@@ -28,7 +32,7 @@ export function ControlUnitCard({
         indicators={[
           <PredicateStat
             key="p"
-            domain="suitest-control-unit"
+            domain={RECOVERY_DOMAIN}
             entityId={group.cu.id}
             name="suitest_control_unit_online"
             label="Control unit status"
@@ -42,6 +46,7 @@ export function ControlUnitCard({
             label="Tripwire"
             colorFor={recoveryColorFor}
           />,
+          <RecoveryInterventionBadge key="mi" domain={RECOVERY_DOMAIN} entityId={group.cu.id} />,
         ]}
         context={
           <ActivityStatus
@@ -52,6 +57,9 @@ export function ControlUnitCard({
             colorFor={workflowColorFor}
           />
         }
+        actions={[
+          <RecoveryResetButtons key="mr" domain={RECOVERY_DOMAIN} entityId={group.cu.id} onReset={onResetRecovery} />,
+        ]}
         onToggle={() => onToggle("candybox", group.cu.id, group.cu.controlled)}
         onEdit={() => onEdit("candybox", group.cu.id, group.cu.label)}
         onDelete={() => onDelete("candybox", group.cu.id)}
@@ -68,6 +76,7 @@ export function ControlUnitCard({
               onDelete={onDelete}
               onAssignCamera={onAssignCamera}
               onLinkCamera={onLinkCamera}
+              onResetRecovery={onResetRecovery}
             />
           ))}
         </Box>

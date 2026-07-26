@@ -33,6 +33,7 @@ export type Deps = {
   readonly recoveryStream: Recovery.RecoveryFeed;
   readonly notifyStream: Notify.NotifyFeed;
   readonly activityStream: Activity.ActivityFeed;
+  readonly resetRecovery: (policyLabel: string, entityId: string, tripwireIndex: number) => boolean;
 };
 
 export const createServices = ({
@@ -44,6 +45,7 @@ export const createServices = ({
   recoveryStream,
   notifyStream,
   activityStream,
+  resetRecovery,
 }: Deps): Services.Services => ({
   // Servizio di logging persistente per web-app
   logger: trpcLog.child("web"),
@@ -76,6 +78,8 @@ export const createServices = ({
   tracking: predicateStream,
   // Feed live delle transizioni di stato del motore di recovery
   recovery: recoveryStream,
+  // Riarma manualmente il tripwire di un'entità dopo un esaurimento dei retry
+  recoveryReset: resetRecovery,
 });
 
 const android = (trpcLog: Logger.Tagged, stream: AdbStream.AdbDeviceStream): Services.AndroidBridge => ({
