@@ -147,8 +147,6 @@ const stopResources = ({ adbTracking, suitestTracking, androidBridge, reconcileL
 
 export const createActiveLifecycle = (env: Env): TE.TaskEither<CreateError, ActiveLifecycle> =>
   pipe(
-    // Unico passo che può fallire: nessuna risorsa viene creata prima che sia riuscito,
-    // quindi non serve alcun rollback in caso di errore (nulla da disfare).
     Registry.sync({
       logger: env.logger.child("Registry"),
       suitestConfig: env.config.suitest,

@@ -28,7 +28,7 @@
   "log": {
     "level": "debug", // "error" | "warn" | "info" | "debug"
     //"file": "logs/service.log"
-    "network": false // stampa le risposte HTTP (get/post, singole o paginate) indipendentemente da "level"
+    "network": false // stampa le risposte HTTP (get/post, singole o paginate) indipendentemente da "tripwire"
   },
   "adb": {
     "port": 5555,
@@ -64,7 +64,7 @@
     {
       "domain": "suitest-camera",
       "label": "camera-recovery-demo",
-      "levels": [
+      "tripwires": [
         {
           "grace": "10s",
           "predicate": ["ref", "suitest_camera_connected"],
@@ -86,14 +86,14 @@
       "cameras": [
         {
           "id": "tablet",
-          "label": "Tablet",
+          "label": "Lenovo Tab M10",
           "controlled": true,
           "videoCaptureDeviceId": null,
           "adbId": "192.168.1.4:5555"
         }
       ],
       "tvs": [{ "deviceId": "tv-001", "label": "TV_1", "controlled": false, "ip": "192.168.2.1" }],
-      "adb": [{ "id": "192.168.1.4:5555", "label": "Tablet", "target": "192.168.1.4:5555" }]
+      "adb": [{ "id": "192.168.1.4:5555", "label": "Lenovo Tab M10", "target": "192.168.1.4:5555" }]
     }
   }
 }

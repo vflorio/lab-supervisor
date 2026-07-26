@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import type * as Interpreter from "../workflow/interpreter";
 import * as Compile from "./compile";
 import * as EntityRunner from "./entity-runner";
-import type { RecoveryLevel } from "./model";
+import type { RecoveryTripwire } from "./model";
 
 // -------------------------------------------------------------------------------------
 // Nessun timer reale: il tempo è solo un numero passato a `observe`.
@@ -32,9 +32,9 @@ const capabilitiesWith = (impl: Partial<Interpreter.CommandCapabilities>): Inter
   ...impl,
 });
 
-const compileOrThrow = (levels: readonly RecoveryLevel[]): readonly Compile.CompiledLevel[] => {
-  const result = Compile.compileLevels(levels);
-  if (E.isLeft(result)) throw new Error("test setup: invalid levels");
+const compileOrThrow = (tripwires: readonly RecoveryTripwire[]): readonly Compile.CompiledTripwire[] => {
+  const result = Compile.compileTripwires(tripwires);
+  if (E.isLeft(result)) throw new Error("test setup: invalid tripwires");
   return result.right;
 };
 
@@ -43,7 +43,7 @@ const GRACE = "1s"; // 1000ms
 describe("recovery/entity-runner", () => {
   it("does not run recovery before grace has elapsed", async () => {
     const calls: string[] = [];
-    const levels: readonly RecoveryLevel[] = [
+    const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: GRACE,
         predicate: { type: "ref", name: "connected" },
@@ -55,7 +55,7 @@ describe("recovery/entity-runner", () => {
       },
     ];
 
-    const runner = EntityRunner.create(compileOrThrow(levels), {
+    const runner = EntityRunner.create(compileOrThrow(tripwires), {
       logger: noopLogger as any,
       workflows: [{ name: "reconnect", commands: [{ type: "reboot" }] }],
       capabilities: capabilitiesWith({
@@ -75,7 +75,7 @@ describe("recovery/entity-runner", () => {
 
   it("runs the pipeline exactly once when grace elapses, then stays quiet until it recovers", async () => {
     const calls: string[] = [];
-    const levels: readonly RecoveryLevel[] = [
+    const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: GRACE,
         predicate: { type: "ref", name: "connected" },
@@ -87,7 +87,7 @@ describe("recovery/entity-runner", () => {
       },
     ];
 
-    const runner = EntityRunner.create(compileOrThrow(levels), {
+    const runner = EntityRunner.create(compileOrThrow(tripwires), {
       logger: noopLogger as any,
       workflows: [{ name: "reconnect", commands: [{ type: "reboot" }] }],
       capabilities: capabilitiesWith({
@@ -121,9 +121,9 @@ describe("recovery/entity-runner", () => {
     expect(calls).toEqual(["reboot", "reboot"]);
   });
 
-  it("retries the pipeline according to the level's retry policy before giving up", async () => {
+  it("retries the pipeline according to the tripwire's retry policy before giving up", async () => {
     let attempts = 0;
-    const levels: readonly RecoveryLevel[] = [
+    const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: GRACE,
         predicate: { type: "ref", name: "connected" },
@@ -135,7 +135,7 @@ describe("recovery/entity-runner", () => {
       },
     ];
 
-    const runner = EntityRunner.create(compileOrThrow(levels), {
+    const runner = EntityRunner.create(compileOrThrow(tripwires), {
       logger: noopLogger as any,
       workflows: [{ name: "reconnect", commands: [{ type: "restartApp", packageId: "pkg" }] }],
       capabilities: capabilitiesWith({
@@ -153,13 +153,13 @@ describe("recovery/entity-runner", () => {
     expect(attempts).toBe(3);
   });
 
-  it("runs independent levels independently, based on each level's own predicate and grace", async () => {
+  it("runs independent tripwires independently, based on each tripwire's own predicate and grace", async () => {
     const fired: string[] = [];
-    const levels: readonly RecoveryLevel[] = [
+    const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: "1s",
         predicate: { type: "ref", name: "connected" },
-        pipeline: { type: "workflow", workflowName: "level-1" },
+        pipeline: { type: "workflow", workflowName: "tripwire-1" },
         retry: [
           ["constantDelay", "1ms"],
           ["limitRetries", 1],
@@ -168,7 +168,7 @@ describe("recovery/entity-runner", () => {
       {
         grace: "2s",
         predicate: { type: "ref", name: "recording" },
-        pipeline: { type: "workflow", workflowName: "level-2" },
+        pipeline: { type: "workflow", workflowName: "tripwire-2" },
         retry: [
           ["constantDelay", "1ms"],
           ["limitRetries", 1],
@@ -176,19 +176,19 @@ describe("recovery/entity-runner", () => {
       },
     ];
 
-    const runner = EntityRunner.create(compileOrThrow(levels), {
+    const runner = EntityRunner.create(compileOrThrow(tripwires), {
       logger: noopLogger as any,
       workflows: [
-        { name: "level-1", commands: [{ type: "wakeUp" }] },
-        { name: "level-2", commands: [{ type: "reboot" }] },
+        { name: "tripwire-1", commands: [{ type: "wakeUp" }] },
+        { name: "tripwire-2", commands: [{ type: "reboot" }] },
       ],
       capabilities: capabilitiesWith({
         wakeUp: () => {
-          fired.push("level-1");
+          fired.push("tripwire-1");
           return TE.right(undefined);
         },
         reboot: () => {
-          fired.push("level-2");
+          fired.push("tripwire-2");
           return TE.right(undefined);
         },
       }),
@@ -198,10 +198,10 @@ describe("recovery/entity-runner", () => {
     const lookup = (name: string) => name === "connected";
 
     await runner.observe(lookup, 0);
-    await runner.observe(lookup, 1000); // level-1 sano, non scatta; level-2 ancora sotto grace (2s)
+    await runner.observe(lookup, 1000); // tripwire-1 sano, non scatta; tripwire-2 ancora sotto grace (2s)
     expect(fired).toEqual([]);
 
-    await runner.observe(lookup, 2000); // level-2 raggiunge grace -> scatta
-    expect(fired).toEqual(["level-2"]);
+    await runner.observe(lookup, 2000); // tripwire-2 raggiunge grace -> scatta
+    expect(fired).toEqual(["tripwire-2"]);
   });
 });

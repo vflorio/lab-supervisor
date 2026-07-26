@@ -38,7 +38,7 @@ describe("recovery/runner", () => {
     const policy: RecoveryPolicy = {
       label: "test-policy",
       domain: "test-domain",
-      levels: [
+      tripwires: [
         {
           grace: "10ms",
           predicate: { type: "ref", name: "healthy" },
@@ -83,7 +83,7 @@ describe("recovery/runner", () => {
     const policy: RecoveryPolicy = {
       label: "test-policy",
       domain: "test-domain",
-      levels: [
+      tripwires: [
         {
           grace: "10ms",
           predicate: { type: "ref", name: "healthy" },
@@ -130,7 +130,7 @@ describe("recovery/runner", () => {
     const policy: RecoveryPolicy = {
       label: "test-policy",
       domain: "test-domain",
-      levels: [
+      tripwires: [
         {
           grace: "10ms",
           predicate: { type: "ref", name: "healthy" },
@@ -173,7 +173,7 @@ describe("recovery/runner", () => {
     const policy: RecoveryPolicy = {
       label: "broken",
       domain: "test-domain",
-      levels: [
+      tripwires: [
         {
           grace: "10ms",
           predicate: { type: "ref", name: "healthy" },

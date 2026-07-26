@@ -6,7 +6,7 @@ import type { AppError } from "../errors";
 import * as Machine from "../state-machine/machine";
 
 // -------------------------------------------------------------------------------------
-// Macchina a stati di un singolo RecoveryLevel
+// Macchina a stati di un singolo RecoveryTripwire
 //
 // Semantica "tripwire indipendente" (non escalation sequenziale):
 // il livello osserva solo il proprio predicate;
@@ -14,12 +14,12 @@ import * as Machine from "../state-machine/machine";
 // il livello non può ri-scattare finché il predicate non torna vero
 // -------------------------------------------------------------------------------------
 
-export type LevelState =
+export type TripwireState =
   | { readonly tag: "healthy" }
   | { readonly tag: "pending"; readonly since: number }
   | { readonly tag: "fired" };
 
-export const initial: LevelState = { tag: "healthy" };
+export const initial: TripwireState = { tag: "healthy" };
 
 export interface Observe {
   readonly tag: "observe";
@@ -32,9 +32,9 @@ export interface RunRecovery {
 }
 
 export const reduce =
-  (graceMs: number): Machine.Reducer<LevelState, Observe, RunRecovery> =>
+  (graceMs: number): Machine.Reducer<TripwireState, Observe, RunRecovery> =>
   (state, event) =>
-    match<[LevelState, Observe], Machine.Transition<LevelState, RunRecovery>>([state, event])
+    match<[TripwireState, Observe], Machine.Transition<TripwireState, RunRecovery>>([state, event])
       .with([{ tag: P._ }, { healthy: true }], () => Machine.transition(initial))
       .with([{ tag: "healthy" }, { now: P.select() }], (now) => Machine.transition({ tag: "pending", since: now }))
       .with([{ tag: "pending", since: P.select("since") }, { now: P.select("now") }], ({ since, now }) =>
@@ -64,5 +64,5 @@ export const make = <Error extends AppError>(
   graceMs: number,
   runWithRetry: TE.TaskEither<Error, boolean>,
   onResult: (succeeded: boolean) => void,
-): Machine.Machine<unknown, Error, LevelState, Observe, RunRecovery> =>
+): Machine.Machine<unknown, Error, TripwireState, Observe, RunRecovery> =>
   Machine.make(reduce(graceMs), makeHandler(runWithRetry, onResult));

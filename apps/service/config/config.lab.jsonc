@@ -30,7 +30,7 @@
   "log": {
     "level": "debug" // "error" | "warn" | "info" | "debug"
     //"file": "logs/service.log"
-    //"network": true // stampa le risposte HTTP (get/post, singole o paginate) indipendentemente da "level"
+    //"network": true // stampa le risposte HTTP (get/post, singole o paginate) indipendentemente da "tripwire"
   },
   "adb": {
     "port": 5555,

@@ -8,7 +8,7 @@ import type { PolicyDecodeError } from "../retry/codec";
 import type { Policy } from "../retry/retry";
 import type { CommandCapabilities } from "../workflow/interpreter";
 import type { Workflow } from "../workflow/workflow";
-import { type CompiledLevel, compileLevels } from "./compile";
+import { type CompiledTripwire, compileTripwires } from "./compile";
 import * as EntityRunner from "./entity-runner";
 import type { RecoveryPolicy } from "./model";
 
@@ -38,8 +38,8 @@ export const start = (
   env: RecoveryRunnerEnv,
 ): E.Either<PolicyDecodeError, RecoveryRunnerHandle> =>
   pipe(
-    compileLevels(policy.levels),
-    E.map((compiledLevels: readonly CompiledLevel[]) => {
+    compileTripwires(policy.tripwires),
+    E.map((compiledTripwires: readonly CompiledTripwire[]) => {
       const now = env.now ?? Date.now;
       const factsByEntity = new Map<string, Map<string, PredicateValue>>();
       const runnersByEntity = new Map<string, EntityRunner.EntityRunner>();
@@ -48,7 +48,7 @@ export const start = (
         const existing = runnersByEntity.get(entityId);
         if (existing) return existing;
 
-        const created = EntityRunner.create(compiledLevels, {
+        const created = EntityRunner.create(compiledTripwires, {
           logger: env.logger.child(entityId),
           workflows: env.workflows,
           capabilities: env.capabilitiesFor(entityId),

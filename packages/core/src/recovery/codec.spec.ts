@@ -3,11 +3,11 @@ import { describe, expect, it } from "vitest";
 import { RecoveryPolicyCodec } from "./codec";
 
 describe("recovery/codec", () => {
-  it("decodes a recovery policy with escalating levels", () => {
+  it("decodes a recovery policy with escalating tripwires", () => {
     const json = {
       label: "Recovery A",
       domain: "suitest-camera",
-      levels: [
+      tripwires: [
         {
           grace: "1m",
           predicate: ["ref", "suitest_camera_connected"],
@@ -41,16 +41,16 @@ describe("recovery/codec", () => {
     const result = RecoveryPolicyCodec.decode(json);
     expect(E.isRight(result)).toBe(true);
     if (E.isRight(result)) {
-      expect(result.right.levels).toHaveLength(3);
-      expect(result.right.levels[0]?.predicate).toStrictEqual({ type: "ref", name: "suitest_camera_connected" });
+      expect(result.right.tripwires).toHaveLength(3);
+      expect(result.right.tripwires[0]?.predicate).toStrictEqual({ type: "ref", name: "suitest_camera_connected" });
     }
   });
 
-  it("fails when a level is missing a required field", () => {
+  it("fails when a tripwire is missing a required field", () => {
     const result = RecoveryPolicyCodec.decode({
       label: "Recovery A",
       domain: "suitest-camera",
-      levels: [{ grace: "1m", predicate: ["ref", "x"], pipeline: ["workflow", "y"] }],
+      tripwires: [{ grace: "1m", predicate: ["ref", "x"], pipeline: ["workflow", "y"] }],
     });
     expect(E.isLeft(result)).toBe(true);
   });

@@ -30,7 +30,7 @@
   "log": {
     "level": "debug", // "error" | "warn" | "info" | "debug"
     //"file": "logs/service.log"
-    "network": false // stampa le risposte HTTP (get/post, singole o paginate) indipendentemente da "level"
+    "network": false // stampa le risposte HTTP (get/post, singole o paginate) indipendentemente da "tripwire"
   },
   "adb": {
     "port": 5555,
@@ -71,7 +71,7 @@
     {
       "label": "camera-recovery-demo",
       "domain": "suitest-camera",
-      "levels": [
+      "tripwires": [
         {
           "grace": "10s",
           "predicate": ["ref", "suitest_camera_connected"],

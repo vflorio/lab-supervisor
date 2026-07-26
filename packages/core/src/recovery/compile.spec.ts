@@ -1,11 +1,11 @@
 import * as E from "fp-ts/Either";
 import { describe, expect, it } from "vitest";
-import { compileLevels } from "./compile";
-import type { RecoveryLevel } from "./model";
+import { compileTripwires } from "./compile";
+import type { RecoveryTripwire } from "./model";
 
 describe("recovery/compile", () => {
-  it("compiles grace, predicate and retry policy for every level", () => {
-    const levels: readonly RecoveryLevel[] = [
+  it("compiles grace, predicate and retry policy for every tripwire", () => {
+    const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: "1m",
         predicate: { type: "ref", name: "suitest_camera_connected" },
@@ -17,7 +17,7 @@ describe("recovery/compile", () => {
       },
     ];
 
-    const result = compileLevels(levels);
+    const result = compileTripwires(tripwires);
     expect(E.isRight(result)).toBe(true);
     if (E.isRight(result)) {
       expect(result.right).toHaveLength(1);
@@ -27,8 +27,8 @@ describe("recovery/compile", () => {
     }
   });
 
-  it("fails fast when a level's retry policy is malformed", () => {
-    const levels: readonly RecoveryLevel[] = [
+  it("fails fast when a tripwire's retry policy is malformed", () => {
+    const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: "1m",
         predicate: { type: "ref", name: "x" },
@@ -37,7 +37,7 @@ describe("recovery/compile", () => {
       },
     ];
 
-    const result = compileLevels(levels);
+    const result = compileTripwires(tripwires);
     expect(E.isLeft(result)).toBe(true);
   });
 });

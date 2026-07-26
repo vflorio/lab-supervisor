@@ -8,7 +8,7 @@ import { PipelineCodec } from "../workflow/pipeline-codec";
 // Codec
 // -------------------------------------------------------------------------------------
 
-export const RecoveryLevelCodec = t.type({
+export const RecoveryTripwireCodec = t.type({
   grace: DurationString,
   predicate: PredicateExpressionCodec,
   pipeline: PipelineCodec,
@@ -18,5 +18,5 @@ export const RecoveryLevelCodec = t.type({
 export const RecoveryPolicyCodec = t.type({
   label: t.string,
   domain: t.string,
-  levels: t.array(RecoveryLevelCodec),
+  tripwires: t.array(RecoveryTripwireCodec),
 });

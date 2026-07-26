@@ -8,7 +8,7 @@ import type { Pipeline } from "../workflow/pipeline";
 // vera = strada buona), una tolleranza prima di agire (grace), cosa eseguire quando
 // il predicate resta falso oltre grace (pipeline) e con quale policy ritentare (retry).
 //
-// Più livelli (levels) formano un'unica policy nominata (label) - i livelli sono ordinati
+// Più livelli (tripwires) formano un'unica policy nominata (label) - i livelli sono ordinati
 // per grace crescente e rappresentano un'escalation: condizioni/azioni diverse man mano
 // che il tempo passa, non un semplice retry dello stesso identico livello.
 //
@@ -17,7 +17,7 @@ import type { Pipeline } from "../workflow/pipeline";
 // presumibilmente sopra state-machine/machine.ts.
 // -------------------------------------------------------------------------------------
 
-export interface RecoveryLevel {
+export interface RecoveryTripwire {
   readonly grace: DurationString;
   readonly predicate: PredicateExpression;
   readonly pipeline: Pipeline;
@@ -30,5 +30,5 @@ export interface RecoveryPolicy {
   // cui la policy si applica - il motore a runtime la esegue per ogni entityId visto in quel
   // dominio.
   readonly domain: string;
-  readonly levels: readonly RecoveryLevel[];
+  readonly tripwires: readonly RecoveryTripwire[];
 }

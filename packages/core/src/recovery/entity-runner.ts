@@ -7,8 +7,8 @@ import * as Machine from "../state-machine/machine";
 import type { CommandCapabilities, WorkflowEnv } from "../workflow/interpreter";
 import { interpretPipeline } from "../workflow/pipeline-interpreter";
 import type { Workflow } from "../workflow/workflow";
-import type { CompiledLevel } from "./compile";
-import * as LevelMachine from "./level-machine";
+import type { CompiledTripwire } from "./compile";
+import * as TripwireMachine from "./tripwire-machine";
 
 // -------------------------------------------------------------------------------------
 // Guida tutti i livelli di una RecoveryPolicy per una singola entità
@@ -25,39 +25,39 @@ export interface EntityRunner {
   readonly observe: (lookup: PredicateLookup, now: number) => Promise<void>;
 }
 
-interface LevelInstance {
-  readonly predicate: CompiledLevel["predicate"];
+interface TripwireInstance {
+  readonly predicate: CompiledTripwire["predicate"];
   readonly machine: Machine.Machine<
     unknown,
     AppError,
-    LevelMachine.LevelState,
-    LevelMachine.Observe,
-    LevelMachine.RunRecovery
+    TripwireMachine.TripwireState,
+    TripwireMachine.Observe,
+    TripwireMachine.RunRecovery
   >;
   readonly logger: Logger.Tagged;
-  state: LevelMachine.LevelState;
+  state: TripwireMachine.TripwireState;
 }
 
-export const create = (compiledLevels: readonly CompiledLevel[], env: EntityRunnerEnv): EntityRunner => {
+export const create = (compiledTripwires: readonly CompiledTripwire[], env: EntityRunnerEnv): EntityRunner => {
   const workflowEnv: WorkflowEnv = {
     logger: env.logger,
     capabilities: env.capabilities,
     workflows: env.workflows,
   };
 
-  const instances: LevelInstance[] = compiledLevels.map((level, index) => {
-    const levelLogger = env.logger.child(`Recovery-Level:${index}`);
+  const instances: TripwireInstance[] = compiledTripwires.map((tripwire, index) => {
+    const tripwireLogger = env.logger.child(`Recovery-Tripwire:${index}`);
 
     const runWithRetry = Retry.retryingUntil(
-      level.retryPolicy,
-      levelLogger,
-    )(interpretPipeline(level.pipeline)(workflowEnv));
+      tripwire.retryPolicy,
+      tripwireLogger,
+    )(interpretPipeline(tripwire.pipeline)(workflowEnv));
 
-    const machine = LevelMachine.make(level.graceMs, runWithRetry, (succeeded) =>
-      levelLogger.info(succeeded ? "recovery succeeded" : "recovery exhausted retries without success")(),
+    const machine = TripwireMachine.make(tripwire.graceMs, runWithRetry, (succeeded) =>
+      tripwireLogger.info(succeeded ? "recovery succeeded" : "recovery exhausted retries without success")(),
     );
 
-    return { predicate: level.predicate, machine, logger: levelLogger, state: LevelMachine.initial };
+    return { predicate: tripwire.predicate, machine, logger: tripwireLogger, state: TripwireMachine.initial };
   });
 
   const observe = async (lookup: PredicateLookup, now: number): Promise<void> => {
