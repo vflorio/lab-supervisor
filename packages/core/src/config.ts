@@ -92,7 +92,7 @@ const ServiceCodec = t.intersection([
     trpc: TrpcCodec,
     registry: RegistryCodec,
   }),
-  // `recovery` (Recovery Model): nessun motore a runtime la consuma ancora, resta opzionale
+  // `recovery` (Recovery Model) opzionale perché non tutte le installazioni definiscono policy di recovery
   t.partial({
     recovery: t.array(RecoveryPolicyCodec),
   }),

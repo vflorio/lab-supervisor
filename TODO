@@ -11,8 +11,8 @@
 - [X] Target model: divisione esplicita PersistentTarget (porta persistente = connected) & ConnectingTarget (porta random = connecting)
 - [X] Recovery policy model: offline threshold, grace period, retry count, delay tra tentativi
     - [ ] Model/FSM/ADT: Recovery State = healthy / recovery / fatal-error o manual-intervention-required  
-    - [ ] Notifications: associazione a via config ad ogni tripwire, wiring= (UI: notistack, service: Slack (se configurato))
-- [ ] Notification policy model: immediate vs. after-all-retries-exhausted
+    - [X] Notifications: associazione a via config ad ogni tripwire, wiring= (UI: notistack, service: Slack (se configurato))
+- [X] Notification policy model: immediate vs. exhausted (after-all-retries)
 - [X] Config model: configurazione completa supervisor (devices, policies, schedule, Slack)
 - [X] Predicates model: sistema per dichiare info di interesse generale (quindi esposti a tRPC e tramite api event-driven) estratte da servizi specifici 
 
@@ -55,21 +55,21 @@
 
 ### Retry Engine
 - [X] Retry model (constant, exponential, limit, cap)
-- [ ] Generic retry runner: tentativi configurabili, delay, strategia per device type
-- [ ] Backoff strategy (fixed / exponential) - decidere quale usare
+- [X] Generic retry runner: tentativi configurabili, delay, strategia per device type
+- [X] Backoff strategy (fixed / exponential)
 - [ ] Marcare device come "intervento manuale necessario" dopo esaurimento retry
 
 ## Notifications
 
 - [X] Slack client
 - [ ] Notification payload builder: info device, motivo failure, riepilogo tentativi recovery
-- [ ] Invio notifica al termine dei retry senza successo
-- [ ] Invio notifica immediata per failure critici (configurabile per policy)
+- [X] Invio notifica al termine dei retry senza successo
+- [X] Invio notifica immediata per failure critici (configurabile per policy)
 
 ## Operational Safety
 
 - [ ] Flag maintenance mode manuale: impedire recovery automatico per device spento manualmente
-- [ ] State machine centralizzata per gestione policy: il servizio opera in base a stati finiti (active, paused, recovering) - es. pausa automatica su perdita connettività (connection tracker)
+- [X] State machine centralizzata per gestione policy: il servizio opera in base a stati finiti (active, paused, recovering) - es. pausa automatica su perdita connettività (connection tracker)
 
 ## Service / Runtime
 

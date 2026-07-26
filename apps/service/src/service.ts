@@ -1,8 +1,10 @@
 import * as ActivationSchedule from "@supervisor/core/activation/schedule";
+import * as Activity from "@supervisor/core/activity/stream";
 import type * as ConfigModel from "@supervisor/core/config";
 import * as Errors from "@supervisor/core/errors";
 import * as LogStream from "@supervisor/core/log-stream";
 import * as Logger from "@supervisor/core/logger";
+import * as Notify from "@supervisor/core/notify/stream";
 import * as Predicates from "@supervisor/core/predicates/index";
 import * as Recovery from "@supervisor/core/recovery/index";
 import * as RetryPolicy from "@supervisor/core/retry/retry";
@@ -111,13 +113,24 @@ export const create: Effect<ServiceHandle> = pipe(
     const predicateStream = Predicates.createPredicateStream();
     const adbDeviceStream = AdbStream.createAdbDeviceStream();
     const recoveryStream = Recovery.createRecoveryStream();
+    const notifyStream = Notify.createNotifyStream();
+    const activityStream = Activity.createActivityStream();
 
     const trpcLog = logger.child("tRPC");
     const trpcServer = Trpc.startServer({
       port: config.trpc.port,
       hostname: config.trpc.hostname,
       logger: trpcLog,
-      services: createServices({ config, trpcLog, adbDeviceStream, logStream, predicateStream, recoveryStream }),
+      services: createServices({
+        config,
+        trpcLog,
+        logStream,
+        adbDeviceStream,
+        predicateStream,
+        recoveryStream,
+        notifyStream,
+        activityStream,
+      }),
     });
 
     let active: O.Option<ServiceLifecycle.ActiveLifecycle> = O.none;
@@ -141,6 +154,8 @@ export const create: Effect<ServiceHandle> = pipe(
           predicateStream,
           adbDeviceStream,
           recoveryStream,
+          notifyStream,
+          activityStream,
         }),
         TE.tapIO((lifecycle) => () => {
           active = O.some(lifecycle);

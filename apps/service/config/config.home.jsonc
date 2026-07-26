@@ -74,7 +74,15 @@
           // Cosa fare quando il predicate resta falso per >= grace
           "pipeline": ["workflow", "open-chrome"],
           // Cosa fare se la pipeline fallisce (es. crash, timeout, ecc.)
-          "retry": [["constantDelay", "10s"], ["limitRetries", 2]]
+          "retry": [["constantDelay", "10s"], ["limitRetries", 2]],
+          "notify": [
+            {
+              "type": ["slack"],
+              "channel": "#lab-supervisor",
+              "message": "Camera recovery failed",
+              "policy": ["immediate", "exhausted"] // Invia in 2 lifcycles diversi
+            }
+          ]
         }
         //{
         //  "grace": "60s",

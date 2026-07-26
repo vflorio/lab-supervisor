@@ -21,9 +21,7 @@ export interface AndroidDeviceSnapshot {
 export interface AndroidBridge {
   readonly devices: () => TE.TaskEither<Adb.Error, readonly AndroidDeviceSnapshot[]>;
   readonly reboot: (target: Network.Endpoint) => TE.TaskEither<Adb.Error, void>;
-  // Feed live alimentato dal tracker ADB centralizzato (apps/service/src/tracking/adb),
-  // usato dalla subscription tRPC `android.devicesTail` invece di ripollare `adb devices`
-  // in autonomia (era una fonte di poll ridondante rispetto al tracker).
+  // Feed alimentato dal tracker ADB
   readonly devicesFeed: {
     readonly subscribe: (listener: (devices: readonly AndroidDeviceSnapshot[]) => void) => () => void;
     readonly snapshot: () => readonly AndroidDeviceSnapshot[];
@@ -74,10 +72,9 @@ export interface Services {
   readonly mdns: MdnsDiscovery;
   readonly registry: DeviceRegistry;
   readonly settings: Settings;
-  readonly notifications: Notifications;
   // Questo serve per permettere di avere in logger transportato in HTTP (per loggare errori critici delle web-app)
   readonly logger: Logger.Tagged; // Web -> Service
-  // Feed live dei log di servizio (formattati come su console) per la subscription tRPC verso la web-app
+  readonly notifications: NotifyFeed; // Service -> Web
   readonly logs: LogFeed; // Service -> Web
   // Feed live dei predicati di activation (packages/core/src/predicates) per la subscription tRPC verso la web-app
   readonly tracking: PredicateFeed; // Service -> Web

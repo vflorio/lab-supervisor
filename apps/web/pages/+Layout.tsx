@@ -12,11 +12,13 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { SnackbarProvider } from "notistack";
 import { useState } from "react";
 import { match } from "ts-pattern";
 import { usePageContext } from "vike-react/usePageContext";
 import { LogPanel } from "../components/LogPanel";
 import { LogFeedProvider, useLogFeed } from "../hooks/useLogFeed";
+import { NotifyToaster } from "../hooks/useNotify";
 import { PredicatesProvider } from "../hooks/usePredicates";
 import "./Layout.css";
 import { theme } from "../theme";
@@ -34,17 +36,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <LogFeedProvider>
-        <PredicatesProvider>
-          <Box sx={{ display: "flex", height: "100vh", width: "100%" }}>
-            <Sidebar />
-            <Box id="page-content" component="main" sx={{ flexGrow: 2, minWidth: 0, p: { xs: 2, md: 4 } }}>
-              {children}
+      <SnackbarProvider maxSnack={3} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
+        <LogFeedProvider>
+          <PredicatesProvider>
+            <NotifyToaster />
+            <Box sx={{ display: "flex", height: "100vh", width: "100%" }}>
+              <Sidebar />
+              <Box id="page-content" component="main" sx={{ flexGrow: 2, minWidth: 0, p: { xs: 2, md: 4 } }}>
+                {children}
+              </Box>
+              <LogPanel />
             </Box>
-            <LogPanel />
-          </Box>
-        </PredicatesProvider>
-      </LogFeedProvider>
+          </PredicatesProvider>
+        </LogFeedProvider>
+      </SnackbarProvider>
     </ThemeProvider>
   );
 }

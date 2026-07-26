@@ -12,6 +12,7 @@
     "@trpc/client": "11.18.0",
     "@vikejs/express": "0.2.4",
     "express": "5.2.1",
+    "notistack": "^3.0.2",
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "ts-pattern": "5.9.0",

@@ -1,4 +1,5 @@
 import type { DurationString } from "../date-time";
+import type { NotifyRule } from "../notify/model";
 import type { PredicateExpression } from "../predicates/expression";
 import type { PolicyJson } from "../retry/codec";
 import type { Pipeline } from "../workflow/pipeline";
@@ -22,13 +23,13 @@ export interface RecoveryTripwire {
   readonly predicate: PredicateExpression;
   readonly pipeline: Pipeline;
   readonly retry: PolicyJson;
+  readonly notify?: readonly NotifyRule[];
 }
 
 export interface RecoveryPolicy {
   readonly label: string;
-  // Dominio tracciato (vedi packages/core/src/predicates, es. "adb" | "suitest-camera" | ...) a
-  // cui la policy si applica - il motore a runtime la esegue per ogni entityId visto in quel
-  // dominio.
+  // Dominio tracciato (es. "adb" | "suitest-camera" | ...) a cui la policy si applica;
+  // il motore a runtime la esegue per ogni entityId visto in quel dominio.
   readonly domain: string;
   readonly tripwires: readonly RecoveryTripwire[];
 }

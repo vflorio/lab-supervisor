@@ -46,6 +46,64 @@ describe("recovery/codec", () => {
     }
   });
 
+  it("decodes an optional notify block on a tripwire", () => {
+    const json = {
+      label: "Recovery A",
+      domain: "suitest-camera",
+      tripwires: [
+        {
+          grace: "10s",
+          predicate: ["ref", "suitest_camera_connected"],
+          pipeline: ["workflow", "open-chrome"],
+          retry: [
+            ["constantDelay", "10s"],
+            ["limitRetries", 2],
+          ],
+          notify: [
+            {
+              type: ["slack"],
+              channel: "#lab-supervisor",
+              message: "Camera recovery failed",
+              policy: ["immediate", "exhausted"],
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = RecoveryPolicyCodec.decode(json);
+    expect(E.isRight(result)).toBe(true);
+    if (E.isRight(result)) {
+      expect(result.right.tripwires[0]?.notify).toStrictEqual([
+        {
+          type: { type: "slack" },
+          channel: "#lab-supervisor",
+          message: "Camera recovery failed",
+          policy: ["immediate", "exhausted"],
+        },
+      ]);
+    }
+  });
+
+  it("decodes a tripwire without a notify block", () => {
+    const result = RecoveryPolicyCodec.decode({
+      label: "Recovery A",
+      domain: "suitest-camera",
+      tripwires: [
+        {
+          grace: "10s",
+          predicate: ["ref", "x"],
+          pipeline: ["workflow", "y"],
+          retry: [["constantDelay", "10s"]],
+        },
+      ],
+    });
+    expect(E.isRight(result)).toBe(true);
+    if (E.isRight(result)) {
+      expect(result.right.tripwires[0]?.notify).toBeUndefined();
+    }
+  });
+
   it("fails when a tripwire is missing a required field", () => {
     const result = RecoveryPolicyCodec.decode({
       label: "Recovery A",

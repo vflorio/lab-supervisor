@@ -4,6 +4,7 @@ import { router } from "./instance";
 import { androidRouter } from "./routers/android";
 import { registryRouter } from "./routers/device-registry";
 import { logsRouter } from "./routers/logs";
+import { notifyRouter } from "./routers/notify";
 import { recoveryRouter } from "./routers/recovery";
 import { settingsRouter } from "./routers/settings";
 import { trackingRouter } from "./routers/tracking";
@@ -19,6 +20,7 @@ export const appRouter = router({
   android: androidRouter,
   registry: registryRouter,
   logs: logsRouter,
+  notify: notifyRouter,
   recovery: recoveryRouter,
   settings: settingsRouter,
   tracking: trackingRouter,

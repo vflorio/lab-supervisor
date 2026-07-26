@@ -2,6 +2,7 @@ import * as Config from "@supervisor/core/config";
 import type * as LogStream from "@supervisor/core/log-stream";
 import type * as Logger from "@supervisor/core/logger";
 import * as Network from "@supervisor/core/network";
+import type * as Notify from "@supervisor/core/notify/stream";
 import type * as Predicates from "@supervisor/core/predicates/index";
 import type * as Recovery from "@supervisor/core/recovery/index";
 import * as Adb from "@supervisor/core/services/adb";
@@ -29,6 +30,7 @@ export type Deps = {
   readonly adbDeviceStream: AdbStream.AdbDeviceStream;
   readonly predicateStream: Predicates.PredicateFeed;
   readonly recoveryStream: Recovery.RecoveryFeed;
+  readonly notifyStream: Notify.NotifyFeed;
 };
 
 export const createServices = ({
@@ -38,6 +40,7 @@ export const createServices = ({
   logStream,
   predicateStream,
   recoveryStream,
+  notifyStream,
 }: Deps): Services.Services => ({
   // Servizio di logging persistente per web-app
   logger: trpcLog.child("web"),
@@ -48,8 +51,8 @@ export const createServices = ({
   // TODO: Servizio di DNS-SD (Service Discovery)
   mdns: {},
 
-  // TODO: Servizio di notifiche
-  notifications: {},
+  // Feed live delle notifiche dispatchate dal motore di recovery
+  notifications: notifyStream,
 
   // Servizio di gestione del registry dei device
   registry: registry(config.registry.dbPath),

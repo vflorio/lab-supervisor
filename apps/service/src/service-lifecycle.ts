@@ -2,6 +2,7 @@ import type * as ConfigModel from "@supervisor/core/config";
 import * as Errors from "@supervisor/core/errors";
 import * as IntervalLoop from "@supervisor/core/interval-loop";
 import type * as Logger from "@supervisor/core/logger";
+import type * as Notify from "@supervisor/core/notify/stream";
 import type * as Predicates from "@supervisor/core/predicates/index";
 import type * as Recovery from "@supervisor/core/recovery/index";
 import type * as RetryPolicy from "@supervisor/core/retry/retry";
@@ -45,6 +46,7 @@ export interface Env {
   readonly predicateStream: Predicates.PredicateStream;
   readonly adbDeviceStream: AdbStream.AdbDeviceStream;
   readonly recoveryStream: Recovery.RecoveryStream;
+  readonly notifyStream: Notify.NotifyStream;
 }
 
 export interface ActiveLifecycle {
@@ -98,6 +100,7 @@ const createRecovery = (
       config: env.config,
       predicateStream: env.predicateStream,
       recoveryStream: env.recoveryStream,
+      notifyStream: env.notifyStream,
     }),
     TE.fromEither,
     TE.map((recovery): ActiveLifecycle => ({ ...resources, recovery })),
