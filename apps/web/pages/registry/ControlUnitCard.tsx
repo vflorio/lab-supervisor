@@ -1,7 +1,10 @@
-import { Dns } from "@mui/icons-material";
+import { Bolt, Dns } from "@mui/icons-material";
 import { Box, Paper } from "@mui/material";
 import { EntryRow, entryRowGridSx, entryRowSubgridSx } from "@supervisor/ui/EntryRow";
+import { ActivityStat } from "../../components/ActivityStat";
+import { ActivityStatus } from "../../components/ActivityStatus";
 import { PredicateStat } from "../../components/PredicateStat";
+import { recoveryColorFor, workflowColorFor } from "./activityColors";
 import { TvRow } from "./TvRow";
 import type { CuGroup, RowActions } from "./types";
 
@@ -32,7 +35,23 @@ export function ControlUnitCard({
             colorFor={(value) => (value === undefined ? "disabled" : value ? "success" : "error")}
             detail={(value) => (value === undefined ? "unknown" : value ? "online" : "offline")}
           />,
+          <ActivityStat
+            key="ar"
+            source="recovery"
+            entityId={group.cu.id}
+            label="Tripwire"
+            colorFor={recoveryColorFor}
+          />,
         ]}
+        context={
+          <ActivityStatus
+            source="workflow"
+            entityId={group.cu.id}
+            label="Recovery workflow"
+            icon={<Bolt fontSize="small" />}
+            colorFor={workflowColorFor}
+          />
+        }
         onToggle={() => onToggle("candybox", group.cu.id, group.cu.controlled)}
         onEdit={() => onEdit("candybox", group.cu.id, group.cu.label)}
         onDelete={() => onDelete("candybox", group.cu.id)}

@@ -1,3 +1,4 @@
+import type * as Activity from "@supervisor/core/activity/stream";
 import * as Network from "@supervisor/core/network";
 import * as Retry from "@supervisor/core/retry/retry";
 import { pipe } from "fp-ts/function";
@@ -20,7 +21,7 @@ import type { AndroidBridgeEvent, AndroidBridgeIntent } from "./model";
 // se la connessione applicativa è stabilita.
 // -------------------------------------------------------------------------------------
 
-export type AndroidBridgeMachineEnv = AdbConnectionMachineEnv;
+export type AndroidBridgeMachineEnv = AdbConnectionMachineEnv & { readonly activityStream: Activity.ActivityStream };
 
 const toEvents =
   (host: Network.Host) =>
@@ -40,7 +41,7 @@ const toEvents =
 // stessa policy usata per la riconnessione. TargetResolution.connect non fallisce mai (Err =
 // never): un tentativo esaurito ritorna comunque l'ultimo ConnectionState raggiunto (Unknown),
 // da cui deriviamo ConnectionFailed - mai un errore.
-export const interpretWithPolicy =
+const interpretWithPolicy =
   (policy: Retry.Policy) =>
   (intent: AndroidBridgeIntent): RTE.ReaderTaskEither<AndroidBridgeMachineEnv, never, readonly AndroidBridgeEvent[]> =>
   (env) =>
@@ -54,8 +55,7 @@ export const interpretWithPolicy =
       )
       .exhaustive();
 
-export const interpret = (
-  intent: AndroidBridgeIntent,
-): RTE.ReaderTaskEither<AndroidBridgeMachineEnv, never, readonly AndroidBridgeEvent[]> =>
+export const interpret =
+  (intent: AndroidBridgeIntent): RTE.ReaderTaskEither<AndroidBridgeMachineEnv, never, readonly AndroidBridgeEvent[]> =>
   (env) =>
     interpretWithPolicy(env.adbReconnectPolicy)(intent)(env);

@@ -1,5 +1,7 @@
 import { pipe } from "fp-ts/function";
+import * as O from "fp-ts/Option";
 import * as RTE from "fp-ts/ReaderTaskEither";
+import * as RA from "fp-ts/ReadonlyArray";
 
 // -------------------------------------------------------------------------------------
 // Model - state machine: reducer + comandi dichiarativi
@@ -43,6 +45,29 @@ export const make = <Env, Error, State, Event, Intent>(
   handle: CommandHandler<Env, Error, Event, Intent>,
   onTransition?: TransitionHook<Env, Error, State, Event>,
 ): Machine<Env, Error, State, Event, Intent> => ({ reduce, handle, onTransition });
+
+// Compone più TransitionHook indipendenti (es. uno che logga, uno che inoltra a un feed)
+// in uno solo, eseguiti in ordine - così un chiamante può estendere l'osservabilità di una
+// macchina senza sostituire quella già presente. `undefined` viene filtrato: comporre zero
+// hook (o solo `undefined`) produce `undefined`, non un hook no-op.
+export const composeTransitionHooks = <Env, Error, State, Event>(
+  ...hooks: ReadonlyArray<TransitionHook<Env, Error, State, Event> | undefined>
+): TransitionHook<Env, Error, State, Event> | undefined =>
+  pipe(
+    hooks,
+    RA.filterMap(O.fromNullable),
+    O.fromPredicate(RA.isNonEmpty),
+    O.map(
+      (defined): TransitionHook<Env, Error, State, Event> =>
+        (from, event, to) =>
+          pipe(
+            defined.map((hook) => hook(from, event, to)),
+            RTE.sequenceArray,
+            RTE.asUnit,
+          ),
+    ),
+    O.toUndefined,
+  );
 
 // -------------------------------------------------------------------------------------
 // Orchestratore / interprete dichiarativo

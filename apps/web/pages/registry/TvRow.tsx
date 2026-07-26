@@ -1,8 +1,11 @@
-import { Tv } from "@mui/icons-material";
+import { Bolt, Tv } from "@mui/icons-material";
 import { Box } from "@mui/material";
 import { EntryRow, entryRowSubgridSx } from "@supervisor/ui/EntryRow";
 import * as O from "fp-ts/Option";
+import { ActivityStat } from "../../components/ActivityStat";
+import { ActivityStatus } from "../../components/ActivityStatus";
 import { PredicateStat } from "../../components/PredicateStat";
+import { recoveryColorFor, workflowColorFor } from "./activityColors";
 import { CameraRow } from "./CameraRow";
 import { adbStatusFor } from "./hierarchy";
 import type { RowActions, TvGroup } from "./types";
@@ -54,7 +57,23 @@ export function TvRow({
             colorFor={(value) => (value === undefined ? "disabled" : value ? "warning" : "disabled")}
             detail={inUseLabel ?? "available"}
           />,
+          <ActivityStat
+            key="ar"
+            source="recovery"
+            entityId={tv.deviceId}
+            label="Tripwire"
+            colorFor={recoveryColorFor}
+          />,
         ]}
+        context={
+          <ActivityStatus
+            source="workflow"
+            entityId={tv.deviceId}
+            label="Recovery workflow"
+            icon={<Bolt fontSize="small" />}
+            colorFor={workflowColorFor}
+          />
+        }
         onToggle={() => onToggle("tv", tv.deviceId, tv.controlled)}
         onEdit={() => onEdit("tv", tv.deviceId, tv.label)}
         onDelete={() => onDelete("tv", tv.deviceId)}

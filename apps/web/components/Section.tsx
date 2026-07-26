@@ -1,13 +1,13 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 
-export interface ActivityProps {
+export interface SectionProps {
   title: string;
   actions?: React.ReactNode;
   children: React.ReactNode;
 }
 
-export function Activity({ title, actions, children }: ActivityProps) {
+export function Section({ title, actions, children }: SectionProps) {
   return (
     <Box>
       <Box sx={{ display: "flex", alignItems: "center", mb: 3, gap: 1 }}>

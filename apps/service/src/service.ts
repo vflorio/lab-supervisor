@@ -1,4 +1,5 @@
 import * as ActivationSchedule from "@supervisor/core/activation/schedule";
+import * as Activity from "@supervisor/core/activity/stream";
 import type * as ConfigModel from "@supervisor/core/config";
 import * as Errors from "@supervisor/core/errors";
 import * as LogStream from "@supervisor/core/log-stream";
@@ -113,6 +114,7 @@ export const create: Effect<ServiceHandle> = pipe(
     const adbDeviceStream = AdbStream.createAdbDeviceStream();
     const recoveryStream = Recovery.createRecoveryStream();
     const notifyStream = Notify.createNotifyStream();
+    const activityStream = Activity.createActivityStream();
 
     const trpcLog = logger.child("tRPC");
     const trpcServer = Trpc.startServer({
@@ -127,6 +129,7 @@ export const create: Effect<ServiceHandle> = pipe(
         predicateStream,
         recoveryStream,
         notifyStream,
+        activityStream,
       }),
     });
 
@@ -152,6 +155,7 @@ export const create: Effect<ServiceHandle> = pipe(
           adbDeviceStream,
           recoveryStream,
           notifyStream,
+          activityStream,
         }),
         TE.tapIO((lifecycle) => () => {
           active = O.some(lifecycle);

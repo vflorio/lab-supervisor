@@ -1,3 +1,4 @@
+import type * as Activity from "@supervisor/core/activity/stream";
 import type * as ConfigModel from "@supervisor/core/config";
 import * as Errors from "@supervisor/core/errors";
 import * as IntervalLoop from "@supervisor/core/interval-loop";
@@ -47,6 +48,7 @@ export interface Env {
   readonly adbDeviceStream: AdbStream.AdbDeviceStream;
   readonly recoveryStream: Recovery.RecoveryStream;
   readonly notifyStream: Notify.NotifyStream;
+  readonly activityStream: Activity.ActivityStream;
 }
 
 export interface ActiveLifecycle {
@@ -101,6 +103,7 @@ const createRecovery = (
       predicateStream: env.predicateStream,
       recoveryStream: env.recoveryStream,
       notifyStream: env.notifyStream,
+      activityStream: env.activityStream,
     }),
     TE.fromEither,
     TE.map((recovery): ActiveLifecycle => ({ ...resources, recovery })),
@@ -117,6 +120,7 @@ const createResources =
         spawn: Node.spawn,
         adbPort: env.config.adb.port,
         adbReconnectPolicy: env.policies.adbReconnectPolicy,
+        activityStream: env.activityStream,
       },
       env.adbDeviceStream,
     );

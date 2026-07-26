@@ -1,3 +1,4 @@
+import type * as Activity from "@supervisor/core/activity/stream";
 import * as Config from "@supervisor/core/config";
 import type * as LogStream from "@supervisor/core/log-stream";
 import type * as Logger from "@supervisor/core/logger";
@@ -31,6 +32,7 @@ export type Deps = {
   readonly predicateStream: Predicates.PredicateFeed;
   readonly recoveryStream: Recovery.RecoveryFeed;
   readonly notifyStream: Notify.NotifyFeed;
+  readonly activityStream: Activity.ActivityFeed;
 };
 
 export const createServices = ({
@@ -41,6 +43,7 @@ export const createServices = ({
   predicateStream,
   recoveryStream,
   notifyStream,
+  activityStream,
 }: Deps): Services.Services => ({
   // Servizio di logging persistente per web-app
   logger: trpcLog.child("web"),
@@ -53,6 +56,9 @@ export const createServices = ({
 
   // Feed live delle notifiche dispatchate dal motore di recovery
   notifications: notifyStream,
+
+  // Feed live di "cosa sta facendo l'applicazione" per entità
+  activity: activityStream,
 
   // Servizio di gestione del registry dei device
   registry: registry(config.registry.dbPath),

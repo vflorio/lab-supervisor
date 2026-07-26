@@ -46,4 +46,27 @@ describe("state-machine/machine", () => {
     const result = await Machine.run(machine)("Red", [{ _tag: "Tick" }, { _tag: "Tick" }])({})();
     expect(result).toStrictEqual({ _tag: "Right", right: "Yellow" });
   });
+
+  it("composeTransitionHooks invokes every hook, in order, on each transition", async () => {
+    const calls: string[] = [];
+    const hookA: Machine.TransitionHook<unknown, never, Light, Event> = (from, _event, to) =>
+      RTE.fromIO(() => {
+        calls.push(`A:${from}->${to}`);
+      });
+    const hookB: Machine.TransitionHook<unknown, never, Light, Event> = (from, _event, to) =>
+      RTE.fromIO(() => {
+        calls.push(`B:${from}->${to}`);
+      });
+
+    const handle: Machine.CommandHandler<unknown, never, Event, Command> = () => RTE.right([]);
+    const machine = Machine.make(reduce, handle, Machine.composeTransitionHooks(hookA, hookB));
+
+    await Machine.dispatch(machine)("Red", { _tag: "Tick" })({})();
+
+    expect(calls).toStrictEqual(["A:Red->Green", "B:Red->Green"]);
+  });
+
+  it("composeTransitionHooks filters out undefined hooks, returning undefined if none remain", () => {
+    expect(Machine.composeTransitionHooks(undefined, undefined)).toBeUndefined();
+  });
 });

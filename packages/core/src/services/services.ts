@@ -1,4 +1,5 @@
 import type * as TE from "fp-ts/TaskEither";
+import type { ActivityFeed } from "../activity/stream";
 import type * as ConfigModel from "../config";
 import type { LogFeed } from "../log-stream";
 import type * as Logger from "../logger";
@@ -31,9 +32,6 @@ export interface AndroidBridge {
 
 // biome-ignore lint/suspicious/noEmptyInterface: <wip>
 export interface MdnsDiscovery {}
-
-// biome-ignore lint/suspicious/noEmptyInterface: <wip>
-export interface Notifications {}
 
 export interface DeviceRegistry {
   readonly getAll: () => TE.TaskEither<Db.DbError, Db.Database>;
@@ -75,11 +73,17 @@ export interface Services {
   readonly settings: Settings;
   // Questo serve per permettere di avere in logger transportato in HTTP (per loggare errori critici delle web-app)
   readonly logger: Logger.Tagged; // Web -> Service
-  readonly notifications: NotifyFeed; // Service -> Web
+
+  // tRPC Feeds
+
+  // Feed dei log di servizio
   readonly logs: LogFeed; // Service -> Web
-  // Feed live dei predicati di activation (packages/core/src/predicates) per la subscription tRPC verso la web-app
+  // Feed dei predicati di tracking
   readonly tracking: PredicateFeed; // Service -> Web
-  // Feed live delle transizioni di stato del motore di recovery (packages/core/src/recovery/status)
-  // per la subscription tRPC verso la web-app
+  // Feed delle transizioni di stato del motore di recovery
   readonly recovery: RecoveryFeed; // Service -> Web
+  // Feed delle notifiche
+  readonly notifications: NotifyFeed; // Service -> Web
+  // Feed di activity tracing (cosa fa l'entità in un dato momento)
+  readonly activity: ActivityFeed; // Service -> Web
 }

@@ -1,3 +1,4 @@
+import type * as Activity from "@supervisor/core/activity/stream";
 import type * as ConfigModel from "@supervisor/core/config";
 import type * as Logger from "@supervisor/core/logger";
 import * as NotifyDispatch from "@supervisor/core/notify/dispatch";
@@ -39,6 +40,7 @@ export interface Env {
   readonly predicateStream: Predicates.PredicateFeed;
   readonly recoveryStream: Recovery.RecoveryStream;
   readonly notifyStream: NotifyStream.NotifyStream;
+  readonly activityStream: Activity.ActivityStream;
 }
 
 export type StartError = PolicyDecodeError;
@@ -65,6 +67,26 @@ const statusFieldsOf = (
   match(event)
     .with({ type: "transition" }, ({ state }) => ({ state }))
     .with({ type: "outcome" }, ({ outcome }) => ({ state: "fired" as const, outcome }))
+    .exhaustive();
+
+// Traduce uno StatusEvent nelle attività osservabili:
+// ogni transizione alimenta l'attività "recovery" (stato del tripwire);
+// l'ingresso in "fired" alimenta anche "workflow" (la pipeline di recovery è partita, status "running");
+// un outcome la conclude con l'esito stesso ("succeeded"/"exhausted");
+// stessa distinzione tra transition/outcome già usata sopra da statusFieldsOf.
+const activityEntriesOf = (
+  event: Recovery.StatusEvent,
+): readonly { readonly source: "recovery" | "workflow"; readonly status: string }[] =>
+  match(event)
+    .with({ type: "transition" }, ({ state }) =>
+      state === "fired"
+        ? [
+            { source: "recovery" as const, status: state },
+            { source: "workflow" as const, status: "running" },
+          ]
+        : [{ source: "recovery" as const, status: state }],
+    )
+    .with({ type: "outcome" }, ({ outcome }) => [{ source: "workflow" as const, status: outcome }])
     .exhaustive();
 
 export const start = (env: Env): E.Either<StartError, Handle> => {
@@ -156,13 +178,21 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
 
           env.recoveryStream.emit({ ...source, ...statusFieldsOf(event) });
 
+          for (const activity of activityEntriesOf(event)) {
+            env.activityStream.emit({ entityId, ...activity });
+          }
+
           pipe(
             lifecycleOf(event),
             O.match(
               () => {},
               (lifecycle) => {
                 const rules = policy.tripwires[tripwireIndex]?.notify ?? [];
-                // TODO: Modello Async sopra T & TE per gestire in modo dichiarativo il deataching
+                // onStatus è un callback sincrono del motore di recovery (deriva da un IO
+                // dentro entity-runner.ts) - non può essere await-ato qui. Il dispatch
+                // resta comunque un Task singolo e breve (una richiesta HTTP per rule),
+                // non un loop di lunga durata come IntervalLoop: "detach and forget" è
+                // sufficiente, non serve un Handle/stop dedicato.
                 void notify(source, lifecycle, rules)();
               },
             ),

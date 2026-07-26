@@ -1,4 +1,4 @@
-import { Add, Delete, Usb } from "@mui/icons-material";
+import { Add } from "@mui/icons-material";
 import {
   Alert,
   Box,
@@ -22,8 +22,7 @@ import * as O from "fp-ts/Option";
 import { useState } from "react";
 import { match } from "ts-pattern";
 import { useData } from "vike-react/useData";
-import { Activity } from "../../components/Activity";
-import { PredicateStat } from "../../components/PredicateStat";
+import { Section } from "../../components/Section";
 import { type AdbDevice, useAdbDevices } from "../../hooks/useAdbDevices";
 import { useServiceLogger } from "../../hooks/useServiceLogger";
 import type { Data } from "../index/+data";
@@ -36,6 +35,7 @@ import { LinkSuitestDialog } from "./LinkSuitestDialog";
 import { mutate, mutations } from "./mutations";
 import { TvRow } from "./TvRow";
 import type { CameraView, Database, DeviceKind, LinkingTarget, NewAdbTargetForm } from "./types";
+
 // -------------------------------------------------------------------------------------
 // Component
 // -------------------------------------------------------------------------------------
@@ -100,11 +100,6 @@ function HierarchyView({ db, adbDevices }: { db: Database; adbDevices: readonly 
           .exhaustive(),
       setError,
     );
-  };
-
-  const handleDeleteAdb = (id: string) => {
-    log(`User deleted adb target ${id}`, "warn");
-    return mutate(() => mutations.adb.remove.mutate(id), setError);
   };
 
   // Assegna un host ADB a una camera: upsert (idempotente, chiave = target stesso) del target
@@ -192,7 +187,7 @@ function HierarchyView({ db, adbDevices }: { db: Database; adbDevices: readonly 
   const linkCandidates = linking ? cameraSuitestCandidates(db, linking.currentVideoCaptureDeviceId) : [];
 
   return (
-    <Activity
+    <Section
       title="Device Registry"
       actions={
         <>
@@ -319,6 +314,6 @@ function HierarchyView({ db, adbDevices }: { db: Database; adbDevices: readonly 
         onLink={handleLinkSuitest}
         onClose={() => setLinking(null)}
       />
-    </Activity>
+    </Section>
   );
 }

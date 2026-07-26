@@ -17,6 +17,7 @@ import { useState } from "react";
 import { match } from "ts-pattern";
 import { usePageContext } from "vike-react/usePageContext";
 import { LogPanel } from "../components/LogPanel";
+import { ActivityProvider } from "../hooks/useActivity";
 import { LogFeedProvider, useLogFeed } from "../hooks/useLogFeed";
 import { NotifyToaster } from "../hooks/useNotify";
 import { PredicatesProvider } from "../hooks/usePredicates";
@@ -49,14 +50,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       >
         <LogFeedProvider>
           <PredicatesProvider>
-            <NotifyToaster />
-            <Box sx={{ display: "flex", height: "100vh", width: "100%" }}>
-              <Sidebar />
-              <Box id="page-content" component="main" sx={{ flexGrow: 2, minWidth: 0, p: { xs: 2, md: 4 } }}>
-                {children}
+            <ActivityProvider>
+              <NotifyToaster />
+              <Box sx={{ display: "flex", height: "100vh", width: "100%" }}>
+                <Sidebar />
+                <Box id="page-content" component="main" sx={{ flexGrow: 2, minWidth: 0, p: { xs: 2, md: 4 } }}>
+                  {children}
+                </Box>
+                <LogPanel />
               </Box>
-              <LogPanel />
-            </Box>
+            </ActivityProvider>
           </PredicatesProvider>
         </LogFeedProvider>
       </SnackbarProvider>

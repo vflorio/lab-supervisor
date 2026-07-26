@@ -1,6 +1,7 @@
 import { router } from "./instance";
 
-// Questi dipendono dall'instanza del router ma non possono stare in una closure
+// I routers dipendono dall'instanza di tRPC (ma non possono stare in una closure)
+import { activityRouter } from "./routers/activity";
 import { androidRouter } from "./routers/android";
 import { registryRouter } from "./routers/device-registry";
 import { logsRouter } from "./routers/logs";
@@ -24,11 +25,12 @@ export const appRouter = router({
   recovery: recoveryRouter,
   settings: settingsRouter,
   tracking: trackingRouter,
+  activity: activityRouter,
 });
 
 export type AppRouter = typeof appRouter;
 
 // Questo risolve il type-error:
-export type { TrackedData } from "@trpc/server/unstable-core-do-not-import";
 // The inferred type of 'appRouter' cannot be named without a reference to 'TrackedData' from '../node_modules/@trpc/server/dist/unstable-core-do-not-import.d-BdVSvUCr.mjs'.
 // This is likely not portable. A type annotation is necessary.ts(2883)
+export type { TrackedData } from "@trpc/server/unstable-core-do-not-import";

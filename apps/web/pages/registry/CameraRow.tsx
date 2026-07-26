@@ -1,11 +1,14 @@
-import { Link as LinkIcon, Usb, Videocam } from "@mui/icons-material";
+import { Bolt, Cable, Link as LinkIcon, Usb, Videocam } from "@mui/icons-material";
 import { Box, Button, Stack, Typography } from "@mui/material";
 import * as Network from "@supervisor/core/network";
 import { EntryRow } from "@supervisor/ui/EntryRow";
 import * as O from "fp-ts/Option";
 import type { ReactNode } from "react";
+import { ActivityStat } from "../../components/ActivityStat";
+import { ActivityStatus } from "../../components/ActivityStatus";
 import { PredicateStat } from "../../components/PredicateStat";
 import type { AdbDevice } from "../../hooks/useAdbDevices";
+import { adbBridgeColorFor, recoveryColorFor, workflowColorFor } from "./activityColors";
 import type { CameraView, DeviceKind } from "./types";
 
 export function CameraRow({
@@ -63,6 +66,15 @@ export function CameraRow({
         detail={(value) => (value ? "active" : "idle")}
       />,
     );
+    activity.push(
+      <ActivityStat
+        key="ar"
+        source="recovery"
+        entityId={videoCaptureDeviceId}
+        label="Tripwire"
+        colorFor={recoveryColorFor}
+      />,
+    );
   } else {
     actions.push(
       <Button key="o" size="small" variant="outlined" startIcon={<LinkIcon fontSize="small" />} onClick={onLink}>
@@ -107,7 +119,10 @@ export function CameraRow({
       checkedTitle="Controlled by supervisor"
       indicators={[...connectivity, ...activity]}
       context={
-        <Stack sx={{ width: "100%", gap: 1, direction: "row", justifyContent: "space-between", alignItems: "center" }}>
+        <Stack
+          direction="row"
+          sx={{ width: "100%", gap: 2, flexWrap: "wrap", justifyContent: "space-between", alignItems: "center" }}
+        >
           {adbAddress && (
             <Stack sx={{ flexDirection: "row", gap: 1, alignItems: "center", minWidth: 0 }}>
               <Usb fontSize="small" color="disabled" />
@@ -120,6 +135,24 @@ export function CameraRow({
                 </Typography>
               </Box>
             </Stack>
+          )}
+          {camera.adb && (
+            <ActivityStatus
+              source="adb"
+              entityId={camera.id}
+              label="ADB bridge"
+              icon={<Cable fontSize="small" />}
+              colorFor={adbBridgeColorFor}
+            />
+          )}
+          {videoCaptureDeviceId && (
+            <ActivityStatus
+              source="workflow"
+              entityId={videoCaptureDeviceId}
+              label="Recovery workflow"
+              icon={<Bolt fontSize="small" />}
+              colorFor={workflowColorFor}
+            />
           )}
         </Stack>
       }
