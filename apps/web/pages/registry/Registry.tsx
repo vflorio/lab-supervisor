@@ -35,7 +35,7 @@ import { adbStatusFor, buildHierarchy, cameraSuitestCandidates } from "./hierarc
 import { LinkSuitestDialog } from "./LinkSuitestDialog";
 import { mutate, mutations } from "./mutations";
 import { TvRow } from "./TvRow";
-import type { CameraView, Db, DeviceKind, LinkingTarget, NewAdbTargetForm } from "./types";
+import type { CameraView, Database, DeviceKind, LinkingTarget, NewAdbTargetForm } from "./types";
 // -------------------------------------------------------------------------------------
 // Component
 // -------------------------------------------------------------------------------------
@@ -52,7 +52,7 @@ export function RegistryView() {
 
 const emptyNewAdbTarget: NewAdbTargetForm = { label: "", target: "" };
 
-function HierarchyView({ db, adbDevices }: { db: Db; adbDevices: readonly AdbDevice[] }) {
+function HierarchyView({ db, adbDevices }: { db: Database; adbDevices: readonly AdbDevice[] }) {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ kind: DeviceKind; id: string; label: string } | null>(null);
   const [editLabel, setEditLabel] = useState("");

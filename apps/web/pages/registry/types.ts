@@ -1,8 +1,8 @@
-import type { AdbEntry, CameraEntry, CandyboxEntry, Db, TvEntry } from "@supervisor/core/services/db";
+import type { AdbEntry, CameraEntry, CandyboxEntry, Database, TvEntry } from "@supervisor/core/services/db";
 import type { InUseBy } from "@supervisor/core/services/suitest";
 import type { AdbDevice } from "../../hooks/useAdbDevices";
 
-export type { AdbEntry, Db };
+export type { AdbEntry, Database };
 
 export type DeviceKind = "candybox" | "camera" | "tv";
 

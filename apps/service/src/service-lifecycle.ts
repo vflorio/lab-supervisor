@@ -67,7 +67,6 @@ const readRegistry = (env: Env) =>
     fsEnv: Node.fsEnv,
   });
 
-// Se la policy viene esaurita senza connetterci,
 const createReconcileLoop = (env: Env, androidBridge: AndroidBridgeOrchestrator.Handle): IntervalLoop.Handle => {
   const reconcileLog = env.logger.child("AndroidBridge");
 

@@ -1,13 +1,13 @@
 import * as Network from "@supervisor/core/network";
 import * as O from "fp-ts/Option";
 import type { AdbDevice } from "../../hooks/useAdbDevices";
-import type { CameraView, ControlUnitView, Db, Hierarchy, TvGroup, TvView } from "./types";
+import type { CameraView, ControlUnitView, Database, Hierarchy, TvGroup, TvView } from "./types";
 
 // Stato di raggiungibilità ADB dell'host assegnato alla camera (fisico, via `adb devices`) -
 // distinto da `camera.suitest.online`, che riflette invece lo stato dell'app suitest-camera
 export function adbStatusFor(
   adbDevices: readonly AdbDevice[],
-  target: Network.Target | undefined,
+  target: Network.Endpoint | undefined,
 ): AdbDevice["status"] | null {
   if (!target) return null;
   const formatted = Network.format(target);
@@ -19,7 +19,7 @@ export function adbStatusFor(
 // (non allocato/misto se manca il collegamento)
 // -------------------------------------------------------------------------------------
 
-function enrich(db: Db): { controlUnits: ControlUnitView[]; tvs: TvView[]; cameras: CameraView[] } {
+function enrich(db: Database): { controlUnits: ControlUnitView[]; tvs: TvView[]; cameras: CameraView[] } {
   const controlUnits: ControlUnitView[] = Object.values(db.lab.candyboxes).map((cu) => ({
     ...cu,
     online: db.suitest.controlUnits[cu.id]?.online,
@@ -54,7 +54,7 @@ function enrich(db: Db): { controlUnits: ControlUnitView[]; tvs: TvView[]; camer
   return { controlUnits, tvs, cameras };
 }
 
-export function buildHierarchy(db: Db): Hierarchy {
+export function buildHierarchy(db: Database): Hierarchy {
   const { controlUnits, tvs, cameras } = enrich(db);
 
   const camerasByTvDeviceId = new Map<string, CameraView[]>();
@@ -97,7 +97,7 @@ export function buildHierarchy(db: Db): Hierarchy {
 
 // Candidati Suitest (video-capture-device) non ancora collegati a nessun'altra camera
 // (riconciliazione manuale)
-export function cameraSuitestCandidates(db: Db, currentVideoCaptureDeviceId: string | undefined) {
+export function cameraSuitestCandidates(db: Database, currentVideoCaptureDeviceId: string | undefined) {
   const usedElsewhere = new Set(
     Object.values(db.lab.cameras)
       .map((c) => O.toUndefined(c.videoCaptureDeviceId))
