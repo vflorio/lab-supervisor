@@ -2,6 +2,12 @@ import type * as Config from "@supervisor/core/config";
 import * as Logger from "@supervisor/core/logger";
 import pino from "pino";
 
+const PINO_METHOD_LEVELS = ["debug", "info", "warn", "error"] as const;
+type PinoMethodLevel = (typeof PINO_METHOD_LEVELS)[number];
+
+const isPinoMethodLevel = (level: Logger.LogLevel): level is PinoMethodLevel =>
+  (PINO_METHOD_LEVELS as readonly string[]).includes(level);
+
 const pinoTransport = (config: Config.Log): Logger.Transport => {
   const targets: pino.TransportTargetOptions[] = [];
 
@@ -12,8 +18,8 @@ const pinoTransport = (config: Config.Log): Logger.Transport => {
   const logger = pino({ level: "trace" }, config.path ? pino.transport({ targets }) : pino.destination(1));
 
   return (record) => {
-    const fn = logger[record.level as "debug" | "info" | "warn" | "error"] as pino.LogFn;
-    fn?.(record.tag ? { tag: record.tag, depth: record.depth } : {}, record.message);
+    if (!isPinoMethodLevel(record.level)) return;
+    logger[record.level](record.tag ? { tag: record.tag, depth: record.depth } : {}, record.message);
   };
 };
 

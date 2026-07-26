@@ -26,7 +26,7 @@
   },
   "log": {
     "level": "debug", // "error" | "warn" | "info" | "debug"
-    "file": "logs/service.jsonl", // JSON Lines files
+    "path": "data/logs.jsonl", // JSON Lines files
     "network": false // stampa le risposte HTTP (get/post, singole o paginate) indipendentemente da "tripwire"
   },
   "adb": {
