@@ -24,11 +24,52 @@ export const resolveTarget = (domain: string, entityId: string, registry: Db.Lab
     .with(SuitestCamera.DOMAIN, () => resolveCameraTarget(entityId, registry))
     .otherwise(() => O.none);
 
-const resolveCameraTarget = (videoCaptureDeviceId: string, registry: Db.LabRegistry): O.Option<Network.Endpoint> =>
+const findCameraByVideoCaptureDeviceId = (
+  videoCaptureDeviceId: string,
+  registry: Db.LabRegistry,
+): O.Option<Db.CameraEntry> =>
   pipe(
     Object.values(registry.cameras),
     RA.findFirst((camera) => O.elem(S.Eq)(videoCaptureDeviceId)(camera.videoCaptureDeviceId)),
+  );
+
+const resolveCameraTarget = (videoCaptureDeviceId: string, registry: Db.LabRegistry): O.Option<Network.Endpoint> =>
+  pipe(
+    findCameraByVideoCaptureDeviceId(videoCaptureDeviceId, registry),
     O.chain((camera) => camera.adbId),
     O.chain((adbId) => O.fromNullable(registry.adb[adbId])),
     O.map((entry) => entry.target),
   );
+
+// -------------------------------------------------------------------------------------
+// Descrive un'entità per i placeholder di un messaggio di notifica (vedi ../../../../
+// packages/core/src/notify/template.ts e ./engine.ts): stesso `match` su domain di
+// resolveTarget sopra, ma per label leggibile + ip invece che per un Network.Endpoint
+// operativo. Un dominio/lookup non risolvibile ricade sul solo entityId - una notifica
+// non deve mai fallire per un dettaglio del device mancante.
+// -------------------------------------------------------------------------------------
+
+export interface EntityDescriptor {
+  readonly id: string;
+  readonly label: string;
+  readonly ip: string;
+}
+
+const UNKNOWN = "unknown";
+
+const resolveLabel = (domain: string, entityId: string, registry: Db.LabRegistry): O.Option<string> =>
+  match(domain)
+    .with(AdbTracking.DOMAIN, () => O.fromNullable(registry.adb[entityId]?.label))
+    .with(SuitestCamera.DOMAIN, () =>
+      pipe(
+        findCameraByVideoCaptureDeviceId(entityId, registry),
+        O.map((camera) => camera.label),
+      ),
+    )
+    .otherwise(() => O.none);
+
+export const describeEntity = (domain: string, entityId: string, registry: Db.LabRegistry): EntityDescriptor => ({
+  id: entityId,
+  label: O.getOrElse(() => entityId)(resolveLabel(domain, entityId, registry)),
+  ip: O.getOrElse(() => UNKNOWN)(pipe(resolveTarget(domain, entityId, registry), O.map(Network.format))),
+});

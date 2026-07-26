@@ -3,6 +3,7 @@ import type * as ConfigModel from "../config";
 import type { LogFeed } from "../log-stream";
 import type * as Logger from "../logger";
 import type * as Network from "../network";
+import type { NotifyFeed } from "../notify/stream";
 import type { PredicateFeed } from "../predicates/feed";
 import type { RecoveryFeed } from "../recovery/status";
 import type * as Adb from "./adb";

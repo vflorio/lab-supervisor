@@ -21,6 +21,7 @@ import { LogFeedProvider, useLogFeed } from "../hooks/useLogFeed";
 import { NotifyToaster } from "../hooks/useNotify";
 import { PredicatesProvider } from "../hooks/usePredicates";
 import "./Layout.css";
+import { closeSnackbar } from "notistack";
 import { theme } from "../theme";
 
 const NAV_ITEMS = [
@@ -36,7 +37,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <SnackbarProvider maxSnack={3} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
+      <SnackbarProvider
+        maxSnack={3}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        autoHideDuration={10 * 60 * 1000}
+        action={(key) => (
+          <IconButton size="small" color="inherit" onClick={() => closeSnackbar(key)}>
+            <ChevronLeft fontSize="small" />
+          </IconButton>
+        )}
+      >
         <LogFeedProvider>
           <PredicatesProvider>
             <NotifyToaster />

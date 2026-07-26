@@ -1,3 +1,4 @@
+import * as O from "fp-ts/Option";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type * as Logger from "../logger";
 import { dispatch } from "./dispatch";
@@ -29,7 +30,7 @@ const makeLogger = (): FakeLogger => {
 const rule = (policy: NotifyRule["policy"]): NotifyRule => ({
   type: { type: "slack" },
   channel: "#lab-supervisor",
-  message: "Camera recovery failed",
+  message: { type: "template", message: "Camera recovery failed" },
   policy,
 });
 
@@ -41,7 +42,7 @@ describe("notify/dispatch", () => {
   it("skips rules whose policy doesn't include the current lifecycle", async () => {
     const logger = makeLogger();
 
-    const results = await dispatch([rule(["exhausted"])], "immediate", { logger })();
+    const results = await dispatch([rule(["exhausted"])], "immediate", {}, { logger, slack: O.none })();
 
     expect(results).toHaveLength(0);
     expect(logger.calls).toHaveLength(0);
@@ -50,9 +51,11 @@ describe("notify/dispatch", () => {
   it("always logs, and marks slack as skipped when not configured", async () => {
     const logger = makeLogger();
 
-    const results = await dispatch([rule(["immediate"])], "immediate", { logger })();
+    const results = await dispatch([rule(["immediate"])], "immediate", {}, { logger, slack: O.none })();
 
-    expect(results).toStrictEqual([{ rule: rule(["immediate"]), slack: "skipped" }]);
+    expect(results).toStrictEqual([
+      { rule: rule(["immediate"]), message: "Camera recovery failed", slack: { type: "skipped" } },
+    ]);
     expect(logger.calls.some((c) => c.level === "info" && c.message.includes("notify[immediate]"))).toBe(true);
     expect(logger.calls.some((c) => c.level === "debug" && c.message.includes("skipped"))).toBe(true);
   });
@@ -61,12 +64,16 @@ describe("notify/dispatch", () => {
     const logger = makeLogger();
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 })));
 
-    const results = await dispatch([rule(["immediate"])], "immediate", {
-      logger,
-      slack: { botToken: "xoxb-test" },
-    })();
+    const results = await dispatch(
+      [rule(["immediate"])],
+      "immediate",
+      {},
+      { logger, slack: O.some({ botToken: "xoxb-test" }) },
+    )();
 
-    expect(results).toStrictEqual([{ rule: rule(["immediate"]), slack: "sent" }]);
+    expect(results).toStrictEqual([
+      { rule: rule(["immediate"]), message: "Camera recovery failed", slack: { type: "sent" } },
+    ]);
   });
 
   it("logs and swallows a slack failure instead of throwing", async () => {
@@ -78,12 +85,43 @@ describe("notify/dispatch", () => {
         .mockResolvedValue(new Response(JSON.stringify({ ok: false, error: "channel_not_found" }), { status: 200 })),
     );
 
-    const results = await dispatch([rule(["immediate"])], "immediate", {
-      logger,
-      slack: { botToken: "xoxb-test" },
-    })();
+    const results = await dispatch(
+      [rule(["immediate"])],
+      "immediate",
+      {},
+      { logger, slack: O.some({ botToken: "xoxb-test" }) },
+    )();
 
-    expect(results).toStrictEqual([{ rule: rule(["immediate"]), slack: "failed" }]);
+    expect(results).toStrictEqual([
+      {
+        rule: rule(["immediate"]),
+        message: "Camera recovery failed",
+        slack: { type: "failed", error: { type: "SlackAPIError", message: "channel_not_found" } },
+      },
+    ]);
     expect(logger.calls.some((c) => c.level === "error" && c.message.includes("slack dispatch failed"))).toBe(true);
+  });
+
+  it("substitutes {{placeholder}} vars in the rule message, leaving unknown ones untouched", async () => {
+    const logger = makeLogger();
+    const withTemplate: NotifyRule = {
+      ...rule(["immediate"]),
+      message: { type: "template", message: "{{label}} recovery failed (ip: {{ip}}, ref: {{missing}})" },
+    };
+
+    const results = await dispatch(
+      [withTemplate],
+      "immediate",
+      { label: "Lenovo Tab M10", ip: "192.168.1.4:5555" },
+      { logger, slack: O.none },
+    )();
+
+    expect(results).toStrictEqual([
+      {
+        rule: withTemplate,
+        message: "Lenovo Tab M10 recovery failed (ip: 192.168.1.4:5555, ref: {{missing}})",
+        slack: { type: "skipped" },
+      },
+    ]);
   });
 });

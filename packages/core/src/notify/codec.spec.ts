@@ -17,7 +17,7 @@ describe("notify/codec", () => {
       expect(result.right).toStrictEqual({
         type: { type: "slack" },
         channel: "#lab-supervisor",
-        message: "Camera recovery failed",
+        message: { type: "template", message: "Camera recovery failed" },
         policy: ["immediate", "exhausted"],
       });
     }

@@ -195,7 +195,7 @@ describe("recovery/entity-runner", () => {
         },
       }),
       onStatus: (_index, event) => {
-        if (event.outcome !== undefined) outcomes.push(event.outcome);
+        if (event.type === "outcome") outcomes.push(event.outcome);
       },
     });
 
@@ -208,8 +208,8 @@ describe("recovery/entity-runner", () => {
     expect(outcomes).toEqual(["exhausted"]);
     // un warning per ogni tentativo in cui la pipeline è "riuscita" ma il predicate resta falso
     expect(warnings).toEqual([
-      "recovery pipeline completed without errors, but the predicate is still false - device not healthy yet",
-      "recovery pipeline completed without errors, but the predicate is still false - device not healthy yet",
+      "recovery pipeline completed successfully, but predicate is still false",
+      "recovery pipeline completed successfully, but predicate is still false",
     ]);
   });
 

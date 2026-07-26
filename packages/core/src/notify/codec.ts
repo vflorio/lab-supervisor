@@ -1,6 +1,6 @@
 import * as t from "io-ts";
 import { match } from "ts-pattern";
-import type { NotifyTarget } from "./model";
+import type { NotifyTarget, NotifyTemplateMessage } from "./model";
 
 // -------------------------------------------------------------------------------------
 // Codec - JSON: tupla taggata per il target, coerente con Predicate/Pipeline
@@ -35,9 +35,26 @@ export const NotifyTargetCodec = new t.Type<NotifyTarget, unknown[], unknown>(
 
 export const NotifyLifecycleCodec = t.union([t.literal("immediate"), t.literal("exhausted")]);
 
+// Wrap/unwrap - stessa forma minimale di Validation.optionFromNullable: nessuna validazione
+// di struttura da hardcodare, il JSON resta una stringa semplice, solo il tipo decodificato
+// diventa l'ADT (vedi model.ts)
+export const NotifyTemplateMessageCodec: t.Type<NotifyTemplateMessage, string, unknown> = new t.Type(
+  "NotifyTemplateMessage",
+  (u): u is NotifyTemplateMessage =>
+    typeof u === "object" &&
+    u !== null &&
+    (u as NotifyTemplateMessage).type === "template" &&
+    typeof (u as NotifyTemplateMessage).message === "string",
+  (u, c) =>
+    typeof u === "string"
+      ? t.success({ type: "template", message: u })
+      : t.failure(u, c, "Expected a string (notify message template)"),
+  (a) => a.message,
+);
+
 export const NotifyRuleCodec = t.type({
   type: NotifyTargetCodec,
   channel: t.string,
-  message: t.string,
+  message: NotifyTemplateMessageCodec,
   policy: t.array(NotifyLifecycleCodec),
 });

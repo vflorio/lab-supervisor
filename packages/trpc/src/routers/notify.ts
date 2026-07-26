@@ -4,11 +4,8 @@ import { tracked } from "@trpc/server";
 import { publicProcedure, router } from "../instance";
 
 // -------------------------------------------------------------------------------------
-// Notify router (notifiche dispatchate dal motore di recovery - live tail, SSE-based
-// subscription) - stessa forma di routers/recovery.ts. A differenza del feed di recovery,
-// una notifica è un evento puntuale (non lo stato corrente di un'entità), quindi non
-// esiste un equivalente utile di `recoveryRouter.snapshot`: la history riprodotta da `tail`
-// è già il backlog rilevante per un client che si collega.
+// Notify router
+// (notifiche dispatchate dal motore di recovery; live tail, SSE-based subscription)
 // -------------------------------------------------------------------------------------
 
 export interface NotifyTailInput {

@@ -79,8 +79,8 @@
             {
               "type": ["slack"],
               "channel": "#lab-supervisor",
-              "message": "Camera recovery failed",
-              "policy": ["immediate", "exhausted"] // Invia in 2 lifcycles diversi
+              "message": "{{label}} ({{ip}}) suitest connection failed, manual intervention required",
+              "policy": ["exhausted"]
             }
           ]
         }
