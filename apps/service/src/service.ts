@@ -4,6 +4,7 @@ import * as Errors from "@supervisor/core/errors";
 import * as LogStream from "@supervisor/core/log-stream";
 import * as Logger from "@supervisor/core/logger";
 import * as Predicates from "@supervisor/core/predicates/index";
+import * as Recovery from "@supervisor/core/recovery/index";
 import * as RetryPolicy from "@supervisor/core/retry/retry";
 import type * as Schedule from "@supervisor/core/schedule";
 import type * as Validation from "@supervisor/core/validation";
@@ -88,13 +89,20 @@ export const create: Effect<ServiceHandle> = pipe(
     const logStream = LogStream.createLogStream();
     const logger = pipe(ServiceLogger.create(config.log, [logStream.transport]), Logger.tagged("Service"));
 
-    // const activationSchedule = ActivationSchedule.toSchedule(config.activationSchedule);
-    const debugActiveFrom = Date.now() + 5000;
-    const debugActiveTo = debugActiveFrom + 2 * 60000;
-    const activationSchedule: Schedule.Schedule = () => {
-      const now = Date.now();
-      return now >= debugActiveFrom && now < debugActiveTo;
+    // Schedule di attivazione: Inizia dopo 5s, dura 2m
+    const debugSchedule = (): Schedule.Schedule => {
+      const debugActiveFrom = Date.now() + 5000;
+      const debugActiveTo = debugActiveFrom + 2 * 60000;
+
+      return () => {
+        const now = Date.now();
+        return now >= debugActiveFrom && now < debugActiveTo;
+      };
     };
+
+    const activationSchedule = import.meta.env.DEV
+      ? debugSchedule()
+      : ActivationSchedule.toSchedule(config.activationSchedule);
 
     logger.info(`Activation schedule: ${ActivationSchedule.format(config.activationSchedule)}`)();
 
@@ -102,24 +110,17 @@ export const create: Effect<ServiceHandle> = pipe(
 
     const predicateStream = Predicates.createPredicateStream();
     const adbDeviceStream = AdbStream.createAdbDeviceStream();
+    const recoveryStream = Recovery.createRecoveryStream();
 
     const trpcLog = logger.child("tRPC");
     const trpcServer = Trpc.startServer({
       port: config.trpc.port,
       hostname: config.trpc.hostname,
       logger: trpcLog,
-      services: createServices({ config, trpcLog, adbDeviceStream, logStream, predicateStream }),
+      services: createServices({ config, trpcLog, adbDeviceStream, logStream, predicateStream, recoveryStream }),
     });
 
     let active: O.Option<ServiceLifecycle.ActiveLifecycle> = O.none;
-
-    const lifecycleDeps: ServiceLifecycle.Env = {
-      logger: activationLog,
-      config,
-      policies,
-      predicateStream,
-      adbDeviceStream,
-    };
 
     const clearActive: IO.IO<void> = () => {
       active = O.none;
@@ -133,7 +134,14 @@ export const create: Effect<ServiceHandle> = pipe(
 
     const activationRunner = Activation.create(activationLog, activationSchedule, {
       onActive: pipe(
-        ServiceLifecycle.createActiveLifecycle(lifecycleDeps),
+        ServiceLifecycle.createActiveLifecycle({
+          logger: activationLog,
+          config,
+          policies,
+          predicateStream,
+          adbDeviceStream,
+          recoveryStream,
+        }),
         TE.tapIO((lifecycle) => () => {
           active = O.some(lifecycle);
         }),

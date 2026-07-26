@@ -2,7 +2,7 @@ import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import { format } from "../errors";
 import * as IntervalLoop from "../interval-loop";
-import type * as Logger from "../logger";
+import * as Logger from "../logger";
 import type { PredicateEntry, PredicateFeed, PredicateValue } from "../predicates/index";
 import type { PolicyDecodeError } from "../retry/codec";
 import type { Policy } from "../retry/retry";
@@ -27,6 +27,9 @@ export interface RecoveryRunnerEnv {
   // Cadenza del tick periodico di ri-osservazione (per rilevare grace scaduti senza nuovi fatti)
   readonly tickPolicy: Policy;
   readonly now?: () => number;
+  // Notifica opzionale ad ogni transizione/esito di un tripwire, per un'entità - vedi
+  // EntityRunner.StatusEvent per la forma dell'evento
+  readonly onStatus?: (entityId: string, tripwireIndex: number, event: EntityRunner.StatusEvent) => void;
 }
 
 export interface RecoveryRunnerHandle {
@@ -52,6 +55,7 @@ export const start = (
           logger: env.logger.child(entityId),
           workflows: env.workflows,
           capabilities: env.capabilitiesFor(entityId),
+          onStatus: env.onStatus && ((tripwireIndex, event) => env.onStatus!(entityId, tripwireIndex, event)),
         });
         runnersByEntity.set(entityId, created);
         return created;
@@ -86,15 +90,16 @@ export const start = (
       });
 
       const tickLoop = IntervalLoop.create(
-        env.logger.child("recovery-tick"),
+        Logger.muted(env.logger.child(`RecoveryRunner:${policy.label}`)),
         env.tickPolicy,
         async () => {
           for (const entityId of factsByEntity.keys()) await observeEntity(entityId);
         },
-        `(Recovery) ${policy.label}`,
+        //  `RecoveryRunner:${policy.label}`,
       );
 
-      void tickLoop.start();
+      // Avvia il loop in background
+      pipe(tickLoop.start, IntervalLoop.detach)();
 
       return {
         stop: () => {

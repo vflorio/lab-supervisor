@@ -4,6 +4,7 @@ import type { LogFeed } from "../log-stream";
 import type * as Logger from "../logger";
 import type * as Network from "../network";
 import type { PredicateFeed } from "../predicates/feed";
+import type { RecoveryFeed } from "../recovery/status";
 import type * as Adb from "./adb";
 import type * as Db from "./db";
 
@@ -80,4 +81,7 @@ export interface Services {
   readonly logs: LogFeed; // Service -> Web
   // Feed live dei predicati di activation (packages/core/src/predicates) per la subscription tRPC verso la web-app
   readonly tracking: PredicateFeed; // Service -> Web
+  // Feed live delle transizioni di stato del motore di recovery (packages/core/src/recovery/status)
+  // per la subscription tRPC verso la web-app
+  readonly recovery: RecoveryFeed; // Service -> Web
 }

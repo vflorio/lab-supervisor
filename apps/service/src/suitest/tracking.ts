@@ -1,10 +1,10 @@
 import type * as Config from "@supervisor/core/config";
-import type * as IntervalLoop from "@supervisor/core/interval-loop";
+import * as IntervalLoop from "@supervisor/core/interval-loop";
 import type * as Logger from "@supervisor/core/logger";
 import * as Predicates from "@supervisor/core/predicates/index";
 import type * as Retry from "@supervisor/core/retry/retry";
+import { flow, pipe } from "fp-ts/function";
 import * as IO from "fp-ts/IO";
-import { pipe } from "fp-ts/lib/function";
 import * as TE from "fp-ts/TaskEither";
 import * as SuitestCamera from "./suitest-camera";
 import * as SuitestControlUnit from "./suitest-control-unit";
@@ -47,10 +47,9 @@ export const create = ({ logger, stream, policies, suitestConfig }: Deps) => {
 
   return {
     start: pipe(
-      TE.Do,
-      TE.flatMap(() => camera.start),
-      TE.flatMap(() => controlUnit.start),
-      TE.flatMap(() => device.start),
+      [camera.start, controlUnit.start, device.start],
+      TE.traverseArray(flow(IntervalLoop.detach, TE.fromIO)),
+      TE.asUnit,
     ),
     stop: pipe(
       IO.Do,

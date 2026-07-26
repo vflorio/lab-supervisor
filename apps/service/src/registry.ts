@@ -8,7 +8,7 @@ import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
 import * as TE from "fp-ts/TaskEither";
 
-interface RegistrySyncEnv {
+export interface RegistrySyncEnv {
   readonly logger: Logger.Tagged;
   readonly fsEnv: Fs.Env;
   readonly dbPath: string;

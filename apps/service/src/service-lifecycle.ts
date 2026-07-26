@@ -3,9 +3,9 @@ import * as Errors from "@supervisor/core/errors";
 import * as IntervalLoop from "@supervisor/core/interval-loop";
 import type * as Logger from "@supervisor/core/logger";
 import type * as Predicates from "@supervisor/core/predicates/index";
+import type * as Recovery from "@supervisor/core/recovery/index";
 import type * as RetryPolicy from "@supervisor/core/retry/retry";
 import * as Retry from "@supervisor/core/retry/retry";
-import * as E from "fp-ts/Either";
 import { constVoid, flow, pipe } from "fp-ts/function";
 import * as IO from "fp-ts/IO";
 import * as TE from "fp-ts/TaskEither";
@@ -13,6 +13,7 @@ import type * as AdbStream from "./adb/adb-stream";
 import * as AdbTracking from "./adb/adb-tracking";
 import * as AndroidBridgeOrchestrator from "./machines/android-bridge/orchestrator";
 import * as Node from "./node";
+import * as RecoveryEngine from "./recovery/engine";
 import * as Registry from "./registry";
 import * as SuitestTracking from "./suitest/tracking";
 
@@ -43,6 +44,7 @@ export interface Env {
   readonly policies: Policies;
   readonly predicateStream: Predicates.PredicateStream;
   readonly adbDeviceStream: AdbStream.AdbDeviceStream;
+  readonly recoveryStream: Recovery.RecoveryStream;
 }
 
 export interface ActiveLifecycle {
@@ -50,9 +52,10 @@ export interface ActiveLifecycle {
   readonly suitestTracking: IntervalLoop.Handle;
   readonly androidBridge: AndroidBridgeOrchestrator.Handle;
   readonly reconcileLoop: IntervalLoop.Handle;
+  readonly recovery: RecoveryEngine.Handle;
 }
 
-export type CreateError = Registry.SyncError;
+export type CreateError = Registry.SyncError | RecoveryEngine.StartError;
 
 // -------------------------------------------------------------------------------------
 // Internal
@@ -85,8 +88,23 @@ const createReconcileLoop = (env: Env, androidBridge: AndroidBridgeOrchestrator.
   return IntervalLoop.create(reconcileLog, Retry.constantDelay(5000), tick, "(AndroidBridge) reconcile");
 };
 
+const createRecovery = (
+  env: Env,
+  resources: Omit<ActiveLifecycle, "recovery">,
+): TE.TaskEither<CreateError, ActiveLifecycle> =>
+  pipe(
+    RecoveryEngine.start({
+      logger: env.logger.child("Recovery"),
+      config: env.config,
+      predicateStream: env.predicateStream,
+      recoveryStream: env.recoveryStream,
+    }),
+    TE.fromEither,
+    TE.map((recovery): ActiveLifecycle => ({ ...resources, recovery })),
+  );
+
 const createResources =
-  (env: Env): IO.IO<ActiveLifecycle> =>
+  (env: Env): IO.IO<Omit<ActiveLifecycle, "recovery">> =>
   () => {
     const trackingLog = env.logger.child("Tracking");
 
@@ -132,9 +150,16 @@ const startBackgroundLoops = ({ adbTracking, suitestTracking, reconcileLoop }: A
     ),
   );
 
-const stopResources = ({ adbTracking, suitestTracking, androidBridge, reconcileLoop }: ActiveLifecycle): IO.IO<void> =>
+const stopResources = ({
+  adbTracking,
+  suitestTracking,
+  androidBridge,
+  reconcileLoop,
+  recovery,
+}: ActiveLifecycle): IO.IO<void> =>
   pipe(
     IO.Do,
+    IO.flatMap(() => recovery.stop),
     IO.flatMap(() => adbTracking.stop),
     IO.flatMap(() => suitestTracking.stop),
     IO.flatMap(() => reconcileLoop.stop),
@@ -156,6 +181,7 @@ export const createActiveLifecycle = (env: Env): TE.TaskEither<CreateError, Acti
     }),
     TE.tapIO(() => env.logger.info("Activation flow completed")),
     TE.flatMap(() => TE.fromIO(createResources(env))),
+    TE.flatMap((resources) => createRecovery(env, resources)),
     TE.tapIO(startBackgroundLoops),
   );
 

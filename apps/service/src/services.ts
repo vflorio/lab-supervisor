@@ -3,6 +3,7 @@ import type * as LogStream from "@supervisor/core/log-stream";
 import type * as Logger from "@supervisor/core/logger";
 import * as Network from "@supervisor/core/network";
 import type * as Predicates from "@supervisor/core/predicates/index";
+import type * as Recovery from "@supervisor/core/recovery/index";
 import * as Adb from "@supervisor/core/services/adb";
 import * as Db from "@supervisor/core/services/db";
 import type * as Services from "@supervisor/core/services/services";
@@ -24,9 +25,10 @@ const toDeviceSnapshot = (devices: readonly Adb.Device[]): readonly Services.And
 export type Deps = {
   readonly config: Config.Service;
   readonly trpcLog: Logger.Tagged;
-  readonly adbDeviceStream: AdbStream.AdbDeviceStream;
   readonly logStream: LogStream.LogStream;
+  readonly adbDeviceStream: AdbStream.AdbDeviceStream;
   readonly predicateStream: Predicates.PredicateFeed;
+  readonly recoveryStream: Recovery.RecoveryFeed;
 };
 
 export const createServices = ({
@@ -35,17 +37,12 @@ export const createServices = ({
   adbDeviceStream,
   logStream,
   predicateStream,
+  recoveryStream,
 }: Deps): Services.Services => ({
   // Servizio di logging persistente per web-app
   logger: trpcLog.child("web"),
 
-  // Feed live dei log di servizio, consumato dalla subscription tRPC per la web-app
-  logs: logStream,
-
-  // Feed live dei predicati di monitoring, consumato dalla subscription tRPC per la web-app
-  tracking: predicateStream,
-
-  // TODO: Servizi di gestione delle dispositivi android
+  // Servizio di gestione delle dispositivi android
   android: android(trpcLog, adbDeviceStream),
 
   // TODO: Servizio di DNS-SD (Service Discovery)
@@ -61,6 +58,15 @@ export const createServices = ({
   settings: {
     getConfig: () => Config.redact(config),
   },
+
+  // tRPC (consumati dalle subscriptions per la web-app)
+
+  // Feed live dei log di servizio
+  logs: logStream,
+  // Feed live dei predicati di monitoring
+  tracking: predicateStream,
+  // Feed live delle transizioni di stato del motore di recovery
+  recovery: recoveryStream,
 });
 
 const android = (trpcLog: Logger.Tagged, stream: AdbStream.AdbDeviceStream): Services.AndroidBridge => ({

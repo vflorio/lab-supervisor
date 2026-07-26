@@ -1,11 +1,8 @@
 import type * as Adb from "@supervisor/core/services/adb";
 
-export interface AdbDeviceFeed {
+export interface AdbDeviceStream {
   readonly subscribe: (listener: (devices: readonly Adb.Device[]) => void) => () => void;
   readonly snapshot: () => readonly Adb.Device[];
-}
-
-export interface AdbDeviceStream extends AdbDeviceFeed {
   readonly publish: (devices: readonly Adb.Device[]) => void;
 }
 

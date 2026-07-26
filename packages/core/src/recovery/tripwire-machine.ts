@@ -8,10 +8,8 @@ import * as Machine from "../state-machine/machine";
 // -------------------------------------------------------------------------------------
 // Macchina a stati di un singolo RecoveryTripwire
 //
-// Semantica "tripwire indipendente" (non escalation sequenziale):
-// il livello osserva solo il proprio predicate;
-// Se resta falso ininterrottamente per >= grace, la pipeline scatta una volta sola;
-// il livello non può ri-scattare finché il predicate non torna vero
+// il tripwire osserva solo il proprio predicate, se resta falso ininterrottamente per >= grace,
+// la pipeline scatta e il tripwire non può ri-scattare finché il predicate non torna vero
 // -------------------------------------------------------------------------------------
 
 export type TripwireState =

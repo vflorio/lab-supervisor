@@ -4,7 +4,7 @@ import * as Adb from "@supervisor/core/services/adb";
 import type { LabRegistry } from "@supervisor/core/services/db";
 import { pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";
-import type { AdbDeviceFeed } from "../../adb/adb-stream";
+import type { AdbDeviceStream } from "../../adb/adb-stream";
 import * as Gating from "../../gating";
 import type { AndroidBridgeMachineEnv } from "./interpret";
 import * as AndroidBridgeMachine from "./machine";
@@ -35,7 +35,7 @@ const isReachable =
   (devices: readonly Adb.Device[]): boolean =>
     devices.some((d) => d.status === "device" && Network.EqByIp.equals(d.target, target));
 
-export const create = (env: AndroidBridgeMachineEnv, adbDeviceStream: AdbDeviceFeed): Handle => {
+export const create = (env: AndroidBridgeMachineEnv, adbDeviceStream: AdbDeviceStream): Handle => {
   const states = new Map<string, AndroidBridge.AndroidBridgeState>();
 
   // Best-effort: un fallimento in disconnessione non deve far fallire l'intero reconcile,
