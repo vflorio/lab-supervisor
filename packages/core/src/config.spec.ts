@@ -14,7 +14,7 @@ const validConfig = {
     tokenPassword: "token-password",
   },
   slack: { active: false, botToken: "token" },
-  monitoring: { polling: [["constantDelay", "30s"]] },
+  activation: { polling: [["constantDelay", "30s"]] },
   tracking: {
     adb: { polling: [["constantDelay", "5s"]] },
     suitestCamera: { polling: [["constantDelay", "20s"]] },
@@ -23,7 +23,7 @@ const validConfig = {
   },
   adb: { port: 5555, reconnect: [["constantDelay", "400ms"]] },
   log: { level: "debug" },
-  recovery: { scripts: [], workflows: [] },
+  workflows: [],
   trpc: { port: 3001, hostname: "127.0.0.1" },
   registry: { dbPath: "data/device-registry.json" },
 };

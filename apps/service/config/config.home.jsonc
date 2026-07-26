@@ -18,9 +18,6 @@
     "from": "00:00",
     "to": "23:59"
   },
-  "monitoring": {
-    "polling": [["constantDelay", "30s"]] // loop principale
-  },
   "tracking": {
     "adb": { "polling": [["constantDelay", "10s"]] }, // poll locale, nessun costo esterno
     "suitestCamera": { "polling": [["constantDelay", "30s"]] },
@@ -29,8 +26,8 @@
   },
   "log": {
     "level": "debug", // "error" | "warn" | "info" | "debug"
-    //"file": "logs/service.log"
-    "network": false // stampa le risposte HTTP (get/post, singole o paginate) indipendentemente da "level"
+    "file": "logs/service.jsonl", // JSON Lines files
+    "network": false // stampa le risposte HTTP (get/post, singole o paginate) indipendentemente da "tripwire"
   },
   "adb": {
     "port": 5555,
@@ -41,96 +38,67 @@
       ["limitRetries", 10]
     ]
   },
-  "recovery": {
-    "scripts": [],
-    "workflows": [
+  // Escalation sequenziale
+  "workflows": [
+    [
+      "open-chrome",
       [
-        "open-chrome",
-        {
-          "primary": {
-            "commands": [
-              // wake screen up
-              ["wakeUp"],
-              // Ensure APp is running (start if not opened)
-              ["ensureActivity", "com.android.chrome", "com.google.android.apps.chrome.Main"]
-            ],
-            "policy": [
-              ["constantDelay", "500ms"],
-              ["exponentialBackoff", "500ms"],
-              ["capDelay", "30s"],
-              ["limitRetries", 10]
-            ]
-          },
-          "secondary": {
-            "commands": [
-              ["reboot"],
-              // FIXME va rivista, attende sulla 5555, mentre dopo un reboot è necessario il processo di connessione
-              ["waitForDevice"],
-              ["ensureActivity", "com.android.chrome", "com.google.android.apps.chrome.Main"]
-            ],
-            "policy": [["constantDelay", "60s"], ["limitRetries", 3]]
-          }
-        }
-      ],
-      [
-        "open-developer-settings",
-        {
-          "primary": {
-            "commands": [["wakeUp"], ["openDeveloperSettings"]],
-            "policy": [["constantDelay", "1s"], ["limitRetries", 3]]
-          }
-        }
+        // wake screen up
+        ["wakeUp"],
+        // Ensure App is running (start if not opened)
+        ["ensureActivity", "com.android.chrome", "com.google.android.apps.chrome.Main"]
       ]
-    ]
-  },
+    ],
+    [
+      "open-chrome-reboot",
+      [
+        ["reboot"],
+        // FIXME va rivista, attende sulla 5555, mentre dopo un reboot è necessario il processo di connessione
+        ["waitForDevice"],
+        ["ensureActivity", "com.android.chrome", "com.google.android.apps.chrome.Main"]
+      ]
+    ],
+    ["open-developer-settings", [["wakeUp"], ["openDeveloperSettings"]]]
+  ],
+  "recovery": [
+    {
+      "domain": "suitest-camera",
+      "label": "camera-recovery-demo",
+      // Tripwire indipendente
+      "tripwires": [
+        {
+          // Quanto tempo il predicate deve rimanere falso prima di scattare la pipeline
+          "grace": "10s",
+          // Cosa osservare
+          "predicate": ["ref", "suitest_camera_connected"],
+          // Cosa fare quando il predicate resta falso per >= grace
+          "pipeline": ["workflow", "open-chrome"],
+          // Cosa fare se la pipeline fallisce (es. crash, timeout, ecc.)
+          "retry": [["constantDelay", "10s"], ["limitRetries", 2]]
+        }
+        //{
+        //  "grace": "60s",
+        //  "predicate": ["or", ["ref", "suitest_camera_recording"], ["ref", "suitest_camera_streaming"]],
+        //  "pipeline": ["or", ["workflow", "open-chrome"], ["workflow", "open-chrome-reboot"]],
+        //  "retry": [["constantDelay", "5s"], ["limitRetries", 2]]
+        //}
+      ]
+    }
+  ],
   "registry": {
     "dbPath": "data/device-registry.json",
     "devices": {
       "cameras": [
         {
           "id": "tablet",
-          "label": "Tablet",
+          "label": "Lenovo Tab M10",
           "controlled": true,
           "videoCaptureDeviceId": null,
           "adbId": "192.168.1.4:5555"
-        },
-        // Camere Suitest (video-capture-device) già collegate ai mock TV - riconciliate a mano per test
-        {
-          "id": "camera-tv-1",
-          "label": "Camera_TV_1",
-          "controlled": false,
-          "videoCaptureDeviceId": "vcd-001",
-          "adbId": null
-        },
-        {
-          "id": "camera-tv-2",
-          "label": "Camera_TV_2",
-          "controlled": false,
-          "videoCaptureDeviceId": "vcd-002",
-          "adbId": null
-        },
-        {
-          "id": "camera-tv-3",
-          "label": "Camera_TV_3",
-          "controlled": false,
-          "videoCaptureDeviceId": "vcd-003",
-          "adbId": null
-        },
-        {
-          "id": "camera-tv-4",
-          "label": "Camera_TV_4",
-          "controlled": false,
-          "videoCaptureDeviceId": "vcd-004",
-          "adbId": null
         }
       ],
-      "tvs": [
-        { "deviceId": "tv-001", "label": "TV_1", "controlled": false, "ip": "192.168.2.1" },
-        { "deviceId": "tv-002", "label": "TV_2", "controlled": false, "ip": "192.168.2.2" },
-        { "deviceId": "tv-003", "label": "TV_3", "controlled": false, "ip": "192.168.2.3" },
-        { "deviceId": "tv-004", "label": "TV_4", "controlled": false, "ip": "192.168.2.4" }
-      ],
-      "adb": [{ "id": "192.168.1.4:5555", "label": "Tablet", "target": "192.168.1.4:5555" }]
+      "tvs": [{ "deviceId": "tv-001", "label": "TV_1", "controlled": false, "ip": "192.168.2.1" }],
+      "adb": [{ "id": "192.168.1.4:5555", "label": "Lenovo Tab M10", "target": "192.168.1.4:5555" }]
     }
   }
 }

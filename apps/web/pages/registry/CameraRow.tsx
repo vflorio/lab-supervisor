@@ -1,6 +1,6 @@
 import { Link as LinkIcon, Usb, Videocam } from "@mui/icons-material";
 import { Box, Button, Stack, Typography } from "@mui/material";
-import * as NetworkTarget from "@supervisor/core/network-target";
+import * as Network from "@supervisor/core/network";
 import { EntryRow } from "@supervisor/ui/EntryRow";
 import * as O from "fp-ts/Option";
 import type { ReactNode } from "react";
@@ -29,7 +29,7 @@ export function CameraRow({
   const activity: ReactNode[] = [];
   const actions: ReactNode[] = [];
   const videoCaptureDeviceId = O.toUndefined(camera.videoCaptureDeviceId);
-  const adbAddress = camera.adb ? NetworkTarget.format(camera.adb.target) : undefined;
+  const adbAddress = camera.adb ? Network.format(camera.adb.target) : undefined;
 
   if (camera.suitest && videoCaptureDeviceId) {
     connectivity.push(

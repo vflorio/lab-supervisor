@@ -5,7 +5,7 @@ import type { AppError } from "../errors";
 import * as Retry from "../retry/retry";
 import { createPredicateStream } from "./feed";
 import type { PredicateEntry } from "./model";
-import { diff, run } from "./tracker";
+import { create, diff } from "./tracker";
 
 interface Item {
   readonly id: string;
@@ -89,7 +89,7 @@ describe("predicates/tracker run", () => {
     const emitted: PredicateEntry[] = [];
     stream.subscribe((entry) => emitted.push(entry));
 
-    const handle = run(noopLogger, Retry.constantDelay(5), { domain: "d", keyOf, toFacts, fetch }, stream)({});
+    const handle = create(noopLogger, stream, Retry.constantDelay(5), { domain: "d", keyOf, toFacts, fetch })({});
 
     const done = handle.start();
     await sleep(20);
@@ -116,7 +116,7 @@ describe("predicates/tracker run", () => {
     const emitted: PredicateEntry[] = [];
     stream.subscribe((entry) => emitted.push(entry));
 
-    const handle = run(noopLogger, Retry.constantDelay(5), { domain: "d", keyOf, toFacts, fetch }, stream)({});
+    const handle = create(noopLogger, stream, Retry.constantDelay(5), { domain: "d", keyOf, toFacts, fetch })({});
 
     const done = handle.start();
     await sleep(20);

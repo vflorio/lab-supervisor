@@ -14,7 +14,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import * as NetworkTarget from "@supervisor/core/network-target";
+import * as Network from "@supervisor/core/network";
 import { entryRowGridSx } from "@supervisor/ui/EntryRow";
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
@@ -35,7 +35,7 @@ import { adbStatusFor, buildHierarchy, cameraSuitestCandidates } from "./hierarc
 import { LinkSuitestDialog } from "./LinkSuitestDialog";
 import { mutate, mutations } from "./mutations";
 import { TvRow } from "./TvRow";
-import type { CameraView, Db, DeviceKind, LinkingTarget, NewAdbTargetForm } from "./types";
+import type { CameraView, Database, DeviceKind, LinkingTarget, NewAdbTargetForm } from "./types";
 // -------------------------------------------------------------------------------------
 // Component
 // -------------------------------------------------------------------------------------
@@ -52,7 +52,7 @@ export function RegistryView() {
 
 const emptyNewAdbTarget: NewAdbTargetForm = { label: "", target: "" };
 
-function HierarchyView({ db, adbDevices }: { db: Db; adbDevices: readonly AdbDevice[] }) {
+function HierarchyView({ db, adbDevices }: { db: Database; adbDevices: readonly AdbDevice[] }) {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ kind: DeviceKind; id: string; label: string } | null>(null);
   const [editLabel, setEditLabel] = useState("");
@@ -113,10 +113,10 @@ function HierarchyView({ db, adbDevices }: { db: Db; adbDevices: readonly AdbDev
     mutate(async () => {
       if (!assigningCamera) return { ok: false as const, error: { type: "ValidationError", message: "No camera" } };
 
-      const decoded = NetworkTarget.decode(target);
+      const decoded = Network.decode(target);
       if (E.isLeft(decoded)) return { ok: false as const, error: decoded.left };
 
-      const id = NetworkTarget.format(decoded.right);
+      const id = Network.format(decoded.right);
       log(`User assigned ADB host ${id} to camera ${assigningCamera.id}`);
       const addResult = await mutations.adb.add.mutate({ id, label: id, target: id });
       if (!addResult.ok) return addResult;
@@ -144,10 +144,10 @@ function HierarchyView({ db, adbDevices }: { db: Db; adbDevices: readonly AdbDev
       if (!newAdbTarget.label)
         return { ok: false as const, error: { type: "ValidationError", message: "Label required" } };
 
-      const decoded = NetworkTarget.decode(newAdbTarget.target);
+      const decoded = Network.decode(newAdbTarget.target);
       if (E.isLeft(decoded)) return { ok: false as const, error: decoded.left };
 
-      const id = NetworkTarget.format(decoded.right);
+      const id = Network.format(decoded.right);
       log(`User added ADB target ${id} ("${newAdbTarget.label}")`);
       const result = await mutations.adb.add.mutate({ id, label: newAdbTarget.label, target: id });
 
@@ -182,7 +182,7 @@ function HierarchyView({ db, adbDevices }: { db: Db; adbDevices: readonly AdbDev
         pipe(
           c.adbId,
           O.chain((id) => O.fromNullable(db.lab.adb[id])),
-          O.map((entry) => NetworkTarget.format(entry.target)),
+          O.map((entry) => Network.format(entry.target)),
         ),
       )
       .filter(O.isSome)

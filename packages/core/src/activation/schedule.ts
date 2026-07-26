@@ -36,8 +36,7 @@ export type ActivationSchedule = t.TypeOf<typeof ActivationScheduleCodec>;
 
 // Convertions
 
-// biome-ignore lint/suspicious/noShadowRestrictedNames: <es modules>
-export const toString = (ws: t.TypeOf<typeof ActivationScheduleCodec>): string =>
+export const format = (ws: t.TypeOf<typeof ActivationScheduleCodec>): string =>
   `ActivationSchedule(days: [${ws.days.join(", ")}], from: ${ws.from}, to: ${ws.to})`;
 
 // Costruisce lo Schedule dal ActivationSchedule in config

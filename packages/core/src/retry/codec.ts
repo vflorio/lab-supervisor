@@ -61,7 +61,7 @@ const PolicyStepJsonCodec = new t.Type<PolicyStepJson, (string | number)[], unkn
 
 export const PolicyJsonCodec = t.array(PolicyStepJsonCodec);
 
-export const policyJsonToString = (json: PolicyJson): string => `[PolicyJson: ${JSON.stringify(json)}]`;
+export const formatPolicyJson = (json: PolicyJson): string => `[PolicyJson: ${JSON.stringify(json)}]`;
 
 // -------------------------------------------------------------------------------------
 // Decodifica - da JSON a Policy

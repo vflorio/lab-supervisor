@@ -36,6 +36,7 @@ export const run =
           TE.map((stdout) => stdout.trim()),
         ),
       ),
+      TE.tapIO(({ spawnLogger, stdout }) => spawnLogger.debug(`Process output:\n${stdout}`)),
       TE.tapIO(({ spawnLogger }) => spawnLogger.debug(`Process end: "${formatCommand(command, args)}"`)),
       TE.map(({ stdout }) => stdout),
     );

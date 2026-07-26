@@ -1,6 +1,6 @@
 import * as E from "fp-ts/Either";
 import type * as RTE from "fp-ts/ReaderTaskEither";
-import { type AppError, format as formatError } from "../errors";
+import * as Errors from "../errors";
 import * as IntervalLoop from "../interval-loop";
 import * as Logger from "../logger";
 import type * as Retry from "../retry/retry";
@@ -12,7 +12,7 @@ import { factKey, type PredicateFact, type PredicateValue } from "./model";
 // entità, ed emette sullo stream solo i fatti il cui valore è realmente cambiato.
 // -------------------------------------------------------------------------------------
 
-export interface TrackerConfig<Env, Err extends AppError, RawItem> {
+export interface TrackerConfig<Env, Err extends Errors.AppError, RawItem> {
   readonly domain: string;
   readonly keyOf: (item: RawItem) => string;
   readonly toFacts: (item: RawItem) => Readonly<Record<string, PredicateValue>>;
@@ -54,27 +54,27 @@ export const diff =
     return { changed, next };
   };
 
-// Effettivo: fetch -> diff contro lo snapshot in closure -> emette i fatti cambiati -> ripete
-// sull'IntervalLoop. Un fallimento del fetch viene loggato e ignorato (nessuna emissione),
-// il tracker riprova al prossimo tick - stesso spirito "auto-risanante" di connection/handle.ts.
-export const run =
-  <Env, Error extends AppError, RawItem>(
+// Effettivo: fetch -> diff contro lo snapshot in closure -> emette i fatti cambiati -> ripete sull'IntervalLoop.
+// Un fallimento del fetch viene loggato e ignorato (nessuna emissione),
+// il tracker riprova al prossimo tick
+export const create =
+  <Env, Error extends Errors.AppError, RawItem>(
     logger: Logger.Tagged,
+    stream: PredicateStream,
     policy: Retry.Policy,
     config: TrackerConfig<Env, Error, RawItem>,
-    stream: PredicateStream,
   ) =>
   (env: Env): IntervalLoop.Handle => {
     const diffFor = diff<RawItem>(config.domain, config.keyOf, config.toFacts);
     let snapshot: ReadonlyMap<string, PredicateValue> = new Map();
 
-    const trackerLogger = logger.child(`tracker`);
+    const trackerLogger = logger.child("Tracker");
 
     const tick = async (): Promise<void> => {
       const result = await config.fetch(env)();
 
       if (E.isLeft(result)) {
-        trackerLogger.error(`${config.domain} poll failed: ${formatError(result.left)}`)();
+        trackerLogger.error(`${config.domain} poll failed: ${Errors.format(result.left)}`)();
         return;
       }
 
@@ -87,5 +87,5 @@ export const run =
       for (const fact of changed) stream.emit(fact);
     };
 
-    return IntervalLoop.create(trackerLogger, policy, tick);
+    return IntervalLoop.create(trackerLogger, policy, tick, `(Tracker) ${config.domain}`);
   };

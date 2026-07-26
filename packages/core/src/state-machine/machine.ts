@@ -38,17 +38,17 @@ export interface Machine<Env, Err, S, E, C> {
   readonly onTransition?: TransitionHook<Env, Err, S, E>;
 }
 
-export const make = <Env, Err, S, E, C>(
-  reduce: Reducer<S, E, C>,
-  handle: CommandHandler<Env, Err, E, C>,
-  onTransition?: TransitionHook<Env, Err, S, E>,
-): Machine<Env, Err, S, E, C> => ({ reduce, handle, onTransition });
+export const make = <Env, Error, State, Event, Intent>(
+  reduce: Reducer<State, Event, Intent>,
+  handle: CommandHandler<Env, Error, Event, Intent>,
+  onTransition?: TransitionHook<Env, Error, State, Event>,
+): Machine<Env, Error, State, Event, Intent> => ({ reduce, handle, onTransition });
 
 // -------------------------------------------------------------------------------------
 // Orchestratore / interprete dichiarativo
 // -------------------------------------------------------------------------------------
-// dispatch applica un evento allo stato corrente tramite il reducer, poi esegue
-// in sequenza i comandi generati.
+// dispatch applica un evento allo stato corrente tramite il reducer,
+// poi esegue in sequenza i comandi generati.
 // Ogni comando può produrre nuovi eventi, che vengono ridispatchati ricorsivamente
 // sullo stesso riduttore fino al punto fisso (nessun nuovo evento prodotto).
 // L'orchestratore stesso non contiene logica di dominio: si limita a

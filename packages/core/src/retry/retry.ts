@@ -1,7 +1,5 @@
-import * as TE from "fp-ts/TaskEither";
-import type { Logger } from "../logger";
-
 export * from "./codec";
+export * from "./interpret";
 
 // -------------------------------------------------------------------------------------
 // Model
@@ -70,44 +68,4 @@ export const concat =
     }
 
     return null;
-  };
-
-// -------------------------------------------------------------------------------------
-// Interpret
-// -------------------------------------------------------------------------------------
-
-export const applyPolicy =
-  (policy: Policy) =>
-  (status: Status): Status => ({
-    iteration: status.iteration + 1,
-    previousDelay: policy(status),
-  });
-
-const delay = (ms: number): TE.TaskEither<never, void> =>
-  TE.fromTask(() => new Promise((resolve) => setTimeout(resolve, ms)));
-
-// Riprova un TaskEither usando una Policy fino a quando la policy non è esaurita o l'azione ha successo
-export const retrying =
-  (policy: Policy, logger?: Logger) =>
-  <E, A>(action: TE.TaskEither<E, A>): TE.TaskEither<E, A> => {
-    const apply = applyPolicy(policy);
-
-    const loop = (status: Status): TE.TaskEither<E, A> =>
-      TE.orElse<E, A, E>((error) => {
-        const next = apply(status);
-
-        const exhausted = next.previousDelay === null;
-        if (exhausted) {
-          logger?.debug(`Retry policy exhausted after ${status.iteration + 1} attempt(s)`)();
-          return TE.left(error);
-        }
-
-        logger?.debug(
-          `Retry attempt ${next.iteration}/${exhausted ? "∞" : "?"} - next delay: ${next.previousDelay}ms`,
-        )();
-
-        return TE.flatMap(() => loop(next))(delay(next.previousDelay!));
-      })(action);
-
-    return loop(initialStatus);
   };

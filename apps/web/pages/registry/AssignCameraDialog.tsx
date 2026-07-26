@@ -1,5 +1,5 @@
 import { Chip } from "@mui/material";
-import * as NetworkTarget from "@supervisor/core/network-target";
+import * as Network from "@supervisor/core/network";
 import { SelectDialog } from "@supervisor/ui/SelectDialog";
 import type { AdbDevice } from "../../hooks/useAdbDevices";
 import type { CameraView } from "./types";
@@ -17,7 +17,7 @@ export function AssignCameraDialog({
   onAssign: (target: string) => void;
   onClose: () => void;
 }) {
-  const selectedTarget = camera?.adb ? NetworkTarget.format(camera.adb.target) : undefined;
+  const selectedTarget = camera?.adb ? Network.format(camera.adb.target) : undefined;
   const candidates = adbDevices.filter((d) => d.target === selectedTarget || !usedTargets.has(d.target));
 
   return (

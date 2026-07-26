@@ -1,4 +1,7 @@
 # TODO
+- ui recovery/workflows
+- notifica
+
 
 ## Core
 
@@ -6,8 +9,10 @@
     - [X] Aggiungere unit testing
 - [X] Device model: tipi per TV, Candybox, AndroidCamera (id, name, owner relations, ecc.)
 - [X] Target model: divisione esplicita PersistentTarget (porta persistente = connected) & ConnectingTarget (porta random = connecting)
-- [ ] Recovery policy model: offline threshold, grace period, retry count, delay tra tentativi
-- [ ] Notification policy model: immediate vs. after-all-retries-exhausted, config per device type
+- [X] Recovery policy model: offline threshold, grace period, retry count, delay tra tentativi
+    - [ ] Model/FSM/ADT: Recovery State = healthy / recovery / fatal-error o manual-intervention-required  
+    - [ ] Notifications: associazione a via config ad ogni tripwire, wiring= (UI: notistack, service: Slack (se configurato))
+- [ ] Notification policy model: immediate vs. after-all-retries-exhausted
 - [X] Config model: configurazione completa supervisor (devices, policies, schedule, Slack)
 - [X] Predicates model: sistema per dichiare info di interesse generale (quindi esposti a tRPC e tramite api event-driven) estratte da servizi specifici 
 
@@ -16,6 +21,7 @@
 - [X] Candybox reachability check
 - [X] Suitest Availability check: polling raggiungibilità per device type (Candybox, Android camera), con intervallo configurabile
 - [X] Activation gate: saltare il polling fuori dallo schedule di lavoro configurato
+    - [ ]: estendere il concetto allo stato di controlled per singolo device (es: uso tv 1 dalle 14 alle 18)
 - [X] Offline state tracker: tracciamento centralizzato stato device (online/offline/recovering), durata irraggiungibilità, integrato con availability check
 
 ## Recovery Workflows
@@ -83,3 +89,11 @@
 - [ ] Interfaccia scheduling (UI) per creare recording sessions
 - [ ] Session runner: power on -> selezione input -> avvio registrazione -> stop -> salvataggio -> power off opzionale
 - [ ] Strategia storage registrazioni (path locale, naming convention)
+
+
+- Modalità prenotatà (inietta nella tv un js che mostra un overlay) prenotato da: {utente} per {ragione} 
+    * durante la prenotazione lo script cattura i logs, chiamate di rete e screenshots ciclici/registra schermo
+
+- modalità batch tv commander: 
+    * permette di selezionare n tv, e far partire lo screenshot in una matrice auto-adattante, e permette di inviare un input del telecomando massimo
+    (permette di raggruppare le tv per os-type, in modo tale da specificare comandi per ui-specifiche)

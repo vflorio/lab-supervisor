@@ -1,8 +1,8 @@
-import type { AdbEntry, CameraEntry, CandyboxEntry, Db, TvEntry } from "@supervisor/core/services/db";
+import type { AdbEntry, CameraEntry, CandyboxEntry, Database, TvEntry } from "@supervisor/core/services/db";
 import type { InUseBy } from "@supervisor/core/services/suitest";
 import type { AdbDevice } from "../../hooks/useAdbDevices";
 
-export type { AdbEntry, Db };
+export type { AdbEntry, Database };
 
 export type DeviceKind = "candybox" | "camera" | "tv";
 
@@ -47,7 +47,7 @@ export interface Hierarchy {
 // manualmente dalla UI è un target ADB (es. un tablet), poi assegnabile a una camera.
 export interface NewAdbTargetForm {
   label: string;
-  target: string; // "ip:port", validato a runtime con NetworkTarget.decode
+  target: string; // "ip:port", validato a runtime con Network.decode
 }
 
 // Riconciliazione manuale camera <-> video-capture-device Suitest

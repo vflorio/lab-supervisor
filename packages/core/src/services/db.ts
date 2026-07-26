@@ -14,7 +14,7 @@ export * from "./lab-registry";
 export * from "./suitest-store";
 
 // -------------------------------------------------------------------------------------
-// Model - db multi-dominio: due sezioni nettamente separate.
+// Model - db multi-dominio:.
 // `suitest` è il mirror in sola lettura dei dati grezzi Suitest (formato originale, indicizzato per id).
 // `lab` è il dominio applicativo del supervisor (label/controlled/ip), preconfigurabile
 // e operabile offline, che referenzia `suitest` tramite un campo `suitestId` opzionale per ogni
@@ -26,9 +26,9 @@ export const DbCodec = t.type({
   lab: Lab.LabRegistryCodec,
 });
 
-export type Db = t.TypeOf<typeof DbCodec>;
+export type Database = t.TypeOf<typeof DbCodec>;
 
-export const empty: Db = { suitest: SuitestStoreDomain.empty, lab: Lab.empty };
+export const empty: Database = { suitest: SuitestStoreDomain.empty, lab: Lab.empty };
 
 export type DbError = Fs.FileSystemError | Validation.ValidationError | ParseError;
 
@@ -42,19 +42,19 @@ const parseJson = (raw: string): E.Either<ParseError, unknown> =>
   E.tryCatch(() => JSON.parse(raw), fromUnknown("ParseError"));
 
 export const read =
-  (path: string): ((env: Fs.Env) => TE.TaskEither<DbError, Db>) =>
+  (path: string): ((env: Fs.Env) => TE.TaskEither<DbError, Database>) =>
   (env) =>
     pipe(env.readFile(path), TE.flatMapEither(parseJson), TE.flatMapEither(Validation.validate(DbCodec)));
 
 export const write =
   (path: string) =>
-  (db: Db): ((env: Fs.Env) => TE.TaskEither<DbError, void>) =>
+  (db: Database): ((env: Fs.Env) => TE.TaskEither<DbError, void>) =>
   (env) =>
     env.writeFile(path, JSON.stringify(DbCodec.encode(db), null, 2));
 
 export const modify =
   (path: string) =>
-  (f: Endomorphism<Db>): ((env: Fs.Env) => TE.TaskEither<DbError, Db>) =>
+  (f: Endomorphism<Database>): ((env: Fs.Env) => TE.TaskEither<DbError, Database>) =>
   (env) =>
     pipe(
       read(path)(env),
@@ -65,7 +65,7 @@ export const modify =
 // Applica una modifica pura al solo dominio applicativo (`lab`), lasciando `suitest` invariato
 export const modifyLab =
   (path: string) =>
-  (f: Endomorphism<Lab.LabRegistry>): ((env: Fs.Env) => TE.TaskEither<DbError, Db>) =>
+  (f: Endomorphism<Lab.LabRegistry>): ((env: Fs.Env) => TE.TaskEither<DbError, Database>) =>
     modify(path)((db) => ({ ...db, lab: f(db.lab) }));
 
 // -------------------------------------------------------------------------------------
@@ -76,12 +76,12 @@ const seedDict = <T extends { controlled: boolean }>(items: readonly T[], id: (i
   Object.fromEntries(items.map((item) => [id(item), { ...item, controlled: true }]));
 
 export const init =
-  (path: string, seed?: Lab.LabRegistrySeed): ((env: Fs.Env) => TE.TaskEither<DbError, Db>) =>
+  (path: string, seed?: Lab.LabRegistrySeed): ((env: Fs.Env) => TE.TaskEither<DbError, Database>) =>
   (env) =>
     pipe(
       read(path)(env),
       TE.orElse(() => {
-        const initial: Db = {
+        const initial: Database = {
           suitest: SuitestStoreDomain.empty,
           lab: {
             candyboxes: seedDict(seed?.candyboxes ?? [], (d) => d.id),
@@ -99,15 +99,15 @@ export const init =
     );
 
 // -------------------------------------------------------------------------------------
-// Sync da Suitest: sostituisce integralmente il mirror `suitest` e auto-importa i control unit
-// nel dominio `lab` (identità condivisa, nessuna riconciliazione manuale necessaria). TV e
-// Camera non vengono toccate: la loro associazione a un'entità Suitest (`suitestId`) è manuale,
-// fatta via UI.
+// Sync da Suitest: sostituisce integralmente il mirror `suitest` e auto-importa le
+// control unit nel dominio `lab` (identità condivisa, nessuna riconciliazione manuale necessaria).
+// TV e Camera non vengono toccate: la loro associazione a un'entità Suitest (`suitestId`)
+// è manuale, fatta via UI.
 // -------------------------------------------------------------------------------------
 
 export const syncFromSuitest =
   (path: string) =>
-  (incoming: SuitestLists): ((env: Fs.Env) => TE.TaskEither<DbError, Db>) =>
+  (incoming: SuitestLists): ((env: Fs.Env) => TE.TaskEither<DbError, Database>) =>
     modify(path)((db) => ({
       suitest: SuitestStoreDomain.replaceFromSuitest(incoming),
       lab: Lab.upsertCandyboxesFromSuitestControlUnits(incoming.controlUnits)(db.lab),

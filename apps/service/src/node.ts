@@ -28,12 +28,20 @@ export const spawn: Shell.Spawn = (command, args) =>
   );
 
 export const fsEnv: Fs.Env = {
-  logger: pipe(ServiceLogger.create({ level: "debug" }), Logger.tagged("FS")),
+  logger: pipe(ServiceLogger.create({ level: "debug" }), Logger.tagged("FileSystem")),
 
-  readFile: (path) => TE.tryCatch(() => readFile(path, "utf-8"), Errors.fromUnknown("FileSystemError")),
+  readFile: (path) =>
+    pipe(
+      TE.tryCatch(() => readFile(path, "utf-8"), Errors.fromUnknown("FileSystemError")),
+      TE.tapIO(() => fsEnv.logger.debug(`Read file: ${path}`)),
+    ),
+
   writeFile: (path, content) =>
-    TE.tryCatch(async () => {
-      await mkdir(dirname(path), { recursive: true });
-      await writeFile(path, content, "utf-8");
-    }, Errors.fromUnknown("FileSystemError")),
+    pipe(
+      TE.tryCatch(async () => {
+        await mkdir(dirname(path), { recursive: true });
+        await writeFile(path, content, "utf-8");
+      }, Errors.fromUnknown("FileSystemError")),
+      TE.tapIO(() => fsEnv.logger.debug(`Write file: ${path}`)),
+    ),
 };

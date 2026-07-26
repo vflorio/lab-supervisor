@@ -3,12 +3,12 @@ import { constVoid, pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";
 import * as t from "io-ts";
 import type * as Config from "../config";
-import { format } from "../errors";
-import { getJsonAuth, type HTTPError, postJsonBasic } from "../http";
+import * as Errors from "../errors";
+import * as HTTP from "../http";
 import * as Logger from "../logger";
-import { fetchAllPages, type PaginationFetchError } from "./suitest-paginate";
+import * as SuitestPaginate from "./suitest-paginate";
 
-export type SuitestError = HTTPError | Validation.ValidationError | PaginationFetchError;
+export type SuitestError = HTTP.HTTPError | Validation.ValidationError | SuitestPaginate.PaginationFetchError;
 
 export interface Env {
   readonly suitestConfig: Config.Suitest;
@@ -208,27 +208,31 @@ export type VideoCaptureDevice = t.TypeOf<typeof VideoCaptureDeviceCodec>;
 // Logging helper
 // -------------------------------------------------------------------------------------
 
-const loggedGet = (env: Env, path: string): TE.TaskEither<HTTPError, unknown> => {
+const loggedGet = (env: Env, path: string): TE.TaskEither<HTTP.HTTPError, unknown> => {
   const url = endpoint(env, path);
   return pipe(
     env.logger ? TE.fromIO(env.logger.debug(`GET ${url}`)) : TE.right(undefined),
-    TE.flatMap(() => getJsonAuth(url, env.suitestConfig)),
+    TE.flatMap(() => HTTP.getJsonAuth(url, env.suitestConfig)),
     TE.tapIO((data) =>
       env.logger ? env.logger.child("HTTP").logNetwork(Logger.formatJsonLog([{ response: data }])) : constVoid,
     ),
-    TE.tapError((err) => (env.logger ? TE.fromIO(env.logger.error(`  X ${format(err)}`)) : TE.right(undefined))),
+    TE.tapError((err) =>
+      env.logger ? TE.fromIO(env.logger.error(`GET HTTPError: ${Errors.format(err)}`)) : TE.right(undefined),
+    ),
   );
 };
 
-const loggedPost = (env: Env, path: string): TE.TaskEither<HTTPError, unknown> => {
+const loggedPost = (env: Env, path: string): TE.TaskEither<HTTP.HTTPError, unknown> => {
   const url = endpoint(env, path);
   return pipe(
     env.logger ? TE.fromIO(env.logger.debug(`POST ${url}`)) : TE.right(undefined),
-    TE.flatMap(() => postJsonBasic(url, env.suitestConfig)),
+    TE.flatMap(() => HTTP.postJsonBasic(url, env.suitestConfig)),
     TE.tapIO((data) =>
       env.logger ? env.logger.child("HTTP").logNetwork(Logger.formatJsonLog([{ response: data }])) : constVoid,
     ),
-    TE.tapError((err) => (env.logger ? TE.fromIO(env.logger.error(`  X ${format(err)}`)) : TE.right(undefined))),
+    TE.tapError((err) =>
+      env.logger ? TE.fromIO(env.logger.error(`POST HTTPError: ${Errors.format(err)}`)) : TE.right(undefined),
+    ),
   );
 };
 
@@ -236,12 +240,14 @@ const loggedPost = (env: Env, path: string): TE.TaskEither<HTTPError, unknown> =
 // API - Devices
 // -------------------------------------------------------------------------------------
 
-// TVs, Smart Plugs (mai fotocamere: quelle arrivano solo da /video-capture-devices)
+// TVs, Smart Plugs
 export const getAllDevices = (env: Env): TE.TaskEither<SuitestError, readonly Device[]> =>
   pipe(
-    fetchAllPages(endpoint(env, "/devices"), env.suitestConfig, DeviceCodec, env.logger),
+    SuitestPaginate.fetchAllPages(endpoint(env, "/devices"), env.suitestConfig, DeviceCodec, env.logger),
     TE.tapIO((devices) => (env.logger ? env.logger.debug(`  -> ${devices.length} devices total`) : () => {})),
-    TE.tapError((err) => (env.logger ? TE.fromIO(env.logger.error(`  X ${format(err)}`)) : TE.right(undefined))),
+    TE.tapError((err) =>
+      env.logger ? TE.fromIO(env.logger.error(`/devices error: ${Errors.format(err)}`)) : TE.right(undefined),
+    ),
   );
 
 // Dettaglio di un singolo device
@@ -265,11 +271,20 @@ export const getControlUnits = (env: Env): TE.TaskEither<SuitestError, readonly 
 
 export const getVideoCaptureDevices = (env: Env): TE.TaskEither<SuitestError, readonly VideoCaptureDevice[]> =>
   pipe(
-    fetchAllPages(endpoint(env, "/video-capture-devices"), env.suitestConfig, VideoCaptureDeviceCodec, env.logger),
+    SuitestPaginate.fetchAllPages(
+      endpoint(env, "/video-capture-devices"),
+      env.suitestConfig,
+      VideoCaptureDeviceCodec,
+      env.logger,
+    ),
     TE.tapIO((devices) =>
       env.logger ? env.logger.debug(`  -> ${devices.length} video capture devices total`) : () => {},
     ),
-    TE.tapError((err) => (env.logger ? TE.fromIO(env.logger.error(`  X ${format(err)}`)) : TE.right(undefined))),
+    TE.tapError((err) =>
+      env.logger
+        ? TE.fromIO(env.logger.error(`/video-capture-devices error: ${Errors.format(err)}`))
+        : TE.right(undefined),
+    ),
   );
 
 // Riavvia una control unit (CandyBox/Raspberry Pi)

@@ -5,10 +5,11 @@ import * as t from "io-ts";
 import { ActivationScheduleCodec } from "./activation/schedule";
 import { of } from "./errors";
 import { LogLevel } from "./logger";
-import * as NetworkTarget from "./network-target";
+import * as Network from "./network";
+import { RecoveryPolicyCodec } from "./recovery/codec";
 import { PolicyJsonCodec } from "./retry/codec";
 import { AdbEntryCodec, CameraEntryCodec, CandyboxEntryCodec, TvEntryCodec } from "./services/db";
-import { ScriptJsonCodec, WorkflowJsonCodec } from "./workflow/codec";
+import { WorkflowJsonCodec } from "./workflow/codec";
 
 // -------------------------------------------------------------------------------------
 // Model - Configurazione del servizio
@@ -31,13 +32,6 @@ const SlackCodec = t.type({
 
 export type Slack = t.TypeOf<typeof SlackCodec>;
 
-// Configurazione monitoring con policy di polling
-const MonitoringCodec = t.type({
-  polling: PolicyJsonCodec,
-});
-
-export type Monitoring = t.TypeOf<typeof MonitoringCodec>;
-
 // Configurazione dei tracker di predicati (packages/core/src/predicates): una policy di
 // polling indipendente per dominio, ognuno interrogato a una cadenza propria
 const TrackingCodec = t.type({
@@ -59,18 +53,11 @@ export type Log = t.TypeOf<typeof LogCodec>; // Esportata e rinominato per servi
 
 // Configurazione connessione ADB
 const AdbCodec = t.type({
-  port: NetworkTarget.PortCodec,
+  port: Network.PortCodec,
   reconnect: PolicyJsonCodec,
 });
 
 export type Adb = t.TypeOf<typeof AdbCodec>;
-
-const RecoveryCodec = t.type({
-  scripts: t.array(ScriptJsonCodec),
-  workflows: t.array(WorkflowJsonCodec),
-});
-
-export type Recovery = t.TypeOf<typeof RecoveryCodec>;
 
 const TrpcCodec = t.type({
   port: t.number,
@@ -93,18 +80,23 @@ const RegistryCodec = t.intersection([
 
 export type Registry = t.TypeOf<typeof RegistryCodec>;
 
-const ServiceCodec = t.type({
-  activationSchedule: ActivationScheduleCodec,
-  suitest: SuitestCodec,
-  slack: SlackCodec,
-  monitoring: MonitoringCodec,
-  tracking: TrackingCodec,
-  adb: AdbCodec,
-  log: LogCodec,
-  recovery: RecoveryCodec,
-  trpc: TrpcCodec,
-  registry: RegistryCodec,
-});
+const ServiceCodec = t.intersection([
+  t.type({
+    activationSchedule: ActivationScheduleCodec,
+    suitest: SuitestCodec,
+    slack: SlackCodec,
+    tracking: TrackingCodec,
+    adb: AdbCodec,
+    log: LogCodec,
+    workflows: t.array(WorkflowJsonCodec),
+    trpc: TrpcCodec,
+    registry: RegistryCodec,
+  }),
+  // `recovery` (Recovery Model): nessun motore a runtime la consuma ancora, resta opzionale
+  t.partial({
+    recovery: t.array(RecoveryPolicyCodec),
+  }),
+]);
 
 export type Service = t.TypeOf<typeof ServiceCodec>;
 
