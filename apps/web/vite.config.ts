@@ -8,6 +8,7 @@ export default defineConfig({
     proxy: {
       "/api/trpc": {
         target: "http://localhost:3001",
+        ws: true,
         rewrite: (path) => path.replace(/^\/api\/trpc/, "/trpc"),
       },
       // Mock Suitest server (apps/mocks) - solo per la form di debug /mock in sviluppo
