@@ -9,8 +9,10 @@
     - [X] Aggiungere unit testing
 - [X] Device model: tipi per TV, Candybox, AndroidCamera (id, name, owner relations, ecc.)
 - [X] Target model: divisione esplicita PersistentTarget (porta persistente = connected) & ConnectingTarget (porta random = connecting)
-- [ ] Recovery policy model: offline threshold, grace period, retry count, delay tra tentativi
-- [ ] Notification policy model: immediate vs. after-all-retries-exhausted, config per device type
+- [X] Recovery policy model: offline threshold, grace period, retry count, delay tra tentativi
+    - [ ] Model/FSM/ADT: Recovery State = healthy / recovery / fatal-error o manual-intervention-required  
+    - [ ] Notifications: associazione a via config ad ogni tripwire, wiring= (UI: notistack, service: Slack (se configurato))
+- [ ] Notification policy model: immediate vs. after-all-retries-exhausted
 - [X] Config model: configurazione completa supervisor (devices, policies, schedule, Slack)
 - [X] Predicates model: sistema per dichiare info di interesse generale (quindi esposti a tRPC e tramite api event-driven) estratte da servizi specifici 
 

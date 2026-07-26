@@ -1,4 +1,6 @@
 import * as E from "fp-ts/Either";
+import { pipe } from "fp-ts/function";
+import * as TE from "fp-ts/TaskEither";
 import { type AppError, format } from "../errors";
 import type * as Logger from "../logger";
 import type { PredicateLookup } from "../predicates/expression";
@@ -57,12 +59,30 @@ export const create = (compiledTripwires: readonly CompiledTripwire[], env: Enti
   const instances: TripwireInstance[] = compiledTripwires.map((tripwire, index) => {
     const tripwireLogger = env.logger.child(`Recovery-Tripwire:${index}`);
 
-    const runWithRetry = Retry.retryingUntil(
-      tripwire.retryPolicy,
-      tripwireLogger,
-    )(interpretPipeline(tripwire.pipeline)(workflowEnv));
+    // Il predicate va ricontrollato dopo la pipeline: "succeeded" nella pipeline significa solo che
+    // i comandi sono stati eseguiti senza errori, non che il device sia di nuovo sano (es. reboot
+    // inviato con successo ma device non ancora tornato raggiungibile) - per questo il lookup, con
+    // cui si rivaluta il predicate, arriva ad ogni tentativo invece di essere catturato una volta sola.
+    const runRecoveryFor = (lookup: PredicateLookup): TE.TaskEither<AppError, boolean> =>
+      Retry.retryingUntil(
+        tripwire.retryPolicy,
+        tripwireLogger,
+      )(
+        pipe(
+          interpretPipeline(tripwire.pipeline)(workflowEnv),
+          TE.map((ranOk) => ({ ranOk, recovered: ranOk && tripwire.predicate(lookup) })),
+          TE.tapIO(({ ranOk, recovered }) =>
+            ranOk && !recovered
+              ? tripwireLogger.warn(
+                  "recovery pipeline completed without errors, but the predicate is still false - device not healthy yet",
+                )
+              : () => {},
+          ),
+          TE.map(({ recovered }) => recovered),
+        ),
+      );
 
-    const machine = TripwireMachine.make(tripwire.graceMs, runWithRetry, (succeeded) => {
+    const machine = TripwireMachine.make(tripwire.graceMs, runRecoveryFor, (succeeded) => {
       tripwireLogger.info(succeeded ? "recovery succeeded" : "recovery exhausted retries without success")();
       env.onStatus?.(index, { state: "fired", outcome: succeeded ? "succeeded" : "exhausted" });
     });
@@ -74,9 +94,12 @@ export const create = (compiledTripwires: readonly CompiledTripwire[], env: Enti
     for (const [index, instance] of instances.entries()) {
       const healthy = instance.predicate(lookup);
       const previousTag = instance.state.tag;
-      const result = await Machine.dispatch(instance.machine)(instance.state, { tag: "observe", healthy, now })(
-        undefined,
-      )();
+      const result = await Machine.dispatch(instance.machine)(instance.state, {
+        tag: "observe",
+        healthy,
+        now,
+        lookup,
+      })(undefined)();
 
       if (E.isRight(result)) {
         instance.state = result.right;

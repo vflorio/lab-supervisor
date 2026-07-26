@@ -19,6 +19,17 @@ const noopLogger = {
   child: (): any => noopLogger,
 };
 
+// Come noopLogger, ma registra i messaggi di warn - usato per verificare gli avvisi emessi
+// quando la pipeline "riesce" senza però che il predicate torni vero.
+const loggerCapturingWarnings = (warnings: string[]): any => ({
+  debug: () => () => {},
+  info: () => () => {},
+  warn: (message: string) => () => warnings.push(message),
+  error: () => () => {},
+  logNetwork: () => () => {},
+  child: (): any => loggerCapturingWarnings(warnings),
+});
+
 const capabilitiesWith = (impl: Partial<Interpreter.CommandCapabilities>): Interpreter.CommandCapabilities => ({
   restartApp: () => TE.right(undefined),
   ensureActivity: () => TE.right(undefined),
@@ -87,33 +98,33 @@ describe("recovery/entity-runner", () => {
       },
     ];
 
+    let value = false;
     const runner = EntityRunner.create(compileOrThrow(tripwires), {
       logger: noopLogger as any,
       workflows: [{ name: "reconnect", commands: [{ type: "reboot" }] }],
       capabilities: capabilitiesWith({
+        // Il reboot "riesce" (nessun comando fallito) e riporta davvero il device online:
+        // è questo secondo fatto, riverificato sul predicate, a contare come successo.
         reboot: () => {
           calls.push("reboot");
+          value = true;
           return TE.right(undefined);
         },
       }),
     });
 
-    let value = false;
     const lookup = () => value;
 
     await runner.observe(lookup, 0); // healthy=false -> pending(since=0)
     await runner.observe(lookup, 999); // ancora sotto grace
     expect(calls).toEqual([]);
 
-    await runner.observe(lookup, 1000); // grace raggiunta -> fired, esegue la pipeline
+    await runner.observe(lookup, 1000); // grace raggiunta -> fired, esegue la pipeline, il predicate torna vero
     expect(calls).toEqual(["reboot"]);
 
-    await runner.observe(lookup, 1001); // ancora non sano: già scattato, non ri-esegue
+    await runner.observe(lookup, 1001); // predicate vero -> reset a healthy, non ri-esegue
     await runner.observe(lookup, 5000);
     expect(calls).toEqual(["reboot"]);
-
-    value = true;
-    await runner.observe(lookup, 6000); // torna sano -> reset
 
     value = false;
     await runner.observe(lookup, 6000); // nuovo episodio
@@ -123,6 +134,7 @@ describe("recovery/entity-runner", () => {
 
   it("retries the pipeline according to the tripwire's retry policy before giving up", async () => {
     let attempts = 0;
+    let connected = false;
     const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: GRACE,
@@ -141,16 +153,64 @@ describe("recovery/entity-runner", () => {
       capabilities: capabilitiesWith({
         restartApp: () => {
           attempts++;
+          if (attempts >= 3) connected = true; // il 3° tentativo è quello che ripristina davvero il device
           return attempts >= 3 ? TE.right(undefined) : TE.left({ type: "WorkflowError", message: "not yet" });
         },
       }),
     });
 
-    const lookup = () => false;
+    const lookup = () => connected;
     await runner.observe(lookup, 0);
     await runner.observe(lookup, 1000);
 
     expect(attempts).toBe(3);
+  });
+
+  it("does not report success when the pipeline runs cleanly but the predicate stays false", async () => {
+    const calls: string[] = [];
+    const outcomes: Array<"succeeded" | "exhausted"> = [];
+    const warnings: string[] = [];
+    const tripwires: readonly RecoveryTripwire[] = [
+      {
+        grace: GRACE,
+        predicate: { type: "ref", name: "connected" },
+        pipeline: { type: "workflow", workflowName: "reconnect" },
+        retry: [
+          ["constantDelay", "1ms"],
+          ["limitRetries", 1],
+        ],
+      },
+    ];
+
+    const runner = EntityRunner.create(compileOrThrow(tripwires), {
+      logger: loggerCapturingWarnings(warnings),
+      workflows: [{ name: "reconnect", commands: [{ type: "reboot" }] }],
+      capabilities: capabilitiesWith({
+        // Il comando "riesce" sempre (nessun errore), ma non fa mai tornare online il device:
+        // rappresenta un workflow "programmato bene" e senza errori che però non basta a
+        // ripristinare il predicate.
+        reboot: () => {
+          calls.push("reboot");
+          return TE.right(undefined);
+        },
+      }),
+      onStatus: (_index, event) => {
+        if (event.outcome !== undefined) outcomes.push(event.outcome);
+      },
+    });
+
+    const lookup = () => false; // il predicate non torna mai vero
+
+    await runner.observe(lookup, 0);
+    await runner.observe(lookup, 1000); // grace raggiunta -> esegue la pipeline, esaurisce i retry
+
+    expect(calls).toEqual(["reboot", "reboot"]); // 1 tentativo + 1 retry (limitRetries: 1), mai marcato riuscito
+    expect(outcomes).toEqual(["exhausted"]);
+    // un warning per ogni tentativo in cui la pipeline è "riuscita" ma il predicate resta falso
+    expect(warnings).toEqual([
+      "recovery pipeline completed without errors, but the predicate is still false - device not healthy yet",
+      "recovery pipeline completed without errors, but the predicate is still false - device not healthy yet",
+    ]);
   });
 
   it("runs independent tripwires independently, based on each tripwire's own predicate and grace", async () => {
@@ -176,6 +236,7 @@ describe("recovery/entity-runner", () => {
       },
     ];
 
+    let recordingRecovered = false;
     const runner = EntityRunner.create(compileOrThrow(tripwires), {
       logger: noopLogger as any,
       workflows: [
@@ -189,13 +250,15 @@ describe("recovery/entity-runner", () => {
         },
         reboot: () => {
           fired.push("tripwire-2");
+          recordingRecovered = true; // il reboot riporta davvero "recording" a vero
           return TE.right(undefined);
         },
       }),
     });
 
-    // connected recupera subito, recording resta falso per tutta la durata
-    const lookup = (name: string) => name === "connected";
+    // connected è sempre vero (tripwire-1 non scatta mai); recording resta falso finché
+    // tripwire-2 non esegue davvero il proprio recovery
+    const lookup = (name: string) => name === "connected" || (name === "recording" && recordingRecovered);
 
     await runner.observe(lookup, 0);
     await runner.observe(lookup, 1000); // tripwire-1 sano, non scatta; tripwire-2 ancora sotto grace (2s)
