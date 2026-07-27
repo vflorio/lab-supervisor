@@ -1,4 +1,4 @@
-import type { SlackMessage } from "@supervisor/core/slack";
+import type { SlackMessage } from "@supervisor/core/adapters/slack";
 
 // -------------------------------------------------------------------------------------
 // Stored message (with server-generated fields)

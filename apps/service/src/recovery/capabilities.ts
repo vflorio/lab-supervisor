@@ -1,5 +1,5 @@
 import * as Errors from "@supervisor/core/errors";
-import type * as Logger from "@supervisor/core/logger";
+import type * as Logger from "@supervisor/core/logger/logger";
 import * as WorkflowInterpreter from "@supervisor/core/workflow/interpreter";
 import { pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";

@@ -1,6 +1,6 @@
 import * as O from "fp-ts/Option";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type * as Logger from "../logger";
+import type * as Logger from "../logger/logger";
 import { dispatch } from "./dispatch";
 import type { NotifyRule } from "./model";
 

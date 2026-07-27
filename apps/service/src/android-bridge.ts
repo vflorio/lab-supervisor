@@ -1,14 +1,12 @@
+import * as Adb from "@supervisor/core/adapters/adb/shell";
+import * as AndroidBridge from "@supervisor/core/android-bridge/machine";
+import type { LabRegistry } from "@supervisor/core/db";
 import * as Errors from "@supervisor/core/errors";
 import * as Network from "@supervisor/core/network";
-import * as Adb from "@supervisor/core/services/adb";
-import type { LabRegistry } from "@supervisor/core/services/db";
 import { pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";
-import type { AdbDeviceStream } from "../../adb/adb-stream";
-import * as Gating from "../../gating";
-import type { AndroidBridgeMachineEnv } from "./interpret";
-import * as AndroidBridgeMachine from "./machine";
-import * as AndroidBridge from "./model";
+import type { AdbDeviceStream } from "./adb/adb-stream";
+import * as Gating from "./gating";
 
 // -------------------------------------------------------------------------------------
 // Orchestrator - una istanza della FSM android-bridge per ogni camera controlled.
@@ -35,7 +33,7 @@ const isReachable =
   (devices: readonly Adb.Device[]): boolean =>
     devices.some((d) => d.status === "device" && Network.EqByIp.equals(d.target, target));
 
-export const create = (env: AndroidBridgeMachineEnv, adbDeviceStream: AdbDeviceStream): Handle => {
+export const create = (env: AndroidBridge.AndroidBridgeMachineEnv, adbDeviceStream: AdbDeviceStream): Handle => {
   const states = new Map<string, AndroidBridge.AndroidBridgeState>();
 
   // Best-effort: un fallimento in disconnessione non deve far fallire l'intero reconcile,
@@ -90,7 +88,7 @@ export const create = (env: AndroidBridgeMachineEnv, adbDeviceStream: AdbDeviceS
       TE.sequenceSeqArray(
         toRetry.map(([id, state]) =>
           pipe(
-            AndroidBridgeMachine.dispatch(state, { _tag: "ReconnectRequested" })(env),
+            AndroidBridge.dispatch(state, { _tag: "ReconnectRequested" })(env),
             TE.map((next) => {
               states.set(id, next);
             }),
@@ -105,7 +103,7 @@ export const create = (env: AndroidBridgeMachineEnv, adbDeviceStream: AdbDeviceS
     for (const [id, state] of states) {
       if (state._tag !== "Idle" || isReachable(state.target)(devices)) continue;
 
-      AndroidBridgeMachine.dispatch(state, {
+      AndroidBridge.dispatch(state, {
         _tag: "ConnectionLost",
         reason: "Device no longer reachable via ADB",
       })(env)().then((result) => {

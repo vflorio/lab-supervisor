@@ -2,8 +2,8 @@ import * as Network from "@supervisor/core/network";
 import type * as Machine from "@supervisor/core/state-machine/machine";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
-import type { AndroidBridgeMachineEnv } from "./interpret";
-import type { AndroidBridgeEvent, AndroidBridgeState } from "./model";
+import type { AndroidBridgeMachineEnv } from "../interpret";
+import type { AndroidBridgeEvent, AndroidBridgeState } from "../model";
 
 // -------------------------------------------------------------------------------------
 // Tracing - visibilità automatica sulle transizioni di fase (debugging)
@@ -30,7 +30,7 @@ const describeEvent = (event: AndroidBridgeEvent): string =>
 const isRegression = (from: AndroidBridgeState, to: AndroidBridgeState): boolean =>
   from._tag !== "Disconnected" && to._tag === "Disconnected";
 
-export const onTransition: Machine.TransitionHook<
+export const logStateChange: Machine.TransitionHook<
   AndroidBridgeMachineEnv,
   never,
   AndroidBridgeState,

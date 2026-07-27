@@ -5,7 +5,7 @@ import * as t from "io-ts";
 import type * as Config from "../config";
 import * as Errors from "../errors";
 import * as HTTP from "../http";
-import * as Logger from "../logger";
+import * as Logger from "../logger/logger";
 import * as SuitestPaginate from "./suitest-paginate";
 
 export type SuitestError = HTTP.HTTPError | Validation.ValidationError | SuitestPaginate.PaginationFetchError;

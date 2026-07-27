@@ -15,7 +15,7 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import type { ControlUnit, Device, DeviceStatus, VideoCaptureDevice } from "@supervisor/core/services/suitest";
+import type { ControlUnit, Device, DeviceStatus, VideoCaptureDevice } from "@supervisor/core/adapters/suitest";
 import { useEffect, useState } from "react";
 
 // -------------------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-import type * as Adb from "@supervisor/core/services/adb";
+import type * as Adb from "@supervisor/core/adapters/adb/shell";
 
 export interface AdbDeviceStream {
   readonly subscribe: (listener: (devices: readonly Adb.Device[]) => void) => () => void;

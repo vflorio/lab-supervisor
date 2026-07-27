@@ -1,4 +1,4 @@
-import type { ControlUnit, Device, DeviceStatus, InUseBy, VideoCaptureDevice } from "@supervisor/core/services/suitest";
+import type { ControlUnit, Device, DeviceStatus, InUseBy, VideoCaptureDevice } from "@supervisor/core/adapters/suitest";
 
 // -------------------------------------------------------------------------------------
 // Seed data

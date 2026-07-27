@@ -1,21 +1,21 @@
 import type * as Activity from "@supervisor/core/activity/stream";
+import * as Adb from "@supervisor/core/adapters/adb/shell";
 import * as Config from "@supervisor/core/config";
-import type * as LogStream from "@supervisor/core/log-stream";
-import type * as Logger from "@supervisor/core/logger";
+import * as Db from "@supervisor/core/db";
+import type * as LogStream from "@supervisor/core/logger/log-stream";
+import type * as Logger from "@supervisor/core/logger/logger";
 import * as Network from "@supervisor/core/network";
 import type * as Notify from "@supervisor/core/notify/stream";
 import type * as Predicates from "@supervisor/core/predicates/index";
 import type * as Recovery from "@supervisor/core/recovery/index";
-import * as Adb from "@supervisor/core/services/adb";
-import * as Db from "@supervisor/core/services/db";
-import type * as Services from "@supervisor/core/services/services";
+import type * as Trpc from "@supervisor/core/trpc";
 import { pipe } from "fp-ts/function";
 import * as RA from "fp-ts/ReadonlyArray";
 import * as TE from "fp-ts/TaskEither";
 import type * as AdbStream from "./adb/adb-stream";
 import * as Node from "./node";
 
-const toDeviceSnapshot = (devices: readonly Adb.Device[]): readonly Services.AndroidDeviceSnapshot[] =>
+const toDeviceSnapshot = (devices: readonly Adb.Device[]): readonly Trpc.AndroidDeviceSnapshot[] =>
   pipe(
     devices,
     RA.map((device) => ({
@@ -36,7 +36,7 @@ export type Deps = {
   readonly resetRecovery: (policyLabel: string, entityId: string, tripwireIndex: number) => boolean;
 };
 
-export const createServices = ({
+export const create = ({
   config,
   trpcLog,
   adbDeviceStream,
@@ -46,15 +46,12 @@ export const createServices = ({
   notifyStream,
   activityStream,
   resetRecovery,
-}: Deps): Services.Services => ({
+}: Deps): Trpc.Services => ({
   // Servizio di logging persistente per web-app
   logger: trpcLog.child("web"),
 
   // Servizio di gestione delle dispositivi android
   android: android(trpcLog, adbDeviceStream),
-
-  // TODO: Servizio di DNS-SD (Service Discovery)
-  mdns: {},
 
   // Feed live delle notifiche dispatchate dal motore di recovery
   notifications: notifyStream,
@@ -82,7 +79,7 @@ export const createServices = ({
   recoveryReset: resetRecovery,
 });
 
-const android = (trpcLog: Logger.Tagged, stream: AdbStream.AdbDeviceStream): Services.AndroidBridge => ({
+const android = (trpcLog: Logger.Tagged, stream: AdbStream.AdbDeviceStream): Trpc.Services["android"] => ({
   // Recupera la lista dei device connessi tramite ADB
   devices: () => pipe(Adb.devices({ logger: trpcLog, spawn: Node.spawn }), TE.map(toDeviceSnapshot)),
 
@@ -97,7 +94,7 @@ const android = (trpcLog: Logger.Tagged, stream: AdbStream.AdbDeviceStream): Ser
   },
 });
 
-const registry = (dbPath: string): Services.DeviceRegistry => ({
+const registry = (dbPath: string): Trpc.Services["registry"] => ({
   getAll: () => Db.read(dbPath)(Node.fsEnv),
 
   candyboxes: {

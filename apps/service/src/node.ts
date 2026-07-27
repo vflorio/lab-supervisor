@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import * as Errors from "@supervisor/core/errors";
 import type * as Fs from "@supervisor/core/fs";
-import * as Logger from "@supervisor/core/logger";
+import * as Logger from "@supervisor/core/logger/logger";
 import type * as Shell from "@supervisor/core/shell";
 import { pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";

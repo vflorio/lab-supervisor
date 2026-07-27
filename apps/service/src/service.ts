@@ -1,9 +1,10 @@
+import * as Activation from "@supervisor/core/activation/runner";
 import * as ActivationSchedule from "@supervisor/core/activation/schedule";
 import * as Activity from "@supervisor/core/activity/stream";
 import type * as ConfigModel from "@supervisor/core/config";
 import * as Errors from "@supervisor/core/errors";
-import * as LogStream from "@supervisor/core/log-stream";
-import * as Logger from "@supervisor/core/logger";
+import * as LogStream from "@supervisor/core/logger/log-stream";
+import * as Logger from "@supervisor/core/logger/logger";
 import * as Notify from "@supervisor/core/notify/stream";
 import * as Predicates from "@supervisor/core/predicates/index";
 import * as Recovery from "@supervisor/core/recovery/index";
@@ -11,7 +12,7 @@ import * as RetryPolicy from "@supervisor/core/retry/retry";
 import type * as Schedule from "@supervisor/core/schedule";
 import type * as Validation from "@supervisor/core/validation";
 import * as E from "fp-ts/Either";
-import { pipe } from "fp-ts/function";
+import { constFalse, pipe } from "fp-ts/function";
 import * as IO from "fp-ts/IO";
 import * as O from "fp-ts/Option";
 import * as RTE from "fp-ts/ReaderTaskEither";
@@ -20,11 +21,10 @@ import * as TE from "fp-ts/TaskEither";
 import * as AdbStream from "./adb/adb-stream";
 import * as Config from "./config";
 import * as ServiceLogger from "./logger";
-import * as Activation from "./machines/activation";
 import type * as Node from "./node";
 import * as ServiceLifecycle from "./service-lifecycle";
-import { createServices } from "./services";
 import * as Trpc from "./trpc";
+import * as TrpcServices from "./trpc-services";
 
 // -------------------------------------------------------------------------------------
 // Env
@@ -74,6 +74,17 @@ const parseConfigPolicies = (
     RTE.fromEither,
   );
 
+// Attivo dopo 5s dall'inizio dello script, termina dopo 2m
+const devActivationSchedule = (): Schedule.Schedule => {
+  const debugActiveFrom = Date.now() + 5000;
+  const debugActiveTo = debugActiveFrom + 2 * 60000;
+
+  return () => {
+    const now = Date.now();
+    return now >= debugActiveFrom && now < debugActiveTo;
+  };
+};
+
 // -------------------------------------------------------------------------------------
 // Public
 // -------------------------------------------------------------------------------------
@@ -91,19 +102,8 @@ export const create: Effect<ServiceHandle> = pipe(
     const logStream = LogStream.createLogStream();
     const logger = pipe(ServiceLogger.create(config.log, [logStream.transport]), Logger.tagged("Service"));
 
-    // Schedule di attivazione: Inizia dopo 5s, dura 2m
-    const debugSchedule = (): Schedule.Schedule => {
-      const debugActiveFrom = Date.now() + 5000;
-      const debugActiveTo = debugActiveFrom + 2 * 60000;
-
-      return () => {
-        const now = Date.now();
-        return now >= debugActiveFrom && now < debugActiveTo;
-      };
-    };
-
-    const activationSchedule = import.meta.env.DEV
-      ? debugSchedule()
+    const activationSchedule = constFalse()
+      ? devActivationSchedule()
       : ActivationSchedule.toSchedule(config.activationSchedule);
 
     logger.info(`Activation schedule: ${ActivationSchedule.format(config.activationSchedule)}`)();
@@ -132,7 +132,7 @@ export const create: Effect<ServiceHandle> = pipe(
       port: config.trpc.port,
       hostname: config.trpc.hostname,
       logger: trpcLog,
-      services: createServices({
+      services: TrpcServices.create({
         config,
         trpcLog,
         logStream,

@@ -3,10 +3,10 @@ import * as O from "fp-ts/Option";
 import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
+import type { SlackConfig } from "../adapters/slack";
+import * as Slack from "../adapters/slack";
 import { format } from "../errors";
-import type * as Logger from "../logger";
-import type { SlackConfig } from "../services/slack";
-import * as Slack from "../services/slack";
+import type * as Logger from "../logger/logger";
 import type { NotifyLifecycle, NotifyRule } from "./model";
 import * as Template from "./template";
 

@@ -3,7 +3,7 @@ import { pipe } from "fp-ts/lib/function";
 import type * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import type { AppError } from "./errors";
-import type * as Logger from "./logger";
+import type * as Logger from "./logger/logger";
 
 export interface CommandError extends AppError<"CommandError"> {}
 

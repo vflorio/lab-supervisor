@@ -1,10 +1,13 @@
 import * as Machine from "@supervisor/core/state-machine/machine";
-import { forwardToActivity } from "./activity";
+import { forwardToActivity } from "./hooks/activity";
+import { logStateChange } from "./hooks/tracing";
 import type { AndroidBridgeMachineEnv } from "./interpret";
 import { interpret } from "./interpret";
 import type * as Model from "./model";
 import { reduce } from "./reduce";
-import { onTransition } from "./tracing";
+
+export * from "./interpret";
+export * from "./model";
 
 // =========================================================================================
 //  AndroidBridge
@@ -46,6 +49,6 @@ const machine: Machine.Machine<
   Model.AndroidBridgeState,
   Model.AndroidBridgeEvent,
   Model.AndroidBridgeIntent
-> = Machine.make(reduce, interpret, Machine.composeTransitionHooks(onTransition, forwardToActivity));
+> = Machine.make(reduce, interpret, Machine.composeTransitionHooks(logStateChange, forwardToActivity));
 
 export const dispatch = Machine.dispatch(machine);

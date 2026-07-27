@@ -1,5 +1,5 @@
-import type * as Logger from "@supervisor/core/logger";
-import type { Services } from "@supervisor/core/services/services";
+import type * as Logger from "@supervisor/core/logger/logger";
+import type { Services } from "@supervisor/core/trpc";
 import * as Trpc from "@supervisor/trpc/server";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { applyWSSHandler } from "@trpc/server/adapters/ws";

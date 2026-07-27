@@ -5,9 +5,9 @@ import { pipe } from "fp-ts/function";
 import type * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
-import type { AdbConnectionMachineEnv } from "../adb-connection/interpret";
-import * as AdbConnection from "../adb-connection/model";
-import * as TargetResolution from "../target-resolution";
+import type { AdbConnectionMachineEnv } from "../adapters/adb/connection/interpret";
+import * as AdbConnection from "../adapters/adb/connection/model";
+import * as TargetResolution from "../adapters/adb/target-resolution";
 import type { AndroidBridgeEvent, AndroidBridgeIntent } from "./model";
 
 // -------------------------------------------------------------------------------------

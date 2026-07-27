@@ -1,6 +1,6 @@
 import type { Endomorphism } from "fp-ts/Endomorphism";
 import * as t from "io-ts";
-import type { ControlUnit } from "../suitest";
+import type { ControlUnit } from "../adapters/suitest";
 import type { LabRegistry } from "./registry";
 
 // -------------------------------------------------------------------------------------

@@ -5,7 +5,7 @@ import * as TE from "fp-ts/TaskEither";
 import * as t from "io-ts";
 import { format } from "../errors";
 import { type BasicAuth, getJsonAuth, type HTTPError } from "../http";
-import * as Logger from "../logger";
+import * as Logger from "../logger/logger";
 
 // -------------------------------------------------------------------------------------
 // Model - Paginated response

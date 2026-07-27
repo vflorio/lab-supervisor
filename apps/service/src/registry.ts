@@ -1,9 +1,9 @@
+import * as Suitest from "@supervisor/core/adapters/suitest";
 import type * as Config from "@supervisor/core/config";
+import * as Db from "@supervisor/core/db";
 import * as Errors from "@supervisor/core/errors";
 import type * as Fs from "@supervisor/core/fs";
-import type * as Logger from "@supervisor/core/logger";
-import * as Db from "@supervisor/core/services/db";
-import * as Suitest from "@supervisor/core/services/suitest";
+import type * as Logger from "@supervisor/core/logger/logger";
 import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
 import * as TE from "fp-ts/TaskEither";

@@ -1,5 +1,5 @@
-import type { LogEntry } from "@supervisor/core/log-stream";
-import type { Logger } from "@supervisor/core/logger";
+import type { LogEntry } from "@supervisor/core/logger/log-stream";
+import type { Logger } from "@supervisor/core/logger/logger";
 import type { TrackedEnvelope } from "@trpc/server";
 import { tracked } from "@trpc/server";
 import { publicProcedure, router } from "../instance";

@@ -1,6 +1,6 @@
 import type * as Config from "@supervisor/core/config";
 import * as IntervalLoop from "@supervisor/core/interval-loop";
-import type * as Logger from "@supervisor/core/logger";
+import type * as Logger from "@supervisor/core/logger/logger";
 import * as Predicates from "@supervisor/core/predicates/index";
 import type * as Retry from "@supervisor/core/retry/retry";
 import { flow, pipe } from "fp-ts/function";

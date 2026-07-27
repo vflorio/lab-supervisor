@@ -1,4 +1,4 @@
-import type { LogEntry } from "@supervisor/core/log-stream";
+import type { LogEntry } from "@supervisor/core/logger/log-stream";
 import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from "react";
 import { trpc } from "../trpc/client";
 

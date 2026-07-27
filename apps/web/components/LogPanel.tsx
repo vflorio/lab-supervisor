@@ -1,7 +1,7 @@
 import { ClearAll, KeyboardArrowDown } from "@mui/icons-material";
 import { Box, Fab, IconButton, MenuItem, Select, type SelectChangeEvent, Tooltip, Typography } from "@mui/material";
-import { LEVEL_PALETTE, TAG_PALETTE } from "@supervisor/core/log-palette";
-import { isLevelEnabled, type LogLevel, padContinuationLines } from "@supervisor/core/logger";
+import { LEVEL_PALETTE, TAG_PALETTE } from "@supervisor/core/logger/log-palette";
+import { isLevelEnabled, type LogLevel, padContinuationLines } from "@supervisor/core/logger/logger";
 import { ResizablePanel } from "@supervisor/ui/ResizablePanel";
 import { useEffect, useRef, useState } from "react";
 import { useLogFeed } from "../hooks/useLogFeed";

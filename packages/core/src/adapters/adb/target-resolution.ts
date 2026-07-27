@@ -1,6 +1,5 @@
-import type * as Logger from "@supervisor/core/logger";
+import type * as Logger from "@supervisor/core/logger/logger";
 import * as Network from "@supervisor/core/network";
-import * as AvahiBrowse from "@supervisor/core/services/avahi-browse";
 import type * as Shell from "@supervisor/core/shell";
 import * as Machine from "@supervisor/core/state-machine/machine";
 import { pipe } from "fp-ts/function";
@@ -9,9 +8,10 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 import * as RA from "fp-ts/ReadonlyArray";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
-import type { AdbConnectionMachineEnv } from "./adb-connection/interpret";
-import * as AdbConnectionMachine from "./adb-connection/machine";
-import * as AdbConnection from "./adb-connection/model";
+import * as AvahiBrowse from "../avahi-browse";
+import type { AdbConnectionMachineEnv } from "./connection/interpret";
+import * as AdbConnectionMachine from "./connection/machine";
+import * as AdbConnection from "./connection/model";
 
 // =========================================================================================
 // MACHINE: TargetResolution
@@ -43,9 +43,9 @@ import * as AdbConnection from "./adb-connection/model";
 // -------------------------------------------------------------------------------------
 
 // Risolve un Host (solo IP, porta ignota) nell'Endpoint attualmente pubblicato via mDNS.
-// Layer trasparente sopra la Target Machine (adb-connection, vedi connect.ts): un Host
-// risolto viene inoltrato come TargetDiscovered, un Host non trovato non tenta alcuna
-// connessione (nessuna porta valida a cui connettersi).
+// Layer trasparente sopra la Target Machine (adb-connection):
+// un Host risolto viene inoltrato come TargetDiscovered,
+// un Host non trovato non tenta alcuna connessione (nessuna porta valida a cui connettersi).
 
 export type ResolutionState =
   | { readonly _tag: "Searching"; readonly host: Network.Host }

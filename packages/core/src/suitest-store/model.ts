@@ -1,5 +1,5 @@
 import * as t from "io-ts";
-import { ControlUnitCodec, DeviceCodec, VideoCaptureDeviceCodec } from "../suitest";
+import { ControlUnitCodec, DeviceCodec, VideoCaptureDeviceCodec } from "../adapters/suitest";
 
 // -------------------------------------------------------------------------------------
 // Model - mirror locale (in sola lettura) dei dati grezzi Suitest, indicizzati per id.

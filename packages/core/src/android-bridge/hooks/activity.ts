@@ -1,8 +1,8 @@
 import type * as Machine from "@supervisor/core/state-machine/machine";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
-import type { AndroidBridgeMachineEnv } from "./interpret";
-import type { AndroidBridgeEvent, AndroidBridgeState } from "./model";
+import type { AndroidBridgeMachineEnv } from "../interpret";
+import type { AndroidBridgeEvent, AndroidBridgeState } from "../model";
 
 // -------------------------------------------------------------------------------------
 // Activity forwarding

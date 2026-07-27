@@ -1,14 +1,13 @@
 import type * as Errors from "@supervisor/core/errors";
-import type * as Logger from "@supervisor/core/logger";
+import type * as Logger from "@supervisor/core/logger/logger";
 import * as A from "fp-ts/Array";
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
 import * as RTE from "fp-ts/ReaderTaskEither";
-import * as RA from "fp-ts/ReadonlyArray";
 import { match, P } from "ts-pattern";
-import * as Network from "../network";
-import * as Shell from "../shell";
+import * as Network from "../../network";
+import * as Shell from "../../shell";
 
 // -------------------------------------------------------------------------------------
 // Model
@@ -65,7 +64,7 @@ const run =
 //   192.168.1.4:5555\tdevice -> catturato
 //   emulator-5554\toffline   -> escluso
 
-const parseLine = (line: string): O.Option<Device> => {
+const parseDevicesLine = (line: string): O.Option<Device> => {
   const parts = line.trim().split("\t");
   if (parts.length < 2) return O.none;
 
@@ -85,11 +84,11 @@ const parseDevices = (stdout: string): Device[] =>
   pipe(
     stdout.split("\n"),
     A.filter((line) => line.trim() !== "" && !line.startsWith("List of")),
-    A.filterMap(parseLine),
+    A.filterMap(parseDevicesLine),
   );
 
 // -------------------------------------------------------------------------------------
-// Public API
+// Public API - Connection & device state
 // -------------------------------------------------------------------------------------
 
 export const getState = (target: Network.Endpoint): Effect<Status> =>
@@ -129,12 +128,25 @@ export const tcpip =
 // List connected devices with their status
 export const devices: Effect<Device[]> = pipe(run(["devices"]), RTE.map(parseDevices));
 
-// isConnected
-export const isConnected = (target: Network.Endpoint): Effect<boolean> =>
-  pipe(
-    devices,
-    RTE.map(RA.some((device) => device.status === "device" && Network.EqByIp.equals(device.target, target))),
-  );
+// Wait for a device to reach a specific state (e.g., "device" or "disconnect")
+export const waitForState =
+  (state: Status) =>
+  (target: Network.Endpoint): Effect<void> =>
+    pipe(run([`wait-for-${state}`], target), RTE.asUnit);
+
+export const waitForDevice = waitForState("device");
+export const waitForDisconnect = waitForState("disconnect");
+
+// -------------------------------------------------------------------------------------
+// Public API - Power control
+// -------------------------------------------------------------------------------------
+
+// Reboot the device
+export const reboot = (target: Network.Endpoint): Effect<void> => pipe(run(["reboot"], target), RTE.asUnit);
+
+// -------------------------------------------------------------------------------------
+// Public API - Input & UI interaction
+// -------------------------------------------------------------------------------------
 
 // Wake the screen up (KEYCODE_WAKEUP = 224, does not toggle off if already on)
 export const wakeUp = (target: Network.Endpoint): Effect<void> =>
@@ -150,11 +162,31 @@ export const inputTap =
   (target: Network.Endpoint): Effect<void> =>
     pipe(run(["shell", "input", "tap", String(x), String(y)], target), RTE.asUnit);
 
-// Launch an app by package id (does not force-stop first)
+// -------------------------------------------------------------------------------------
+// Public API - App lifecycle
+// -------------------------------------------------------------------------------------
+
+// Launch an app by package id
 export const launchApp =
   (packageId: string) =>
   (target: Network.Endpoint): Effect<void> =>
     pipe(run(["shell", "monkey", "-p", packageId, "-c", "android.intent.category.LAUNCHER", "1"], target), RTE.asUnit);
+
+// Force-stop an app by package id
+export const forceStopApp =
+  (packageId: string) =>
+  (target: Network.Endpoint): Effect<void> =>
+    pipe(run(["shell", "am", "force-stop", packageId], target), RTE.asUnit);
+
+// Force-stop and then start an app by package id
+export const restartApp =
+  (packageId: string) =>
+  (target: Network.Endpoint): Effect<void> =>
+    pipe(
+      forceStopApp(packageId)(target),
+      RTE.flatMap(() => launchApp(packageId)(target)),
+      RTE.asUnit,
+    );
 
 // Open a URL in the default browser via ACTION_VIEW intent
 export const openUrl =
@@ -166,28 +198,9 @@ export const openUrl =
 export const openDeveloperSettings = (target: Network.Endpoint): Effect<void> =>
   pipe(run(["shell", "am", "start", "-a", "android.settings.APPLICATION_DEVELOPMENT_SETTINGS"], target), RTE.asUnit);
 
-// Force-stop and then restart an app by package id
-export const restartApp =
-  (packageId: string) =>
-  (target: Network.Endpoint): Effect<void> =>
-    pipe(
-      run(["shell", "am", "force-stop", packageId], target),
-      RTE.flatMap(() =>
-        run(["shell", "monkey", "-p", packageId, "-c", "android.intent.category.LAUNCHER", "1"], target),
-      ),
-      RTE.asUnit,
-    );
-
-// Reboot the device
-export const reboot = (target: Network.Endpoint): Effect<void> => pipe(run(["reboot"], target), RTE.asUnit);
-
-export const waitForState =
-  (state: Status) =>
-  (target: Network.Endpoint): Effect<void> =>
-    pipe(run([`wait-for-${state}`], target), RTE.asUnit);
-
-export const waitForDevice = waitForState("device");
-export const waitForDisconnect = waitForState("disconnect");
+// -------------------------------------------------------------------------------------
+// Public API - Activity / window introspection
+// -------------------------------------------------------------------------------------
 
 // Get the currently focused (foreground) app activity
 // Uses `dumpsys window` and reads `mFocusedApp` which reports the actual foreground activity

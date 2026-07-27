@@ -52,6 +52,7 @@
     [
       "open-chrome-reboot",
       [
+        // Assicurarsi che reboot non sia mai al primo livello per evitare loops dato che waitForDevice è fallato
         ["reboot"],
         // FIXME va rivista, attende sulla 5555, mentre dopo un reboot è necessario il processo di connessione
         ["waitForDevice"],
@@ -72,7 +73,7 @@
           // Cosa osservare
           "predicate": ["ref", "suitest_camera_connected"],
           // Cosa fare quando il predicate resta falso per >= grace
-          "pipeline": ["workflow", "open-chrome"],
+          "pipeline": ["workflow", "open-chrome-reboot"],
           // Cosa fare se la pipeline fallisce (es. crash, timeout, ecc.)
           "retry": [["constantDelay", "10s"], ["limitRetries", 2]],
           "notify": [

@@ -1,6 +1,6 @@
 import type { Endomorphism } from "fp-ts/Endomorphism";
 import * as t from "io-ts";
-import * as Network from "../../network";
+import * as Network from "../network";
 import type { LabRegistry } from "./registry";
 
 // -------------------------------------------------------------------------------------

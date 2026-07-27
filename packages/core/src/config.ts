@@ -3,12 +3,12 @@ import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import * as t from "io-ts";
 import { ActivationScheduleCodec } from "./activation/schedule";
+import { AdbEntryCodec, CameraEntryCodec, CandyboxEntryCodec, TvEntryCodec } from "./db";
 import { of } from "./errors";
-import { LogLevel } from "./logger";
+import { LogLevel } from "./logger/logger";
 import * as Network from "./network";
 import { RecoveryPolicyCodec } from "./recovery/codec";
 import { PolicyJsonCodec } from "./retry/codec";
-import { AdbEntryCodec, CameraEntryCodec, CandyboxEntryCodec, TvEntryCodec } from "./services/db";
 import { WorkflowJsonCodec } from "./workflow/codec";
 
 // -------------------------------------------------------------------------------------

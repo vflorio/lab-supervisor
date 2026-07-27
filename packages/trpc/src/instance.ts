@@ -1,5 +1,5 @@
-import type { Logger } from "@supervisor/core/logger";
-import type { Services } from "@supervisor/core/services/services";
+import type { Logger } from "@supervisor/core/logger/logger";
+import type { Services } from "@supervisor/core/trpc";
 import { initTRPC } from "@trpc/server";
 
 export interface Context {

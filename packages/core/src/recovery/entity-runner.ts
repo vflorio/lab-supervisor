@@ -3,7 +3,7 @@ import { pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
 import { type AppError, format } from "../errors";
-import type * as Logger from "../logger";
+import type * as Logger from "../logger/logger";
 import type { PredicateLookup } from "../predicates/expression";
 import * as Retry from "../retry/retry";
 import * as Machine from "../state-machine/machine";

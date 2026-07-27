@@ -2,7 +2,7 @@ import * as E from "fp-ts/Either";
 import type * as RTE from "fp-ts/ReaderTaskEither";
 import * as Errors from "../errors";
 import * as IntervalLoop from "../interval-loop";
-import * as Logger from "../logger";
+import * as Logger from "../logger/logger";
 import type * as Retry from "../retry/retry";
 import type { PredicateStream } from "./feed";
 import { factKey, type PredicateFact, type PredicateValue } from "./model";

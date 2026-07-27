@@ -1,4 +1,4 @@
-import * as CoreLogger from "@supervisor/core/logger";
+import * as CoreLogger from "@supervisor/core/logger/logger";
 import type { BunRequest } from "bun";
 import * as IO from "fp-ts/IO";
 import { pipe } from "fp-ts/lib/function";

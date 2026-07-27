@@ -2,7 +2,7 @@ import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import { format } from "../errors";
 import * as IntervalLoop from "../interval-loop";
-import * as Logger from "../logger";
+import * as Logger from "../logger/logger";
 import type { PredicateEntry, PredicateFeed, PredicateValue } from "../predicates/index";
 import type { PolicyDecodeError } from "../retry/codec";
 import type { Policy } from "../retry/retry";

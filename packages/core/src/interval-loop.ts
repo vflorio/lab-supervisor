@@ -2,7 +2,7 @@ import * as IO from "fp-ts/IO";
 import { pipe } from "fp-ts/lib/function";
 import * as TE from "fp-ts/TaskEither";
 import * as Errors from "./errors";
-import * as Logger from "./logger";
+import * as Logger from "./logger/logger";
 import * as Retry from "./retry/retry";
 
 // -------------------------------------------------------------------------------------

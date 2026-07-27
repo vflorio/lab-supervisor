@@ -3,7 +3,7 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
 import { type AppError, format, of } from "../errors";
-import type { Logger } from "../logger";
+import type { Logger } from "../logger/logger";
 import type { Command, TapCoords, Workflow } from "../workflow/workflow";
 import { findWorkflow } from "../workflow/workflow";
 

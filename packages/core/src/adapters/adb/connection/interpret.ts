@@ -1,7 +1,6 @@
-import type * as Logger from "@supervisor/core/logger";
+import type * as Logger from "@supervisor/core/logger/logger";
 import * as Network from "@supervisor/core/network";
 import * as Retry from "@supervisor/core/retry/retry";
-import * as Adb from "@supervisor/core/services/adb";
 import type * as Shell from "@supervisor/core/shell";
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
@@ -9,6 +8,7 @@ import type * as RTE from "fp-ts/ReaderTaskEither";
 import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
+import * as Adb from "../shell";
 import type { ConnectionEvent, ConnectionIntent } from "./model";
 
 // -------------------------------------------------------------------------------------

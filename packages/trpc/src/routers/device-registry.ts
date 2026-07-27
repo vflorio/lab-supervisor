@@ -7,7 +7,7 @@ import {
   CandyboxUpdateInputCodec,
   TvEntryCodec,
   TvUpdateInputCodec,
-} from "@supervisor/core/services/db";
+} from "@supervisor/core/db";
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/lib/function";
 import type { Errors } from "io-ts";

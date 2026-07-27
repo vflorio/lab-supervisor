@@ -1,5 +1,5 @@
 import type * as Config from "@supervisor/core/config";
-import * as Logger from "@supervisor/core/logger";
+import * as Logger from "@supervisor/core/logger/logger";
 import pino from "pino";
 
 const PINO_METHOD_LEVELS = ["debug", "info", "warn", "error"] as const;

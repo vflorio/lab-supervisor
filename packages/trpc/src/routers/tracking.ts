@@ -1,6 +1,5 @@
 import type { PredicateEntry } from "@supervisor/core/predicates/model";
-import type { TrackedEnvelope } from "@trpc/server";
-import { tracked } from "@trpc/server";
+import { type TrackedEnvelope, tracked } from "@trpc/server";
 import { publicProcedure, router } from "../instance";
 
 // -------------------------------------------------------------------------------------

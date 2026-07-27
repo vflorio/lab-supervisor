@@ -1,7 +1,7 @@
 import { pipe } from "fp-ts/function";
 import type * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
-import type * as Logger from "../logger";
+import type * as Logger from "../logger/logger";
 import * as Network from "../network";
 import * as Shell from "../shell";
 

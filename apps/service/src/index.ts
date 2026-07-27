@@ -1,5 +1,5 @@
 import * as Errors from "@supervisor/core/errors";
-import * as Logger from "@supervisor/core/logger";
+import * as Logger from "@supervisor/core/logger/logger";
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import * as Args from "./args";

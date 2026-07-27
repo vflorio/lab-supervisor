@@ -1,8 +1,8 @@
+import * as Adb from "@supervisor/core/adapters/adb/shell";
 import * as Errors from "@supervisor/core/errors";
-import type * as Logger from "@supervisor/core/logger";
+import type * as Logger from "@supervisor/core/logger/logger";
 import * as Network from "@supervisor/core/network";
 import * as Retry from "@supervisor/core/retry/retry";
-import * as Adb from "@supervisor/core/services/adb";
 import type * as Shell from "@supervisor/core/shell";
 import * as WorkflowInterpreter from "@supervisor/core/workflow/interpreter";
 import type { Workflow } from "@supervisor/core/workflow/workflow";

@@ -1,6 +1,6 @@
 import { pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";
-import type { Logger } from "../logger";
+import type { Logger } from "../logger/logger";
 import { initialStatus, type Policy, type Status } from "./retry";
 
 // -------------------------------------------------------------------------------------

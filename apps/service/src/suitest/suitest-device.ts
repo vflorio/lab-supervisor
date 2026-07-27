@@ -1,5 +1,5 @@
+import * as Suitest from "@supervisor/core/adapters/suitest";
 import type * as Predicates from "@supervisor/core/predicates/index";
-import * as Suitest from "@supervisor/core/services/suitest";
 
 // -------------------------------------------------------------------------------------
 // Suitest device tracker - dominio "suitest-device": status (enum) e presenza di inUseBy

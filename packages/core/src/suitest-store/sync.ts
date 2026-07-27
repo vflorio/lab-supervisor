@@ -1,4 +1,4 @@
-import type { ControlUnit, Device, VideoCaptureDevice } from "../suitest";
+import type { ControlUnit, Device, VideoCaptureDevice } from "../adapters/suitest";
 import type { SuitestStore } from "./model";
 
 const byId = <T>(items: readonly T[], id: (item: T) => string): Record<string, T> =>

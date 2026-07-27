@@ -1,10 +1,10 @@
+import * as Adb from "@supervisor/core/adapters/adb/shell";
 import * as Errors from "@supervisor/core/errors";
 import * as IntervalLoop from "@supervisor/core/interval-loop";
-import type * as Logger from "@supervisor/core/logger";
+import type * as Logger from "@supervisor/core/logger/logger";
 import * as Network from "@supervisor/core/network";
 import * as Predicates from "@supervisor/core/predicates/index";
 import type * as Retry from "@supervisor/core/retry/retry";
-import * as Adb from "@supervisor/core/services/adb";
 import * as E from "fp-ts/Either";
 import type { AdbDeviceStream } from "./adb-stream";
 

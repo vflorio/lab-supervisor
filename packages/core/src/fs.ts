@@ -2,7 +2,7 @@ import { pipe } from "fp-ts/lib/function";
 import type * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import type { AppError } from "./errors";
-import type { Logger } from "./logger";
+import type { Logger } from "./logger/logger";
 
 // -------------------------------------------------------------------------------------
 // Model

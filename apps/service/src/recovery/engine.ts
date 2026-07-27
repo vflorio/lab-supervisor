@@ -1,6 +1,7 @@
 import type * as Activity from "@supervisor/core/activity/stream";
+import type { SlackConfig } from "@supervisor/core/adapters/slack";
 import type * as ConfigModel from "@supervisor/core/config";
-import type * as Logger from "@supervisor/core/logger";
+import type * as Logger from "@supervisor/core/logger/logger";
 import * as NotifyDispatch from "@supervisor/core/notify/dispatch";
 import type { NotifyLifecycle, NotifyRule } from "@supervisor/core/notify/model";
 import type * as NotifyStream from "@supervisor/core/notify/stream";
@@ -8,7 +9,6 @@ import type * as Predicates from "@supervisor/core/predicates/index";
 import * as Recovery from "@supervisor/core/recovery/index";
 import type { PolicyDecodeError } from "@supervisor/core/retry/codec";
 import * as RetryPolicy from "@supervisor/core/retry/retry";
-import type { SlackConfig } from "@supervisor/core/services/slack";
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
