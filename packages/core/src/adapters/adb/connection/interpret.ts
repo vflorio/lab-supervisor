@@ -11,20 +11,26 @@ import { match } from "ts-pattern";
 import * as Adb from "../shell";
 import type { ConnectionEvent, ConnectionIntent } from "./model";
 
-// -------------------------------------------------------------------------------------
-// Interpret
-// -------------------------------------------------------------------------------------
-
-// Ogni intento cattura i propri fallimenti e li traduce in eventi
-// la state machine è quindi auto-risanante, un device che fallisce la connessione
-// torna semplicemente a Unknown senza far fallire l'intero ciclo di discovery.
+// Ogni intento cattura i propri fallimenti e li traduce in eventi: la state machine è quindi
+// auto-risanante, un device che fallisce la connessione torna semplicemente a Unknown senza
+// far fallire l'intero ciclo di discovery.
 
 export interface AdbConnectionMachineEnv {
   readonly logger: Logger.Tagged;
   readonly adbPort: Network.PORT;
-  readonly adbReconnectPolicy: Retry.Policy;
   readonly spawn: Shell.Spawn;
 }
+
+// Quantum di tentativi per il solo handshake ADB (`adb connect`) - non configurabile: dettaglio
+// meccanico del protocollo, non una decisione operativa (a differenza di adb.waitForDeviceTimeout,
+// la pazienza di un workflow). Valori bassi di proposito: un quantum esaurito si traduce solo in
+// "richiediamone un altro al prossimo reconcile tick", non in una resa definitiva.
+export const ADB_CONNECT_RETRY_POLICY: Retry.Policy = pipe(
+  Retry.constantDelay(400),
+  Retry.concat(Retry.exponentialBackoff(800)),
+  Retry.capDelay(30_000),
+  Retry.concat(Retry.limitRetries(5)),
+);
 
 const liftAdb =
   <A>(effect: RTE.ReaderTaskEither<Adb.AdbEnv, Adb.Error | Shell.ShellSpawnError, A>) =>
@@ -65,7 +71,7 @@ export const interpret =
         .with({ _tag: "ConnectPersistent" }, ({ target }) =>
           pipe(
             T.delay(1000)(T.of(undefined)),
-            T.flatMap(() => Retry.retrying(env.adbReconnectPolicy, env.logger)(liftAdb(Adb.connect(target))(env))),
+            T.flatMap(() => Retry.retrying(ADB_CONNECT_RETRY_POLICY, env.logger)(liftAdb(Adb.connect(target))(env))),
             T.flatMap(
               E.match(
                 (reason): T.Task<readonly ConnectionEvent[]> =>

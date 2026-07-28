@@ -5,13 +5,6 @@ import * as Schedule from "@supervisor/core/schedule";
 import type * as T from "fp-ts/Task";
 import { type ActivationMachineEnv, type ActivationState, dispatch, init } from "./machine";
 
-// -------------------------------------------------------------------------------------
-// API
-// -------------------------------------------------------------------------------------
-// Guida il tick con IntervalLoop (stesso motore riusato da tracking/*, config.tracking.*):
-// niente più policy configurabile da config (rimossa), fissa a Retry.constantDelay(1000) su
-// indicazione esplicita - la cadenza di valutazione dello schedule non necessita di backoff.
-
 export type StartError = IntervalLoop.StartError;
 
 export const create = (

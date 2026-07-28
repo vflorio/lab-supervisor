@@ -12,11 +12,6 @@ import { RecoveryPolicyCodec } from "./recovery/codec";
 import { PolicyJsonCodec } from "./retry/codec";
 import { WorkflowJsonCodec } from "./workflow/codec";
 
-// -------------------------------------------------------------------------------------
-// Model - Configurazione del servizio
-// -------------------------------------------------------------------------------------
-
-// Credenziali Suitest
 const SuitestCodec = t.type({
   baseUrl: t.string,
   tokenId: t.string,
@@ -25,7 +20,6 @@ const SuitestCodec = t.type({
 
 export type Suitest = t.TypeOf<typeof SuitestCodec>;
 
-// Credenziali Slack
 const SlackCodec = t.type({
   active: t.boolean,
   botToken: t.string,
@@ -33,8 +27,8 @@ const SlackCodec = t.type({
 
 export type Slack = t.TypeOf<typeof SlackCodec>;
 
-// Configurazione dei tracker di predicati (packages/core/src/predicates): una policy di
-// polling indipendente per dominio, ognuno interrogato a una cadenza propria
+// Configurazione dei tracker di predicati: una policy di polling indipendente per dominio,
+// ognuno interrogato a una cadenza propria.
 const TrackingCodec = t.type({
   adb: t.type({ polling: PolicyJsonCodec }),
   suitestCamera: t.type({ polling: PolicyJsonCodec }),
@@ -44,21 +38,17 @@ const TrackingCodec = t.type({
 
 export type Tracking = t.TypeOf<typeof TrackingCodec>;
 
-// Configurazione logging
-// `network`: stampa le risposte HTTP (get/post, singole o paginate) indipendentemente dal
-// `level` configurato - non esiste un livello "verbose" supportato dalla console, quindi è
-// un interruttore a parte invece di un settimo livello di soglia (vedi Logger.logNetwork)
+// `network`: stampa le risposte HTTP indipendentemente dal `level` configurato - non esiste
+// un livello "verbose", quindi è un interruttore a parte invece di una settima soglia.
 const LogCodec = t.intersection([t.type({ level: LogLevel }), t.partial({ path: t.string, network: t.boolean })]);
 
-export type Log = t.TypeOf<typeof LogCodec>; // Esportata e rinominato per servizio
+export type Log = t.TypeOf<typeof LogCodec>;
 
-// Configurazione connessione ADB
-// `waitForDeviceTimeout`: limite intrinseco per il comando waitForDevice di un workflow (vedi
-// packages/core/src/workflow/interpreter.ts) - senza questo, un device che non torna mai online
-// bloccherebbe la pipeline per sempre (vedi RECOVERY-REBOOT-LOOP.md, punto 4)
+// `waitForDeviceTimeout`: la pazienza di un workflow che attende che una camera persa torni a
+// rispondere - la riconnessione è già in corso in background a prescindere da questo timeout.
+// Senza questo, un device che non torna mai online bloccherebbe la pipeline per sempre.
 const AdbCodec = t.type({
   port: Network.PortCodec,
-  reconnect: PolicyJsonCodec,
   waitForDeviceTimeout: DurationString,
 });
 
@@ -105,10 +95,6 @@ const ServiceCodec = t.intersection([
 
 export type Service = t.TypeOf<typeof ServiceCodec>;
 
-// -------------------------------------------------------------------------------------
-// Validazione
-// -------------------------------------------------------------------------------------
-
 const formatErrors = (errors: t.Errors): string =>
   errors
     .map(
@@ -120,7 +106,6 @@ const formatErrors = (errors: t.Errors): string =>
     )
     .join("\n");
 
-// Valida e decodifica un oggetto JSON in ServiceConfig
 export const decode = (raw: unknown): E.Either<ValidationError, Service> =>
   pipe(
     raw,
@@ -128,10 +113,8 @@ export const decode = (raw: unknown): E.Either<ValidationError, Service> =>
     E.mapLeft((errors) => of("ValidationError")(`Invalid configuration:\n${formatErrors(errors)}`)),
   );
 
-// -------------------------------------------------------------------------------------
-// Redazione - da usare ogni volta che la config viene esposta fuori dal processo (es. UI
-// di sola lettura via tRPC): maschera le credenziali, non va mai loggata/servita raw.
-// -------------------------------------------------------------------------------------
+// Da usare ogni volta che la config viene esposta fuori dal processo: maschera le credenziali,
+// non va mai loggata/servita raw.
 
 const REDACTED = "[redacted]";
 

@@ -11,13 +11,9 @@ import * as Registry from "../registry";
 import * as Workflow from "../workflow";
 import { resolveAndroidBridgeId, resolveTarget } from "./target";
 
-// -------------------------------------------------------------------------------------
-// CommandCapabilities per una RecoveryPolicy: risolve il target ADB dell'entityId (via
-// resolveTarget) leggendo il registry FRESCO ad ogni singolo comando eseguito, mai da una
-// cache - il registry è già economico da leggere (Registry.read, mai Registry.sync qui) e una
-// pipeline di recovery esegue pochi comandi per tentativo, quindi non serve alcun loop/cache
-// dedicato solo per questo.
-// -------------------------------------------------------------------------------------
+// CommandCapabilities per una RecoveryPolicy: risolve il target ADB dell'entityId leggendo il
+// registry fresco ad ogni comando, mai da una cache - Registry.read è già economico e una
+// pipeline esegue pochi comandi per tentativo, non serve un cache dedicato.
 
 export interface Env {
   readonly logger: Logger.Tagged;
@@ -30,10 +26,8 @@ export interface Env {
 export const capabilitiesFor =
   (domain: string, env: Env) =>
   (entityId: string): WorkflowInterpreter.CommandCapabilities => {
-    // Risolve l'id camera dell'AndroidBridgeOrchestrator per questo entityId - condiviso da
-    // waitForDevice (per attendere la riconnessione) e da notifyBridge sotto. O.none per
-    // un'entità non tracciata dall'AndroidBridge: tutti i chiamanti degradano a no-op in quel
-    // caso, non è un errore.
+    // Risolve l'id camera per questo entityId; O.none se non tracciata (no-op per i chiamanti,
+    // non un errore).
     const androidBridgeId = (): TE.TaskEither<WorkflowInterpreter.WorkflowError, O.Option<string>> =>
       pipe(
         Registry.read(env.registryEnv),
@@ -41,9 +35,8 @@ export const capabilitiesFor =
         TE.map((db) => resolveAndroidBridgeId(domain, entityId, db.lab)),
       );
 
-    // Notifica alla macchina della camera un evento derivato dall'esito di un comando, se questa
-    // entità è tracciata dall'AndroidBridge. Best-effort in entrambe le direzioni: un id non
-    // risolvibile è un no-op, e un fallimento qui non deve mai alterare l'esito del comando.
+    // Notifica un evento alla macchina della camera, se tracciata. Best-effort: un id non
+    // risolvibile o un fallimento qui non alterano mai l'esito del comando.
     const notifyBridge = (event: AndroidBridge.AndroidBridgeEvent): TE.TaskEither<never, void> =>
       pipe(
         androidBridgeId(),
@@ -54,12 +47,9 @@ export const capabilitiesFor =
         TE.orElse((): TE.TaskEither<never, void> => TE.right(undefined)),
       );
 
-    // Traduce il fallimento di un comando in un evento per la macchina della camera. Oggi una
-    // sola causa è azionabile - un CommandTimeout significa transport ADB incastrato (`adb
-    // devices` lo riporta raggiungibile ma non risponde più, caso che la liveness-detection non
-    // può vedere) - ma la forma è quella giusta: aggiungere una regola è un arm in più, non
-    // nuovo plumbing. Va agganciato con TE.tapError, mai con TE.flatMap: non deve sostituire
-    // l'errore originale del comando.
+    // Traduce il fallimento di un comando in un evento per la macchina; oggi solo CommandTimeout
+    // è azionabile (transport ADB incastrato, invisibile alla liveness-detection). Va agganciato
+    // con TE.tapError, mai TE.flatMap: non deve sostituire l'errore del comando.
     const remediate = (error: WorkflowInterpreter.WorkflowError): TE.TaskEither<never, void> =>
       match(error.cause)
         .with({ type: "CommandTimeout" }, () =>
@@ -67,14 +57,10 @@ export const capabilitiesFor =
         )
         .otherwise((): TE.TaskEither<never, void> => TE.right(undefined));
 
-    // Gate: rifiuta subito un comando se l'AndroidBridge sa già che questa camera non accetta
-    // comandi (qualunque stato diverso da Idle), invece di tentare comunque lo shell-out diretto e
-    // aspettare fino a DEFAULT_COMMAND_TIMEOUT_MS per scoprirlo. Best-effort nella direzione
-    // opposta: un id non risolvibile (dominio non tracciato dall'AndroidBridge) non blocca -
-    // l'assenza di informazione non è motivo di rifiuto. Nota: acceptsCommands riflette lo stato
-    // in-memory dell'orchestrator, aggiornato solo dal tick di reconcile (5s)/poll adb (10s) -
-    // può quindi rifiutare un comando che nel frattempo sarebbe riuscito (falso negativo
-    // accettabile, c'è comunque retry a monte) ma non l'opposto.
+    // Gate: rifiuta subito un comando se l'AndroidBridge sa già che la camera non accetta
+    // comandi, invece di scoprirlo dopo un timeout pieno. Un id non risolvibile non blocca.
+    // Lo stato è in-memory e non istantaneo: può dare un falso negativo (accettabile, c'è
+    // retry a monte) ma mai un falso positivo.
     const requireAccepting = (): TE.TaskEither<WorkflowInterpreter.WorkflowError, void> =>
       pipe(
         androidBridgeId(),
@@ -91,10 +77,8 @@ export const capabilitiesFor =
         }),
       );
 
-    // `gate: false` per i comandi pensati per funzionare proprio quando la camera NON è Idle
-    // (reboot - waitForDevice bypassa withTarget del tutto, vedi sotto) - gatarli rischierebbe di
-    // rifiutare esattamente i comandi di cui una recovery ha bisogno quando il device risulta già
-    // Disconnected.
+    // `gate: false` per i comandi che devono funzionare anche a camera non Idle (reboot):
+    // gatarli rifiuterebbe esattamente ciò di cui una recovery ha bisogno.
     const withTarget = <A>(
       run: (
         capabilities: WorkflowInterpreter.CommandCapabilities,
@@ -118,10 +102,8 @@ export const capabilitiesFor =
         TE.tapError(remediate),
       );
 
-    // A differenza degli altri comandi (shell-out diretto sul target ADB), waitForDevice non
-    // deve fidarsi di una porta ADB potenzialmente congelata dopo un reboot: risolve l'id camera
-    // dell'AndroidBridgeOrchestrator e attende che torni Idle (mDNS + re-pairing, già gestito da
-    // quel layer), con un timeout intrinseco - vedi RECOVERY-REBOOT-LOOP.md, punto 1.
+    // A differenza degli altri comandi, waitForDevice non si fida della porta ADB (può essere
+    // congelata dopo un reboot): attende che la camera torni Idle via AndroidBridge.
     const waitForDevice = (): TE.TaskEither<WorkflowInterpreter.WorkflowError, void> =>
       pipe(
         androidBridgeId(),
@@ -137,11 +119,9 @@ export const capabilitiesFor =
         ),
       );
 
-    // Un reboot riuscito è una disconnessione ATTESA: senza dirlo alla macchina, lo stato lì
-    // resterebbe Idle (stale) finché il poll di adbDeviceStream non se ne accorge da solo (fino a
-    // tracking.adb.polling, oggi 10s) - e un waitForDevice eseguito subito dopo (vedi
-    // open-chrome-reboot) leggerebbe quello stato stale e tornerebbe SUBITO, senza aver mai
-    // aspettato davvero.
+    // Un reboot riuscito è una disconnessione attesa: senza notificarlo, lo stato camera
+    // resterebbe Idle (stale) finché il poll non se ne accorge da solo, e un waitForDevice
+    // successivo tornerebbe subito senza aver atteso davvero.
     const reboot = (): TE.TaskEither<WorkflowInterpreter.WorkflowError, void> =>
       pipe(
         withTarget((c) => c.reboot(), false),

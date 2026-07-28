@@ -1,7 +1,6 @@
 {
   "suitest": {
     "baseUrl": "http://localhost:3002/v1/suitest",
-    //"baseUrl": "https://the.suite.st/api/public/v4",
     "tokenId": "dev-suitest-token-id",
     "tokenPassword": "dev-suitest-token-password"
   },
@@ -12,11 +11,6 @@
   "trpc": {
     "port": 3001,
     "hostname": "127.0.0.1"
-  },
-  "activationSchedule": {
-    "days": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
-    "from": "00:00",
-    "to": "23:59"
   },
   "tracking": {
     "adb": { "polling": [["constantDelay", "10s"]] }, // poll locale, nessun costo esterno
@@ -31,14 +25,14 @@
   },
   "adb": {
     "port": 5555,
-    //TODO: reconnect e waitForDeviceTimeout vanno mergiate perché esprimono lo stesso dato in modi diversi
-    "reconnect": [
-      ["constantDelay", "400ms"],
-      ["exponentialBackoff", "800ms"],
-      ["capDelay", "60s"],
-      ["limitRetries", 10]
-    ],
+    // Pazienza di waitForDevice: quanto un workflow attende la riconnessione (già in corso in
+    // background) prima di arrendersi. La forma dei singoli tentativi non è configurabile.
     "waitForDeviceTimeout": "120s"
+  },
+  "activationSchedule": {
+    "days": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
+    "from": "00:00",
+    "to": "23:59"
   },
   // Escalation sequenziale
   "workflows": [
@@ -78,11 +72,10 @@
           // Cosa fare quando il predicate resta falso per >= grace
           "pipeline": ["workflow", "open-chrome-reboot"],
           // Cosa fare se la pipeline fallisce (es. crash, timeout, ecc.): il delay deve superare
-          // sia adb.waitForDeviceTimeout (90s, il tempo massimo che la pipeline può restare
+          // sia adb.waitForDeviceTimeout (120s, il tempo massimo che la pipeline può restare
           // "in attesa" prima di fallire) sia tracking.suitestCamera.polling (30s, il tempo che
           // Suitest impiega a ripollare e aggiornare il predicate) - altrimenti si ritenta
           // (quindi si reboota di nuovo) un device già tornato sano ma non ancora ripollato
-          // (vedi RECOVERY-REBOOT-LOOP.md, punto 3)
           "retry": [["constantDelay", "120s"], ["limitRetries", 2]],
           "notify": [
             {
@@ -93,12 +86,6 @@
             }
           ]
         }
-        //{
-        //  "grace": "60s",
-        //  "predicate": ["or", ["ref", "suitest_camera_recording"], ["ref", "suitest_camera_streaming"]],
-        //  "pipeline": ["or", ["workflow", "open-chrome"], ["workflow", "open-chrome-reboot"]],
-        //  "retry": [["constantDelay", "5s"], ["limitRetries", 2]]
-        //}
       ]
     }
   ],
