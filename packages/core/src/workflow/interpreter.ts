@@ -34,12 +34,14 @@ export interface CommandCapabilities {
 // Error
 // -------------------------------------------------------------------------------------
 
-// `timedOut`: preserva il segnale "il comando non ha mai risposto" (CommandTimeoutError, vedi
-// packages/core/src/shell.ts) attraverso il mapping generico che appiattisce ogni errore
-// sottostante in un WorkflowError - senza, un chiamante a valle (es. capabilities.ts) non può più
-// distinguere un trasporto ADB incastrato da un comando fallito normalmente (es. app non trovata).
+// `cause`: preserva l'errore sottostante *con il suo tag* attraverso il mapping generico che
+// appiattisce tutto in un WorkflowError. Senza, un chiamante a valle (es. capabilities.ts) non
+// può più distinguere un trasporto ADB incastrato (CommandTimeout) da un comando fallito
+// normalmente (es. app non trovata) - e proiettare quella distinzione su un singolo booleano
+// costringerebbe ad allargare il tipo ogni volta che serve reagire a una causa diversa. Restando
+// un AppError, ogni nuova regola di rimedio è un `.with({ type: "..." })` in più.
 export interface WorkflowError extends AppError<"WorkflowError"> {
-  readonly timedOut?: boolean;
+  readonly cause?: AppError;
 }
 
 export const workflowError = of("WorkflowError");

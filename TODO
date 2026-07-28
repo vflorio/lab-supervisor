@@ -36,8 +36,8 @@
     - [X] Avvia suitest-camera, imposta profilo experimental-wide, e premi tasto connect (le coordinate considerare orientamento schermo)
 - [X] Verifica camera stream dopo recovery (gestito tramite predicati)
 - [X] Fix waitForDevice: gestire il caso in cui mDNS non rileva un device tornato online durante l'esecuzione del workflow
-- [ ] Gating dei comandi workflow su AndroidBridge.acceptsCommands(cameraId) - oggi definito ma mai interrogato prima di eseguire un comando
-- [ ] Disconnect+reconnect esplicito su comando fallito, per i transport ADB "incastrati" che adb devices continua a riportare come device pur non rispondendo più (non rilevabile da ConnectionLost)
+- [X] Gating dei comandi workflow su AndroidBridge.acceptsCommands(cameraId) - oggi definito ma mai interrogato prima di eseguire un comando
+- [X] Disconnect+reconnect esplicito su comando fallito, per i transport ADB "incastrati" che adb devices continua a riportare come device pur non rispondendo più (non rilevabile da ConnectionLost)
 
 ### Retry Engine
 - [X] Retry model (constant, exponential, limit, cap)

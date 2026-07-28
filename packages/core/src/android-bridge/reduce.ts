@@ -7,6 +7,7 @@ import {
   type AndroidBridgeState,
   connecting,
   disconnected,
+  disconnecting,
   idle,
 } from "./model";
 
@@ -39,4 +40,23 @@ export const reduce: Machine.Reducer<AndroidBridgeState, AndroidBridgeEvent, And
     .with([{ _tag: "Idle" }, { _tag: "ConnectionLost" }], ([s, e]) =>
       Machine.transition(disconnected(s.id, hostOf(s.target), e.reason)),
     )
+    // Disconnessione attesa (reboot appena dispacciato): nessun `adb disconnect` da fare, il
+    // device sta già andando giù per conto suo - serve solo invalidare lo stato subito.
+    .with([{ _tag: "Idle" }, { _tag: "RebootDispatched" }], ([s]) =>
+      Machine.transition(disconnected(s.id, hostOf(s.target), "reboot dispatched")),
+    )
+    // Disconnessione sospetta (transport incastrato): a differenza di ConnectionLost il
+    // transport locale di adb va ripulito esplicitamente, quindi si passa da Disconnecting
+    // con l'intent Disconnect - il ritorno a Disconnected arriva dal suo follow-up.
+    .with([{ _tag: "Idle" }, { _tag: "TransportSuspect" }], ([s, e]) =>
+      Machine.transition(disconnecting(s.id, hostOf(s.target)), [
+        { _tag: "Disconnect", target: s.target, reason: e.reason },
+      ]),
+    )
+    .with([{ _tag: "Disconnecting" }, { _tag: "ConnectionLost" }], ([s, e]) =>
+      Machine.transition(disconnected(s.id, s.host, e.reason)),
+    )
+    // Ogni altra combinazione è un no-op esplicito: è QUI che vive la regola "un evento non
+    // pertinente allo stato corrente non produce transizione" - i chiamanti non devono
+    // riscriverla come guard prima di dispatchare (vedi orchestrator).
     .otherwise(() => Machine.transition(state));

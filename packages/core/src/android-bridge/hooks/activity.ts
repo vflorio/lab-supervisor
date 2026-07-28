@@ -12,6 +12,7 @@ const describeStatus = (state: AndroidBridgeState): string =>
   match(state)
     .with({ _tag: "Connecting" }, () => "connecting")
     .with({ _tag: "Idle" }, () => "connected")
+    .with({ _tag: "Disconnecting" }, () => "disconnecting")
     .with({ _tag: "Disconnected" }, (s) => `disconnected (${s.reason})`)
     .exhaustive();
 

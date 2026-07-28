@@ -7,6 +7,7 @@ import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
 import type { AdbConnectionMachineEnv } from "../adapters/adb/connection/interpret";
 import * as AdbConnection from "../adapters/adb/connection/model";
+import * as Adb from "../adapters/adb/shell";
 import * as TargetResolution from "../adapters/adb/target-resolution";
 import type { AndroidBridgeEvent, AndroidBridgeIntent } from "./model";
 
@@ -14,11 +15,16 @@ import type { AndroidBridgeEvent, AndroidBridgeIntent } from "./model";
 // Interpret
 // -------------------------------------------------------------------------------------
 //
-// Un solo intent: Connect delega a TargetResolution.connect, che già gestisce risoluzione
-// mDNS + adb-connection (Unknown -> Temporary -> Persistent) ed è "self-healing"
-// (non fallisce mai: un lookup/handshake fallito torna semplicemente Unknown).
-// Leggiamo il risultato con AdbConnection.isPersistent per decidere
-// se la connessione applicativa è stabilita.
+// Due intent, entrambi Err = never (un fallimento è sempre un evento, mai un Left):
+//
+//  - Connect delega a TargetResolution.connect, che già gestisce risoluzione mDNS +
+//    adb-connection (Unknown -> Temporary -> Persistent) ed è "self-healing" (non fallisce mai:
+//    un lookup/handshake fallito torna semplicemente Unknown). Leggiamo il risultato con
+//    AdbConnection.isPersistent per decidere se la connessione applicativa è stabilita.
+//
+//  - Disconnect ripulisce esplicitamente il transport locale di adb (vedi TransportSuspect nel
+//    model) ed emette comunque ConnectionLost: che il comando riesca o no, da qui in poi quella
+//    camera non va più considerata connessa - è esattamente il punto dell'intent.
 // -------------------------------------------------------------------------------------
 
 export type AndroidBridgeMachineEnv = AdbConnectionMachineEnv & { readonly activityStream: Activity.ActivityStream };
@@ -51,6 +57,12 @@ const interpretWithPolicy =
           TargetResolution.connect(host)(env),
           Retry.retryingWhile(policy, env.logger)(AdbConnection.isPersistent),
           TE.map(toEvents(host)),
+        ),
+      )
+      .with({ _tag: "Disconnect" }, ({ target, reason }) =>
+        pipe(
+          Adb.disconnectQuietly(target)({ logger: env.logger.child("ADB"), spawn: env.spawn }),
+          TE.map((): readonly AndroidBridgeEvent[] => [{ _tag: "ConnectionLost", reason }]),
         ),
       )
       .exhaustive();

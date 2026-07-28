@@ -14,8 +14,8 @@ const mapWorkflowError = (
   error: WorkflowInterpreter.WorkflowError | Adb.Error | Shell.ShellSpawnError | DeviceRegistry.SyncError,
 ): WorkflowInterpreter.WorkflowError => ({
   ...WorkflowInterpreter.workflowError(error.message),
-  // Preserva il segnale "il comando non ha mai risposto" - vedi WorkflowError#timedOut
-  timedOut: error.type === "CommandTimeout",
+  // Preserva il tag dell'errore originale (es. CommandTimeout) - vedi WorkflowError#cause
+  cause: error,
 });
 
 // Bound per waitForActivity: Retry.constantDelay da solo non esaurisce mai (vedi retry/retry.ts),

@@ -1,9 +1,11 @@
+import type * as AndroidBridge from "@supervisor/core/android-bridge/machine";
 import * as Errors from "@supervisor/core/errors";
 import type * as Logger from "@supervisor/core/logger/logger";
 import * as WorkflowInterpreter from "@supervisor/core/workflow/interpreter";
 import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
 import * as TE from "fp-ts/TaskEither";
+import { match } from "ts-pattern";
 import type * as AndroidBridgeOrchestrator from "../android-bridge";
 import * as Registry from "../registry";
 import * as Workflow from "../workflow";
@@ -29,9 +31,9 @@ export const capabilitiesFor =
   (domain: string, env: Env) =>
   (entityId: string): WorkflowInterpreter.CommandCapabilities => {
     // Risolve l'id camera dell'AndroidBridgeOrchestrator per questo entityId - condiviso da
-    // waitForDevice (per interrogare acceptsCommands), da reboot e da remediateIfTimedOut sotto.
-    // O.none per un'entità non tracciata dall'AndroidBridge: tutti i chiamanti degradano a no-op
-    // in quel caso, non è un errore.
+    // waitForDevice (per attendere la riconnessione) e da notifyBridge sotto. O.none per
+    // un'entità non tracciata dall'AndroidBridge: tutti i chiamanti degradano a no-op in quel
+    // caso, non è un errore.
     const androidBridgeId = (): TE.TaskEither<WorkflowInterpreter.WorkflowError, O.Option<string>> =>
       pipe(
         Registry.read(env.registryEnv),
@@ -39,28 +41,34 @@ export const capabilitiesFor =
         TE.map((db) => resolveAndroidBridgeId(domain, entityId, db.lab)),
       );
 
-    // Un comando che va in CommandTimeoutError (mai un fallimento "normale" come app/activity
-    // non trovata, vedi WorkflowError#timedOut) è il segnale che un transport ADB è incastrato:
-    // adb devices continua a riportarlo raggiungibile ma non risponde più, caso non rilevabile
-    // da ConnectionLost (vedi TODO "Disconnect+reconnect esplicito su comando fallito"). Non
-    // sostituisce mai l'errore originale del comando (best-effort, sempre TE.right/never) - va
-    // agganciato con TE.tapError, non TE.flatMap, altrimenti maschererebbe il fallimento vero.
-    const remediateIfTimedOut = (error: WorkflowInterpreter.WorkflowError): TE.TaskEither<never, void> =>
-      error.timedOut
-        ? pipe(
-            androidBridgeId(),
-            TE.flatMap(
-              (id): TE.TaskEither<never, void> =>
-                O.isSome(id)
-                  ? env.androidBridge.forceReconnect(id.value, `command timed out: ${error.message}`)
-                  : TE.right(undefined),
-            ),
-            TE.orElse((): TE.TaskEither<never, void> => TE.right(undefined)),
-          )
-        : TE.right(undefined);
+    // Notifica alla macchina della camera un evento derivato dall'esito di un comando, se questa
+    // entità è tracciata dall'AndroidBridge. Best-effort in entrambe le direzioni: un id non
+    // risolvibile è un no-op, e un fallimento qui non deve mai alterare l'esito del comando.
+    const notifyBridge = (event: AndroidBridge.AndroidBridgeEvent): TE.TaskEither<never, void> =>
+      pipe(
+        androidBridgeId(),
+        TE.flatMap(
+          (id): TE.TaskEither<never, void> =>
+            O.isSome(id) ? env.androidBridge.dispatch(id.value, event) : TE.right(undefined),
+        ),
+        TE.orElse((): TE.TaskEither<never, void> => TE.right(undefined)),
+      );
+
+    // Traduce il fallimento di un comando in un evento per la macchina della camera. Oggi una
+    // sola causa è azionabile - un CommandTimeout significa transport ADB incastrato (`adb
+    // devices` lo riporta raggiungibile ma non risponde più, caso che la liveness-detection non
+    // può vedere) - ma la forma è quella giusta: aggiungere una regola è un arm in più, non
+    // nuovo plumbing. Va agganciato con TE.tapError, mai con TE.flatMap: non deve sostituire
+    // l'errore originale del comando.
+    const remediate = (error: WorkflowInterpreter.WorkflowError): TE.TaskEither<never, void> =>
+      match(error.cause)
+        .with({ type: "CommandTimeout" }, () =>
+          notifyBridge({ _tag: "TransportSuspect", reason: `command timed out: ${error.message}` }),
+        )
+        .otherwise((): TE.TaskEither<never, void> => TE.right(undefined));
 
     // Gate: rifiuta subito un comando se l'AndroidBridge sa già che questa camera non accetta
-    // comandi (Connecting/Disconnected), invece di tentare comunque lo shell-out diretto e
+    // comandi (qualunque stato diverso da Idle), invece di tentare comunque lo shell-out diretto e
     // aspettare fino a DEFAULT_COMMAND_TIMEOUT_MS per scoprirlo. Best-effort nella direzione
     // opposta: un id non risolvibile (dominio non tracciato dall'AndroidBridge) non blocca -
     // l'assenza di informazione non è motivo di rifiuto. Nota: acceptsCommands riflette lo stato
@@ -107,7 +115,7 @@ export const capabilitiesFor =
         ),
         TE.map((target) => Workflow.makeCapabilities(env.workflowEnv, target)),
         TE.flatMap(run),
-        TE.tapError(remediateIfTimedOut),
+        TE.tapError(remediate),
       );
 
     // A differenza degli altri comandi (shell-out diretto sul target ADB), waitForDevice non
@@ -129,25 +137,15 @@ export const capabilitiesFor =
         ),
       );
 
-    // Il reboot invalida esplicitamente lo stato Idle dell'AndroidBridgeOrchestrator: senza
-    // questo, lo stato lì resterebbe "Idle" (stale) finché il prossimo poll di adbDeviceStream
-    // non se ne accorge da solo (fino a tracking.adb.polling, oggi 10s) - e un waitForDevice
-    // eseguito subito dopo (vedi open-chrome-reboot) leggerebbe quello stato stale e tornerebbe
-    // SUBITO, senza aver mai aspettato davvero. Best-effort: un fallimento nel risolvere l'id
-    // (o l'assenza di un id) non deve far fallire un reboot già riuscito.
-    const invalidateAfterReboot: TE.TaskEither<never, void> = pipe(
-      androidBridgeId(),
-      TE.flatMap(
-        (id): TE.TaskEither<never, void> =>
-          O.isSome(id) ? env.androidBridge.markDisconnected(id.value, "reboot dispatched") : TE.right(undefined),
-      ),
-      TE.orElse((): TE.TaskEither<never, void> => TE.right(undefined)),
-    );
-
+    // Un reboot riuscito è una disconnessione ATTESA: senza dirlo alla macchina, lo stato lì
+    // resterebbe Idle (stale) finché il poll di adbDeviceStream non se ne accorge da solo (fino a
+    // tracking.adb.polling, oggi 10s) - e un waitForDevice eseguito subito dopo (vedi
+    // open-chrome-reboot) leggerebbe quello stato stale e tornerebbe SUBITO, senza aver mai
+    // aspettato davvero.
     const reboot = (): TE.TaskEither<WorkflowInterpreter.WorkflowError, void> =>
       pipe(
         withTarget((c) => c.reboot(), false),
-        TE.tap(() => invalidateAfterReboot),
+        TE.tap(() => notifyBridge({ _tag: "RebootDispatched" })),
       );
 
     return {

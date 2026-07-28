@@ -44,9 +44,10 @@ stateDiagram-v2
 
 ### Connection Machine
 
-One instance per controlled camera, driven by two independent inputs: a periodic reconcile
-tick (re-resolves the target and retries any `Disconnected` instance) and a real-time
-subscription that detects an `Idle` device going unreachable.
+One instance per controlled camera, driven by three independent inputs: a periodic reconcile
+tick (re-resolves the target and retries any `Disconnected` instance), a real-time subscription
+that detects an `Idle` device going unreachable, and workflow command outcomes (a dispatched
+reboot, or a command that timed out).
 
 ```mermaid
 ---
@@ -64,6 +65,9 @@ stateDiagram-v2
     Connecting --> Disconnected : handshake failed
 
     Idle --> Disconnected : connection lost
+    Idle --> Disconnected : RebootDispatched
+    Idle --> Disconnecting : TransportSuspect
+    Disconnecting --> Disconnected : disconnect done
 ```
 
 | State | Condition |
@@ -71,9 +75,23 @@ stateDiagram-v2
 | **Disconnected** | No active ADB session |
 | **Connecting** | Target resolution (mDNS) + ADB handshake in progress |
 | **Idle** | ADB session active, device responsive - accepts commands |
+| **Disconnecting** | Explicit `adb disconnect` in flight - does not accept commands, and is not retried by reconcile |
 
-A single `Connect` intent delegates to the Target Machine above (resolution + handshake): this
-machine only translates the outcome into "can this camera accept commands right now?".
+Two intents: `Connect` delegates to the Target Machine above (resolution + handshake), and
+`Disconnect` clears a stale entry from adb's local transport table. This machine only translates
+the outcome into "can this camera accept commands right now?".
+
+Two of the events come from *outside* the connection layer, because they describe situations the
+liveness subscription cannot observe on its own:
+
+| Event | Meaning |
+|---|---|
+| **RebootDispatched** | Expected outage - a reboot was just sent, so the device is about to vanish. Invalidates `Idle` immediately, rather than waiting for the ADB poll to notice; without it a wait-for-reconnect started right after would read the stale `Idle` and return at once. |
+| **TransportSuspect** | Suspected outage - a command timed out while `adb devices` still reports the device as reachable ("stuck transport"). Needs an explicit `adb disconnect`: reconnecting alone does not clear a stale transport entry. |
+
+Every state change goes through a single serialized dispatch per camera, and the reducer is the
+only authority on which events apply to which state - an event that does not apply is a no-op, so
+callers never inspect the state before dispatching.
 
 ### Workflow Activity
 

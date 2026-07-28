@@ -1,10 +1,11 @@
-import type * as Errors from "@supervisor/core/errors";
+import * as Errors from "@supervisor/core/errors";
 import type * as Logger from "@supervisor/core/logger/logger";
 import * as A from "fp-ts/Array";
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
 import * as RTE from "fp-ts/ReaderTaskEither";
+import * as TE from "fp-ts/TaskEither";
 import { match, P } from "ts-pattern";
 import * as Network from "../../network";
 import * as Shell from "../../shell";
@@ -129,6 +130,21 @@ export const connect = (target: Network.Endpoint): Effect<void> =>
 // Disconnect
 export const disconnect = (target: Network.Endpoint): Effect<void> =>
   pipe(run(["disconnect", Network.format(target)]), RTE.asUnit);
+
+// Variante best-effort di `disconnect`: un fallimento non è mai bloccante - si sta ripulendo una
+// entry di transport che potrebbe benissimo non esistere più, e l'obiettivo (nessun transport
+// stale verso quel target) è raggiunto comunque. Si logga soltanto.
+// Usata sia per gli host stray sia per l'intent Disconnect della macchina android-bridge.
+export const disconnectQuietly =
+  (target: Network.Endpoint): RTE.ReaderTaskEither<AdbEnv, never, void> =>
+  (env) =>
+    pipe(
+      disconnect(target)(env),
+      TE.orElseFirstIOK((error) =>
+        env.logger.error(`Disconnect failed for ${Network.format(target)}: ${Errors.format(error)}`),
+      ),
+      TE.orElse((): TE.TaskEither<never, void> => TE.right(undefined)),
+    );
 
 // TCP-IP protocol set
 export const tcpip =
