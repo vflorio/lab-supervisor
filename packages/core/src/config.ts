@@ -3,6 +3,7 @@ import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import * as t from "io-ts";
 import { ActivationScheduleCodec } from "./activation/schedule";
+import { DurationString } from "./date-time";
 import { AdbEntryCodec, CameraEntryCodec, CandyboxEntryCodec, TvEntryCodec } from "./db";
 import { of } from "./errors";
 import { LogLevel } from "./logger/logger";
@@ -52,9 +53,13 @@ const LogCodec = t.intersection([t.type({ level: LogLevel }), t.partial({ path: 
 export type Log = t.TypeOf<typeof LogCodec>; // Esportata e rinominato per servizio
 
 // Configurazione connessione ADB
+// `waitForDeviceTimeout`: limite intrinseco per il comando waitForDevice di un workflow (vedi
+// packages/core/src/workflow/interpreter.ts) - senza questo, un device che non torna mai online
+// bloccherebbe la pipeline per sempre (vedi RECOVERY-REBOOT-LOOP.md, punto 4)
 const AdbCodec = t.type({
   port: Network.PortCodec,
   reconnect: PolicyJsonCodec,
+  waitForDeviceTimeout: DurationString,
 });
 
 export type Adb = t.TypeOf<typeof AdbCodec>;

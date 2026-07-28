@@ -21,7 +21,7 @@ const validConfig = {
     suitestControlUnit: { polling: [["constantDelay", "20s"]] },
     suitestDevice: { polling: [["constantDelay", "20s"]] },
   },
-  adb: { port: 5555, reconnect: [["constantDelay", "400ms"]] },
+  adb: { port: 5555, reconnect: [["constantDelay", "400ms"]], waitForDeviceTimeout: "90s" },
   log: { level: "debug" },
   workflows: [],
   trpc: { port: 3001, hostname: "127.0.0.1" },

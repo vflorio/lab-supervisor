@@ -2,6 +2,7 @@ import { pipe } from "fp-ts/function";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
+import { durationToMs } from "../date-time";
 import { type AppError, format, of } from "../errors";
 import type { Logger } from "../logger/logger";
 import type { Command, TapCoords, Workflow } from "../workflow/workflow";
@@ -33,7 +34,13 @@ export interface CommandCapabilities {
 // Error
 // -------------------------------------------------------------------------------------
 
-export interface WorkflowError extends AppError<"WorkflowError"> {}
+// `timedOut`: preserva il segnale "il comando non ha mai risposto" (CommandTimeoutError, vedi
+// packages/core/src/shell.ts) attraverso il mapping generico che appiattisce ogni errore
+// sottostante in un WorkflowError - senza, un chiamante a valle (es. capabilities.ts) non può più
+// distinguere un trasporto ADB incastrato da un comando fallito normalmente (es. app non trovata).
+export interface WorkflowError extends AppError<"WorkflowError"> {
+  readonly timedOut?: boolean;
+}
 
 export const workflowError = of("WorkflowError");
 
@@ -69,12 +76,17 @@ const commandToString = (cmd: Command): string =>
     .with({ type: "waitForDevice" }, () => "waitForDevice")
     .with({ type: "waitForActivity" }, ({ activity }) => `waitForActivity(${activity})`)
     .with({ type: "run" }, ({ workflowName }) => `run(${workflowName})`)
+    .with({ type: "sleep" }, ({ duration }) => `sleep(${duration})`)
     .exhaustive();
 
 const liftCommand =
   (effect: (command: CommandCapabilities) => TE.TaskEither<WorkflowError, void>): Effect<void> =>
   ({ capabilities }) =>
     effect(capabilities);
+
+// Pausa pura: a differenza degli altri comandi, non passa da CommandCapabilities (nessuna
+// interazione col device), non fallisce mai.
+const sleep = (ms: number): Effect<void> => RTE.fromTask(() => new Promise<void>((resolve) => setTimeout(resolve, ms)));
 
 // -------------------------------------------------------------------------------------
 // Interpreters
@@ -104,6 +116,7 @@ const interpretCommand = (cmd: Command): Effect<void> =>
             RTE.flatMap((workflow) => interpretCommands(workflow.commands)),
           ),
         )
+        .with({ type: "sleep" }, ({ duration }) => sleep(durationToMs(duration)))
         .exhaustive(),
     ),
     RTE.tapError((error) => logError(`  X ${commandToString(cmd)} failed: ${format(error)}`)),

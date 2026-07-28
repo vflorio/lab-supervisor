@@ -31,12 +31,14 @@
   },
   "adb": {
     "port": 5555,
+    //TODO: reconnect e waitForDeviceTimeout vanno mergiate perché esprimono lo stesso dato in modi diversi
     "reconnect": [
       ["constantDelay", "400ms"],
       ["exponentialBackoff", "800ms"],
       ["capDelay", "60s"],
       ["limitRetries", 10]
-    ]
+    ],
+    "waitForDeviceTimeout": "120s"
   },
   // Escalation sequenziale
   "workflows": [
@@ -54,8 +56,9 @@
       [
         // Assicurarsi che reboot non sia mai al primo livello per evitare loops dato che waitForDevice è fallato
         ["reboot"],
-        // FIXME va rivista, attende sulla 5555, mentre dopo un reboot è necessario il processo di connessione
+        // waitForDevice attende ora l'AndroidBridge (mDNS + re-pairing), non la porta 5555 congelata
         ["waitForDevice"],
+        ["sleep", "5s"],
         ["ensureActivity", "com.android.chrome", "com.google.android.apps.chrome.Main"]
       ]
     ],
@@ -74,8 +77,13 @@
           "predicate": ["ref", "suitest_camera_connected"],
           // Cosa fare quando il predicate resta falso per >= grace
           "pipeline": ["workflow", "open-chrome-reboot"],
-          // Cosa fare se la pipeline fallisce (es. crash, timeout, ecc.)
-          "retry": [["constantDelay", "10s"], ["limitRetries", 2]],
+          // Cosa fare se la pipeline fallisce (es. crash, timeout, ecc.): il delay deve superare
+          // sia adb.waitForDeviceTimeout (90s, il tempo massimo che la pipeline può restare
+          // "in attesa" prima di fallire) sia tracking.suitestCamera.polling (30s, il tempo che
+          // Suitest impiega a ripollare e aggiornare il predicate) - altrimenti si ritenta
+          // (quindi si reboota di nuovo) un device già tornato sano ma non ancora ripollato
+          // (vedi RECOVERY-REBOOT-LOOP.md, punto 3)
+          "retry": [["constantDelay", "120s"], ["limitRetries", 2]],
           "notify": [
             {
               "type": ["slack"],

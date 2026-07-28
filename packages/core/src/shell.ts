@@ -11,7 +11,11 @@ export interface CommandTimeoutError extends AppError<"CommandTimeout"> {}
 
 export type ShellSpawnError = CommandError | CommandTimeoutError;
 
-export type Spawn = (command: string, args: readonly string[]) => TE.TaskEither<ShellSpawnError, string>;
+export type Spawn = (
+  command: string,
+  args: readonly string[],
+  timeoutMs?: number,
+) => TE.TaskEither<ShellSpawnError, string>;
 
 // -------------------------------------------------------------------------------------
 
@@ -23,7 +27,7 @@ export type Env = {
 const formatCommand = (command: string, args: readonly string[]): string => `${command} ${args.join(" ")}`;
 
 export const run =
-  (command: string, args: readonly string[]): RTE.ReaderTaskEither<Env, ShellSpawnError, string> =>
+  (command: string, args: readonly string[], timeoutMs?: number): RTE.ReaderTaskEither<Env, ShellSpawnError, string> =>
   ({ logger, spawn }) =>
     pipe(
       TE.Do,
@@ -32,7 +36,7 @@ export const run =
       TE.tapIO(({ spawnLogger }) => spawnLogger.debug(`Process start: "${formatCommand(command, args)}"`)),
       TE.bind("stdout", () =>
         pipe(
-          spawn(command, args),
+          spawn(command, args, timeoutMs),
           TE.map((stdout) => stdout.trim()),
         ),
       ),

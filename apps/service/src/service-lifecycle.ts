@@ -55,7 +55,7 @@ export interface ActiveLifecycle {
   readonly adbTracking: IntervalLoop.Handle;
   readonly suitestTracking: IntervalLoop.Handle;
   readonly androidBridge: AndroidBridgeOrchestrator.Handle;
-  readonly reconcileLoop: IntervalLoop.Handle;
+  readonly adbReconciler: IntervalLoop.Handle;
   readonly recovery: RecoveryEngine.Handle;
 }
 
@@ -74,16 +74,16 @@ const readRegistry = (env: Env) =>
     fsEnv: Node.fsEnv,
   });
 
-const createReconcileLoop = (env: Env, androidBridge: AndroidBridgeOrchestrator.Handle): IntervalLoop.Handle => {
+const createAdbReconciler = (env: Env, androidBridge: AndroidBridgeOrchestrator.Handle): IntervalLoop.Handle => {
   const reconcileLog = env.logger.child("AndroidBridge");
 
   const tick = pipe(
     readRegistry(env),
-    TE.orElseFirstIOK((error) => reconcileLog.error(`Reconcile: registry read failed - ${Errors.format(error)}`)),
+    TE.orElseFirstIOK((error) => reconcileLog.error(`registry read failed - ${Errors.format(error)}`)),
     TE.flatMap((registry) =>
       pipe(
         androidBridge.reconcile(registry.lab),
-        TE.orElseFirstIOK((error) => reconcileLog.error(`Reconcile failed: ${Errors.format(error)}`)),
+        TE.orElseFirstIOK((error) => reconcileLog.error(`reconcile failed: ${Errors.format(error)}`)),
       ),
     ),
     TE.match(constVoid, constVoid),
@@ -104,6 +104,7 @@ const createRecovery = (
       recoveryStream: env.recoveryStream,
       notifyStream: env.notifyStream,
       activityStream: env.activityStream,
+      androidBridge: resources.androidBridge,
     }),
     TE.fromEither,
     TE.map((recovery): ActiveLifecycle => ({ ...resources, recovery })),
@@ -125,6 +126,8 @@ const createResources =
       env.adbDeviceStream,
     );
 
+    const adbReconciler = createAdbReconciler(env, androidBridge);
+
     const adbTracking = AdbTracking.create({
       logger: trackingLog,
       predicateStream: env.predicateStream,
@@ -144,15 +147,13 @@ const createResources =
       },
     });
 
-    const reconcileLoop = createReconcileLoop(env, androidBridge);
-
-    return { androidBridge, adbTracking, suitestTracking, reconcileLoop };
+    return { androidBridge, adbTracking, suitestTracking, adbReconciler };
   };
 
-const startBackgroundLoops = ({ adbTracking, suitestTracking, reconcileLoop }: ActiveLifecycle): IO.IO<void> =>
+const startBackgroundLoops = ({ adbTracking, suitestTracking, adbReconciler }: ActiveLifecycle): IO.IO<void> =>
   IntervalLoop.detach(
     pipe(
-      [adbTracking.start, suitestTracking.start, reconcileLoop.start],
+      [suitestTracking.start, adbTracking.start, adbReconciler.start],
       TE.traverseArray(flow(IntervalLoop.detach, TE.fromIO)),
     ),
   );
@@ -161,7 +162,7 @@ const stopResources = ({
   adbTracking,
   suitestTracking,
   androidBridge,
-  reconcileLoop,
+  adbReconciler,
   recovery,
 }: ActiveLifecycle): IO.IO<void> =>
   pipe(
@@ -169,7 +170,7 @@ const stopResources = ({
     IO.flatMap(() => recovery.stop),
     IO.flatMap(() => adbTracking.stop),
     IO.flatMap(() => suitestTracking.stop),
-    IO.flatMap(() => reconcileLoop.stop),
+    IO.flatMap(() => adbReconciler.stop),
     IO.flatMap(() => androidBridge.stop),
   );
 

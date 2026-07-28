@@ -41,6 +41,36 @@ const resolveCameraTarget = (videoCaptureDeviceId: string, registry: Db.LabRegis
     O.map((entry) => entry.target),
   );
 
+const findCameraByAdbId = (adbId: string, registry: Db.LabRegistry): O.Option<Db.CameraEntry> =>
+  pipe(
+    Object.values(registry.cameras),
+    RA.findFirst((camera) => O.elem(S.Eq)(adbId)(camera.adbId)),
+  );
+
+// -------------------------------------------------------------------------------------
+// Risolve l'entityId di un dominio tracciato nell'id camera usato dall'AndroidBridgeOrchestrator
+// (apps/service/src/android-bridge.ts, chiave = CameraEntry.id, vedi gating.ts#controlledCameraHostsById)
+// - a differenza di resolveTarget, che dà l'endpoint ADB, qui serve l'identità stabile locale
+// per interrogare acceptsCommands/awaitIdle (vedi RECOVERY-REBOOT-LOOP.md, punto 1).
+// -------------------------------------------------------------------------------------
+
+export const resolveAndroidBridgeId = (domain: string, entityId: string, registry: Db.LabRegistry): O.Option<string> =>
+  match(domain)
+    // Dominio "adb": l'entityId è Network.format(target) == la stessa chiave di registry.adb[adbId]
+    .with(AdbTracking.DOMAIN, () =>
+      pipe(
+        findCameraByAdbId(entityId, registry),
+        O.map((camera) => camera.id),
+      ),
+    )
+    .with(SuitestCamera.DOMAIN, () =>
+      pipe(
+        findCameraByVideoCaptureDeviceId(entityId, registry),
+        O.map((camera) => camera.id),
+      ),
+    )
+    .otherwise(() => O.none);
+
 // -------------------------------------------------------------------------------------
 // Descrive un'entità per i placeholder di un messaggio di notifica (vedi ../../../../
 // packages/core/src/notify/template.ts e ./engine.ts): stesso `match` su domain di

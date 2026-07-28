@@ -14,16 +14,23 @@ export interface Process {
   readonly exit: (code: number) => never;
 }
 
-export const spawn: Shell.Spawn = (command, args) =>
+const isTimedOut = (error: unknown): boolean =>
+  error instanceof Error && "killed" in error && Boolean((error as Error & { killed?: boolean }).killed);
+
+export const spawn: Shell.Spawn = (command, args, timeoutMs) =>
   pipe(
     TE.tryCatch(
       () =>
         new Promise<string>((resolve, reject) => {
-          execFile(command, args, (error, stdout, stderr) =>
-            error ? reject({ ...error, message: `${error.message} - ${stderr}` }) : resolve(stdout),
-          );
+          execFile(command, args, { timeout: timeoutMs }, (error, stdout, stderr) => {
+            if (!error) return resolve(stdout);
+            reject(Object.assign(new Error(`${error.message} - ${stderr}`), { killed: error.killed }));
+          });
         }),
-      Errors.fromUnknown("CommandError"),
+      (error) =>
+        isTimedOut(error) //
+          ? Errors.fromUnknown("CommandTimeout")(error)
+          : Errors.fromUnknown("CommandError")(error),
     ),
   );
 

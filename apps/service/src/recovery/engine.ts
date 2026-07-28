@@ -1,6 +1,7 @@
 import type * as Activity from "@supervisor/core/activity/stream";
 import type { SlackConfig } from "@supervisor/core/adapters/slack";
 import type * as ConfigModel from "@supervisor/core/config";
+import { durationToMs } from "@supervisor/core/date-time";
 import type * as Logger from "@supervisor/core/logger/logger";
 import * as NotifyDispatch from "@supervisor/core/notify/dispatch";
 import type { NotifyLifecycle, NotifyRule } from "@supervisor/core/notify/model";
@@ -15,6 +16,7 @@ import * as O from "fp-ts/Option";
 import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
+import type * as AndroidBridgeOrchestrator from "../android-bridge";
 import * as Node from "../node";
 import * as Registry from "../registry";
 import type * as Workflow from "../workflow";
@@ -43,6 +45,9 @@ export interface Env {
   readonly recoveryStream: Recovery.RecoveryStream;
   readonly notifyStream: NotifyStream.NotifyStream;
   readonly activityStream: Activity.ActivityStream;
+  // Serve a waitForDevice per attendere la riconnessione reale (mDNS + re-pairing) invece di
+  // uno shell-out sulla porta ADB congelata - vedi RECOVERY-REBOOT-LOOP.md, punto 1.
+  readonly androidBridge: AndroidBridgeOrchestrator.Handle;
 }
 
 export type StartError = PolicyDecodeError;
@@ -89,6 +94,8 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
       seedDevices: env.config.registry.devices,
       fsEnv: Node.fsEnv,
     },
+    androidBridge: env.androidBridge,
+    waitForDeviceTimeoutMs: durationToMs(env.config.adb.waitForDeviceTimeout),
   };
 
   // Descrive l'entità coinvolta (label/ip leggibili, oltre al solo entityId) per i

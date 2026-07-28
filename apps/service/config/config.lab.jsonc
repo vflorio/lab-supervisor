@@ -39,7 +39,8 @@
       ["exponentialBackoff", "800ms"],
       ["capDelay", "60s"],
       ["limitRetries", 10]
-    ]
+    ],
+    "waitForDeviceTimeout": "90s"
   },
   "workflows": [
     [

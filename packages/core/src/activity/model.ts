@@ -9,18 +9,18 @@
 // diverse finché una fase successiva non li unifica.
 // -------------------------------------------------------------------------------------
 
-export type ActivitySource = "recovery" | "adb";
+export type ActivitySource = "recovery" | "adb" | "workflow";
 
 export interface ActivityEntry {
   readonly id: number;
   readonly timestamp: number;
   readonly entityId: string;
   readonly source: ActivitySource;
-  // Riga leggibile (es. "pending", "running", "connected") - non strutturato in questa fase
+  // Riga leggibile (es. "pending", "running", "connected")
   readonly status: string;
 }
 
-// Chiave univoca dell'"ultimo stato noto" per un sottosistema+entità, usata per indicizzare
-// lo snapshot corrente (vedi ./stream.ts) - stesso schema di predicates/model.ts#factKey.
+// Chiave univoca dell'ultimo stato noto per un sottosistema+entità, usata per indicizzare
+// lo snapshot corrente
 export const activityKey = (entry: Pick<ActivityEntry, "source" | "entityId">): string =>
   `${entry.source}:${entry.entityId}`;

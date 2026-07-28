@@ -1,4 +1,5 @@
 import * as E from "fp-ts/Either";
+import type { DurationString } from "../date-time";
 import { type AppError, of } from "../errors";
 
 // -------------------------------------------------------------------------------------
@@ -22,7 +23,10 @@ export type Command =
   | { readonly type: "inputTap"; readonly coords: TapCoords }
   | { readonly type: "waitForDevice" }
   | { readonly type: "waitForActivity"; readonly activity: string }
-  | { readonly type: "run"; readonly workflowName: string };
+  | { readonly type: "run"; readonly workflowName: string }
+  // Pausa fissa, indipendente da qualunque condizione del device (a differenza di wait*) - utile
+  // per dare respiro tra due comandi (es. dopo un tap, prima che l'UI finisca di animare)
+  | { readonly type: "sleep"; readonly duration: DurationString };
 
 // Un workflow è un nome + una sequenza ordinata di comandi.
 // JSON: ["nome", [command, command, ...]]

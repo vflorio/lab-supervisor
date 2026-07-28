@@ -51,10 +51,21 @@ export const matchDeviceState = (raw: string): O.Option<Status> =>
 // Shell runner
 // -------------------------------------------------------------------------------------
 
+// Limite di default per ogni comando ADB "one-shot": senza, un transport incastrato (adb
+// devices lo riporta ancora come "device" ma non risponde più) blocca per sempre il comando e
+// tutto ciò che lo aspetta (vedi TODO "Disconnect+reconnect esplicito su comando fallito").
+// Esplicitamente escluso per `waitForState` sotto: quei comandi sono bloccanti-per-design
+// (aspettano un cambio di stato reale, non un timeout applicativo).
+const DEFAULT_COMMAND_TIMEOUT_MS = 15_000;
+
 const run =
-  (args: readonly string[], target?: Network.Endpoint): Effect<string> =>
+  (
+    args: readonly string[],
+    target?: Network.Endpoint,
+    timeoutMs: number | undefined = DEFAULT_COMMAND_TIMEOUT_MS,
+  ): Effect<string> =>
   ({ logger, spawn: shell }) =>
-    Shell.run("adb", target ? ["-s", Network.format(target), ...args] : [...args])({ spawn: shell, logger });
+    Shell.run("adb", target ? ["-s", Network.format(target), ...args] : [...args], timeoutMs)({ spawn: shell, logger });
 
 // -------------------------------------------------------------------------------------
 // Parser - `adb devices` output
@@ -128,11 +139,12 @@ export const tcpip =
 // List connected devices with their status
 export const devices: Effect<Device[]> = pipe(run(["devices"]), RTE.map(parseDevices));
 
-// Wait for a device to reach a specific state (e.g., "device" or "disconnect")
+// Wait for a device to reach a specific state (e.g., "device" or "disconnect") - nessun timeout:
+// bloccante per design, a differenza di tutti gli altri comandi sopra (vedi DEFAULT_COMMAND_TIMEOUT_MS)
 export const waitForState =
   (state: Status) =>
   (target: Network.Endpoint): Effect<void> =>
-    pipe(run([`wait-for-${state}`], target), RTE.asUnit);
+    pipe(run([`wait-for-${state}`], target, undefined), RTE.asUnit);
 
 export const waitForDevice = waitForState("device");
 export const waitForDisconnect = waitForState("disconnect");
