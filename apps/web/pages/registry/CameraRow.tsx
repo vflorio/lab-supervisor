@@ -1,4 +1,4 @@
-import { Bolt, Cable, Link as LinkIcon, Usb, Videocam } from "@mui/icons-material";
+import { Bolt, Cable, Link as LinkIcon, PlayArrow, Usb, Videocam } from "@mui/icons-material";
 import { Box, Button, Stack, Typography } from "@mui/material";
 import * as Network from "@supervisor/core/network";
 import { EntryRow } from "@supervisor/ui/EntryRow";
@@ -8,8 +8,9 @@ import { ActivityStat } from "../../components/ActivityStat";
 import { ActivityStatus } from "../../components/ActivityStatus";
 import { PredicateStat } from "../../components/PredicateStat";
 import { RecoveryInterventionBadge, RecoveryResetButtons } from "../../components/RecoveryIntervention";
+import { WorkflowLauncher } from "../../components/WorkflowLauncher";
 import type { AdbDevice } from "../../hooks/useAdbDevices";
-import { adbBridgeColorFor, recoveryColorFor } from "./activityColors";
+import { adbBridgeColorFor, recoveryColorFor, workflowRunColorFor } from "./activityColors";
 import type { CameraView, DeviceKind } from "./types";
 
 const RECOVERY_DOMAIN = "suitest-camera";
@@ -23,6 +24,8 @@ export function CameraRow({
   onAssign,
   onLink,
   onResetRecovery,
+  workflows,
+  onRunWorkflow,
 }: {
   camera: CameraView;
   adbStatus: AdbDevice["status"] | null;
@@ -32,6 +35,8 @@ export function CameraRow({
   onAssign: () => void;
   onLink: () => void;
   onResetRecovery: (policy: string, entityId: string, tripwireIndex: number) => void;
+  workflows: readonly { name: string }[];
+  onRunWorkflow: (cameraId: string, workflowName: string) => void;
 }) {
   const connectivity: ReactNode[] = [];
   const activity: ReactNode[] = [];
@@ -113,6 +118,7 @@ export function CameraRow({
       <Button key="ra" size="small" variant="outlined" startIcon={<Usb fontSize="small" />} onClick={onAssign}>
         Change ADB
       </Button>,
+      <WorkflowLauncher key="wf" workflows={workflows} onLaunch={(name) => onRunWorkflow(camera.id, name)} />,
     );
   } else {
     actions.push(
@@ -166,6 +172,15 @@ export function CameraRow({
               label="ADB bridge"
               icon={<Cable fontSize="small" />}
               colorFor={adbBridgeColorFor}
+            />
+          )}
+          {camera.adb && (
+            <ActivityStatus
+              source="manual-workflow"
+              entityId={camera.id}
+              label="Last workflow"
+              icon={<PlayArrow fontSize="small" />}
+              colorFor={workflowRunColorFor}
             />
           )}
           <div />

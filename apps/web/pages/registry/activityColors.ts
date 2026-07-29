@@ -34,3 +34,13 @@ export const adbBridgeColorFor = (status: string | undefined): ActivityColor => 
   if (status?.startsWith("disconnected")) return "error";
   return "disabled";
 };
+
+// Esito dell'ultimo lancio manuale di un workflow (source "manual-workflow", vedi
+// apps/service/src/manual-workflow.ts) - "running:<name>"/"failed: <message>" portano un
+// suffisso variabile, da cui gli startsWith invece di un match esatto.
+export const workflowRunColorFor = (status: string | undefined): ActivityColor => {
+  if (status?.startsWith("running:")) return "info";
+  if (status === "succeeded") return "success";
+  if (status?.startsWith("failed")) return "error";
+  return "disabled";
+};

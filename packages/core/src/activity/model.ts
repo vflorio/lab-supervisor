@@ -4,7 +4,7 @@
 // `entityId` è quello nativo della fonte, senza canonicalizzazione: la stessa entità fisica può
 // comparire con id diversi tra fonti diverse finché una fase successiva non li unifica.
 
-export type ActivitySource = "recovery" | "adb" | "workflow";
+export type ActivitySource = "recovery" | "adb" | "workflow" | "manual-workflow";
 
 export interface ActivityEntry {
   readonly id: number;

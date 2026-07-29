@@ -22,6 +22,8 @@ export function TvRow({
   onAssignCamera,
   onLinkCamera,
   onResetRecovery,
+  workflows,
+  onRunWorkflow,
 }: { group: TvGroup } & RowActions) {
   const { tv } = group;
   const inUseLabel = tv.inUseBy?.email ?? tv.inUseBy?.orgName ?? tv.inUseBy?.tokenName;
@@ -99,6 +101,8 @@ export function TvRow({
               onAssign={() => onAssignCamera(camera)}
               onLink={() => onLinkCamera(camera)}
               onResetRecovery={onResetRecovery}
+              workflows={workflows}
+              onRunWorkflow={onRunWorkflow}
             />
           ))}
         </Box>

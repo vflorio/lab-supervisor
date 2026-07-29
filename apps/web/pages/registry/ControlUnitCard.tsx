@@ -20,6 +20,8 @@ export function ControlUnitCard({
   onAssignCamera,
   onLinkCamera,
   onResetRecovery,
+  workflows,
+  onRunWorkflow,
 }: { group: CuGroup } & RowActions) {
   return (
     <Paper variant="outlined" sx={{ ...entryRowGridSx, p: 2, rowGap: 1 }}>
@@ -77,6 +79,8 @@ export function ControlUnitCard({
               onAssignCamera={onAssignCamera}
               onLinkCamera={onLinkCamera}
               onResetRecovery={onResetRecovery}
+              workflows={workflows}
+              onRunWorkflow={onRunWorkflow}
             />
           ))}
         </Box>

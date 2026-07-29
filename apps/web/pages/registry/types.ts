@@ -65,4 +65,7 @@ export interface RowActions {
   onAssignCamera: (camera: CameraView) => void;
   onLinkCamera: (camera: CameraView) => void;
   onResetRecovery: (policy: string, entityId: string, tripwireIndex: number) => void;
+  // Nomi dei workflow configurati (config `workflows`), per il menu di lancio manuale
+  workflows: readonly { name: string }[];
+  onRunWorkflow: (cameraId: string, workflowName: string) => void;
 }

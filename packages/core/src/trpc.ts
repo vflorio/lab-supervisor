@@ -9,6 +9,7 @@ import type * as Network from "./network";
 import type { NotifyFeed } from "./notify/stream";
 import type { PredicateFeed } from "./predicates/feed";
 import type { RecoveryFeed } from "./recovery/status";
+import type * as WorkflowInterpreter from "./workflow/interpreter";
 
 // Funzionalità esposte su tRPC
 
@@ -71,6 +72,14 @@ export interface Services {
   // `false` se il servizio non è "active" (nessun motore di recovery in esecuzione) o se
   // l'entità/tripwire indicati non sono mai stati osservati. Web -> Service
   readonly recoveryReset: (policyLabel: string, entityId: string, tripwireIndex: number) => boolean;
+
+  // Lancia manualmente un workflow (config `workflows`) contro l'ADB target assegnato a una
+  // camera - `WorkflowError` se il servizio non è "active", la camera non ha un ADB target
+  // assegnato, o il workflow non è configurato. Web -> Service
+  readonly runWorkflow: (
+    cameraId: string,
+    workflowName: string,
+  ) => TE.TaskEither<WorkflowInterpreter.WorkflowError, void>;
 
   // Feed dei log di servizio
   readonly logs: LogFeed; // Service -> Web

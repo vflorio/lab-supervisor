@@ -9,6 +9,7 @@ import type * as Notify from "@supervisor/core/notify/stream";
 import type * as Predicates from "@supervisor/core/predicates/index";
 import type * as Recovery from "@supervisor/core/recovery/index";
 import type * as Trpc from "@supervisor/core/trpc";
+import type * as WorkflowInterpreter from "@supervisor/core/workflow/interpreter";
 import { pipe } from "fp-ts/function";
 import * as RA from "fp-ts/ReadonlyArray";
 import * as TE from "fp-ts/TaskEither";
@@ -34,6 +35,10 @@ export type Deps = {
   readonly notifyStream: Notify.NotifyFeed;
   readonly activityStream: Activity.ActivityFeed;
   readonly resetRecovery: (policyLabel: string, entityId: string, tripwireIndex: number) => boolean;
+  readonly runManualWorkflow: (
+    cameraId: string,
+    workflowName: string,
+  ) => TE.TaskEither<WorkflowInterpreter.WorkflowError, void>;
 };
 
 export const create = ({
@@ -46,6 +51,7 @@ export const create = ({
   notifyStream,
   activityStream,
   resetRecovery,
+  runManualWorkflow,
 }: Deps): Trpc.Services => ({
   logger: trpcLog.child("web"),
   android: android(trpcLog, adbDeviceStream),
@@ -62,6 +68,7 @@ export const create = ({
   tracking: predicateStream,
   recovery: recoveryStream,
   recoveryReset: resetRecovery,
+  runWorkflow: runManualWorkflow,
 });
 
 const android = (trpcLog: Logger.Tagged, stream: AdbStream.AdbDeviceStream): Trpc.Services["android"] => ({

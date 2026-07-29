@@ -11,6 +11,7 @@ import * as Recovery from "@supervisor/core/recovery/index";
 import * as RetryPolicy from "@supervisor/core/retry/retry";
 import type * as Schedule from "@supervisor/core/schedule";
 import type * as Validation from "@supervisor/core/validation";
+import * as WorkflowInterpreter from "@supervisor/core/workflow/interpreter";
 import * as E from "fp-ts/Either";
 import { constFalse, pipe } from "fp-ts/function";
 import * as IO from "fp-ts/IO";
@@ -112,6 +113,17 @@ export const create: Effect<ServiceHandle> = pipe(
         O.getOrElse(() => false),
       );
 
+    // Il runner manuale esiste solo mentre il servizio è "active" (stessa ragione di resetRecovery).
+    const runManualWorkflow = (
+      cameraId: string,
+      workflowName: string,
+    ): TE.TaskEither<WorkflowInterpreter.WorkflowError, void> =>
+      pipe(
+        active,
+        O.map((lifecycle) => lifecycle.runWorkflow(cameraId, workflowName)),
+        O.getOrElse(() => TE.left(WorkflowInterpreter.workflowError("Service not active"))),
+      );
+
     const trpcLog = logger.child("tRPC");
     const trpcServer = Trpc.startServer({
       port: config.trpc.port,
@@ -127,6 +139,7 @@ export const create: Effect<ServiceHandle> = pipe(
         notifyStream,
         activityStream,
         resetRecovery,
+        runManualWorkflow,
       }),
     });
 

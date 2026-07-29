@@ -8,12 +8,14 @@ import type * as Predicates from "@supervisor/core/predicates/index";
 import type * as Recovery from "@supervisor/core/recovery/index";
 import type * as RetryPolicy from "@supervisor/core/retry/retry";
 import * as Retry from "@supervisor/core/retry/retry";
+import type * as WorkflowInterpreter from "@supervisor/core/workflow/interpreter";
 import { constVoid, flow, pipe } from "fp-ts/function";
 import * as IO from "fp-ts/IO";
 import * as TE from "fp-ts/TaskEither";
 import type * as AdbStream from "./adb/adb-stream";
 import * as AdbTracking from "./adb/adb-tracking";
 import * as AndroidBridgeOrchestrator from "./android-bridge";
+import * as ManualWorkflow from "./manual-workflow";
 import * as Node from "./node";
 import * as RecoveryEngine from "./recovery/engine";
 import * as Registry from "./registry";
@@ -49,6 +51,11 @@ export interface ActiveLifecycle {
   readonly androidBridge: AndroidBridgeOrchestrator.Handle;
   readonly adbReconciler: IntervalLoop.Handle;
   readonly recovery: RecoveryEngine.Handle;
+  // Lancio manuale di un workflow (operatore, via tRPC) - vedi ./manual-workflow.ts
+  readonly runWorkflow: (
+    cameraId: string,
+    workflowName: string,
+  ) => TE.TaskEither<WorkflowInterpreter.WorkflowError, void>;
 }
 
 export type CreateError = Registry.SyncError | RecoveryEngine.StartError;
@@ -92,7 +99,7 @@ const createAdbReconciler = (env: Env, androidBridge: AndroidBridgeOrchestrator.
 
 const createRecovery = (
   env: Env,
-  resources: Omit<ActiveLifecycle, "recovery">,
+  resources: Omit<ActiveLifecycle, "recovery" | "runWorkflow">,
 ): TE.TaskEither<CreateError, ActiveLifecycle> =>
   pipe(
     RecoveryEngine.start({
@@ -105,11 +112,22 @@ const createRecovery = (
       androidBridge: resources.androidBridge,
     }),
     TE.fromEither,
-    TE.map((recovery): ActiveLifecycle => ({ ...resources, recovery })),
+    TE.map(
+      (recovery): ActiveLifecycle => ({
+        ...resources,
+        recovery,
+        runWorkflow: ManualWorkflow.run({
+          logger: env.logger.child("ManualWorkflow"),
+          workflows: env.config.workflows,
+          capabilitiesEnv: recovery.capabilitiesEnv,
+          activityStream: env.activityStream,
+        }),
+      }),
+    ),
   );
 
 const createResources =
-  (env: Env): IO.IO<Omit<ActiveLifecycle, "recovery">> =>
+  (env: Env): IO.IO<Omit<ActiveLifecycle, "recovery" | "runWorkflow">> =>
   () => {
     const trackingLog = env.logger.child("Tracking");
 

@@ -9,6 +9,7 @@ import { notifyRouter } from "./routers/notify";
 import { recoveryRouter } from "./routers/recovery";
 import { settingsRouter } from "./routers/settings";
 import { trackingRouter } from "./routers/tracking";
+import { workflowRouter } from "./routers/workflow";
 
 export * from "./instance";
 export * from "./result";
@@ -26,6 +27,7 @@ export const appRouter = router({
   settings: settingsRouter,
   tracking: trackingRouter,
   activity: activityRouter,
+  workflow: workflowRouter,
 });
 
 export type AppRouter = typeof appRouter;

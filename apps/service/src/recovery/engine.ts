@@ -51,6 +51,11 @@ export interface Handle {
   // Riarma il tripwire di un'entità dopo un esaurimento dei retry (intervento manuale).
   // `false` se la policy non esiste o l'entità non è mai stata osservata da quella policy.
   readonly reset: (policyLabel: string, entityId: string, tripwireIndex: number) => boolean;
+  // Esposto per il runner di workflow manuali (vedi ../manual-workflow.ts): stessa Capabilities.Env
+  // usata dalle RecoveryPolicy, così un lancio manuale ottiene lo stesso gating AndroidBridge e la
+  // stessa risoluzione target di una recovery automatica, senza una seconda costruzione che rischia
+  // di andare fuori sincrono (es. waitForDeviceTimeoutMs).
+  readonly capabilitiesEnv: Capabilities.Env;
 }
 
 // Deriva il NotifyLifecycle dal tag di TripwireState raggiunto; un ritorno a "healthy" non notifica.
@@ -182,6 +187,7 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
         },
         reset: (policyLabel, entityId, tripwireIndex) =>
           handles.get(policyLabel)?.reset(entityId, tripwireIndex) ?? false,
+        capabilitiesEnv,
       };
     }),
   );

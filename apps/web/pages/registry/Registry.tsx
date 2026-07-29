@@ -42,18 +42,26 @@ import type { CameraView, Database, DeviceKind, LinkingTarget, NewAdbTargetForm 
 // -------------------------------------------------------------------------------------
 
 export function RegistryView() {
-  const { registry, adbDevices } = useData<Data>();
+  const { registry, adbDevices, workflows } = useData<Data>();
   const liveAdbDevices = useAdbDevices(adbDevices.ok ? adbDevices.data : []);
 
   return match(registry)
-    .with({ ok: true }, ({ data }) => <HierarchyView db={data} adbDevices={liveAdbDevices} />)
+    .with({ ok: true }, ({ data }) => <HierarchyView db={data} adbDevices={liveAdbDevices} workflows={workflows} />)
     .with({ ok: false }, ({ error }) => <Alert severity="error">Registry error: {error.message}</Alert>)
     .exhaustive();
 }
 
 const emptyNewAdbTarget: NewAdbTargetForm = { label: "", target: "" };
 
-function HierarchyView({ db, adbDevices }: { db: Database; adbDevices: readonly AdbDevice[] }) {
+function HierarchyView({
+  db,
+  adbDevices,
+  workflows,
+}: {
+  db: Database;
+  adbDevices: readonly AdbDevice[];
+  workflows: readonly { name: string }[];
+}) {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ kind: DeviceKind; id: string; label: string } | null>(null);
   const [editLabel, setEditLabel] = useState("");
@@ -145,6 +153,15 @@ function HierarchyView({ db, adbDevices }: { db: Database; adbDevices: readonly 
     });
   };
 
+  // Lancio manuale di un workflow (intervento operatore): come handleResetRecovery, non tocca
+  // il registry su disco - l'esito arriva dallo stream live di activity (source "manual-workflow").
+  const handleRunWorkflow = (cameraId: string, workflowName: string) => {
+    log(`User launched workflow "${workflowName}" on camera ${cameraId}`);
+    void trpc.workflow.run.mutate({ cameraId, workflowName }).then((result) => {
+      if (!result.ok) setError(`Workflow failed: ${result.error.message}`);
+    });
+  };
+
   const handleAdd = () =>
     mutate(async () => {
       if (!newAdbTarget.label)
@@ -228,6 +245,8 @@ function HierarchyView({ db, adbDevices }: { db: Database; adbDevices: readonly 
             onAssignCamera={setAssigningCamera}
             onLinkCamera={handleLinkCamera}
             onResetRecovery={handleResetRecovery}
+            workflows={workflows}
+            onRunWorkflow={handleRunWorkflow}
           />
         ))}
 
@@ -252,6 +271,8 @@ function HierarchyView({ db, adbDevices }: { db: Database; adbDevices: readonly 
                   onAssignCamera={setAssigningCamera}
                   onLinkCamera={handleLinkCamera}
                   onResetRecovery={handleResetRecovery}
+                  workflows={workflows}
+                  onRunWorkflow={handleRunWorkflow}
                 />
               ))}
             </Box>
@@ -275,6 +296,8 @@ function HierarchyView({ db, adbDevices }: { db: Database; adbDevices: readonly 
                   onAssign={() => setAssigningCamera(camera)}
                   onLink={() => handleLinkCamera(camera)}
                   onResetRecovery={handleResetRecovery}
+                  workflows={workflows}
+                  onRunWorkflow={handleRunWorkflow}
                 />
               ))}
             </Box>
