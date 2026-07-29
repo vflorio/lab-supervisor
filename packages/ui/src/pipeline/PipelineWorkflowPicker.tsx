@@ -1,6 +1,6 @@
-import { Bolt, Check } from "@mui/icons-material";
 import { Box, Stack, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import type { Pipeline } from "@supervisor/core/workflow/pipeline";
+import { MultiPicker } from "../picker/MultiPicker";
 
 // Deriva una Pipeline da una selezione piatta di nomi di workflow + operatore: 0 nomi -> null
 // (nessuna pipeline), 1 -> leaf diretto, N -> or/and dei singoli leaf. Guidato, non riscrive un
@@ -29,53 +29,20 @@ export function PipelineWorkflowPicker({
 }: PipelineWorkflowPickerProps) {
   return (
     <Stack sx={{ gap: 2 }}>
-      <Stack sx={{ gap: 0.75 }}>
-        {workflowNames.map((name) => {
-          const on = selected.includes(name);
-          return (
-            <Box
-              key={name}
-              onClick={() => onToggle(name)}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1.5,
-                px: 1.5,
-                py: 1,
-                borderRadius: 1,
-                border: "1px solid",
-                borderColor: on ? "primary.main" : "divider",
-                bgcolor: on ? "action.selected" : "transparent",
-                cursor: "pointer",
-              }}
-            >
-              <Box
-                sx={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: 0.5,
-                  border: "1px solid",
-                  borderColor: on ? "primary.main" : "divider",
-                  bgcolor: on ? "primary.main" : "transparent",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                {on && <Check sx={{ fontSize: 10, color: "primary.contrastText" }} />}
-              </Box>
-              <Bolt sx={{ fontSize: 12, color: on ? "primary.main" : "text.secondary" }} />
-              <Typography variant="body2" sx={{ flex: 1 }}>
-                {name}
-              </Typography>
-            </Box>
-          );
-        })}
-      </Stack>
+      <MultiPicker
+        options={workflowNames.map((name) => ({ id: name, primary: name }))}
+        value={selected}
+        onChange={(next) => {
+          // MultiPicker riporta la selezione completa dopo ogni interazione, che tocca sempre
+          // un solo elemento alla volta - lo isoliamo per restare sull'API onToggle esistente.
+          const changed = next.find((id) => !selected.includes(id)) ?? selected.find((id) => !next.includes(id));
+          if (changed) onToggle(changed);
+        }}
+        placeholder="Cerca workflow..."
+      />
       {selected.length >= 2 && (
         <Box>
-          <Typography variant="overline" color="text.secondary">
+          <Typography variant="overline" color="textSecondary">
             Operatore logico
           </Typography>
           <ToggleButtonGroup

@@ -16,7 +16,7 @@ export function RetryPolicyView({ value }: RetryPolicyViewProps) {
           // biome-ignore lint/suspicious/noArrayIndexKey: PolicyJson non ha id, sola lettura
           <Stack key={index} direction="row" sx={{ gap: 0.75, alignItems: "center" }}>
             {index > 0 && (
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" color="textSecondary">
                 →
               </Typography>
             )}
@@ -29,7 +29,7 @@ export function RetryPolicyView({ value }: RetryPolicyViewProps) {
                 <DurationView key={argIndex} value={arg} />
               ) : (
                 // biome-ignore lint/suspicious/noArrayIndexKey: posizione dell'arg, sola lettura
-                <Typography key={argIndex} variant="caption" color="text.secondary">
+                <Typography key={argIndex} variant="caption" color="textSecondary">
                   {arg}
                 </Typography>
               ),

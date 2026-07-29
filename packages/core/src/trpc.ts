@@ -4,6 +4,7 @@ import type { ActivityFeed } from "./activity/stream";
 import type * as Adb from "./adapters/adb/shell";
 import type * as ConfigModel from "./config";
 import type * as Db from "./db";
+import type * as Errors from "./errors";
 import type { LogFeed } from "./logger/log-stream";
 import type * as Logger from "./logger/logger";
 import type * as Network from "./network";
@@ -77,6 +78,12 @@ interface Settings {
   // di recovery già avviato (RecoveryEngine.start viene chiamato una sola volta da
   // createActiveLifecycle), solo su cosa restituisce getConfig da questo momento.
   readonly updateRecovery: (policies: readonly RecoveryModel.RecoveryPolicy[]) => ConfigModel.Service;
+
+  // Endomorfismo generico: applica un ConfigPatch e persiste su file (vedi `ConfigModel.modify`),
+  // a differenza delle update* sopra che restano in-memory. Oggi solo i campi di `Infra`
+  // (trpc/log/adb/tracking per intero, suitest/slack solo baseUrl/active) sono nel patch -
+  // fallisce se la config non è stata caricata da file (es. `--config-url`).
+  readonly setConfig: (patch: ConfigModel.ConfigPatch) => TE.TaskEither<ConfigModel.ConfigError | Errors.AppError, ConfigModel.Service>;
 }
 
 export interface Services {

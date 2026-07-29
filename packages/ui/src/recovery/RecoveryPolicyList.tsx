@@ -16,7 +16,7 @@ export function RecoveryPolicyList({ policies, selectedLabel, onSelect, onCreate
   return (
     <Stack sx={{ gap: 1 }}>
       <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
-        <Typography variant="overline" color="text.secondary">
+        <Typography variant="overline" color="textSecondary">
           Recovery policies
         </Typography>
         <IconButton size="small" onClick={onCreate} title="New recovery policy">
@@ -39,7 +39,7 @@ export function RecoveryPolicyList({ policies, selectedLabel, onSelect, onCreate
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
               {policy.label}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {policy.domain} · {policy.tripwires.length} tripwire{policy.tripwires.length === 1 ? "" : "s"}
             </Typography>
           </Box>

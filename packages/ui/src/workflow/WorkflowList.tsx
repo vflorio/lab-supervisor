@@ -16,7 +16,7 @@ export function WorkflowList({ workflows, selectedName, onSelect, onCreate }: Wo
   return (
     <Stack sx={{ gap: 1 }}>
       <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
-        <Typography variant="overline" color="text.secondary">
+        <Typography variant="overline" color="textSecondary">
           Workflows
         </Typography>
         <IconButton size="small" onClick={onCreate} title="New workflow">
@@ -39,7 +39,7 @@ export function WorkflowList({ workflows, selectedName, onSelect, onCreate }: Wo
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
               {workflow.name}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {workflow.commands.length} command{workflow.commands.length === 1 ? "" : "s"}
             </Typography>
           </Box>

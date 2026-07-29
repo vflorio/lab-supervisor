@@ -18,12 +18,12 @@ interface JunctionProps<Node, Leaf> {
 
 function Junction<Node, Leaf>({ label, items, ops, renderLeaf }: JunctionProps<Node, Leaf>) {
   return (
-    <Stack sx={{ gap: 0.5, pl: 1.5, borderLeft: "2px solid", borderColor: "divider" }}>
+    <Stack sx={{ gap: 1, pl: 1.5, borderLeft: "2px solid", borderColor: "divider" }}>
       {items.map((item, index) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: nodo sola lettura, nessun id
         <Stack key={index} direction="row" sx={{ gap: 0.75, alignItems: "flex-start" }}>
           {index > 0 && (
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+            <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>
               {label}
             </Typography>
           )}
@@ -40,7 +40,7 @@ export function BooleanTreeView<Node, Leaf>({ value, ops, renderLeaf }: BooleanT
     or: (items) => <Junction label="OR" items={items} ops={ops} renderLeaf={renderLeaf} />,
     not: (child) => (
       <Stack direction="row" sx={{ gap: 0.75, alignItems: "flex-start" }}>
-        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+        <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600 }}>
           NOT
         </Typography>
         <BooleanTreeView value={child} ops={ops} renderLeaf={renderLeaf} />

@@ -48,7 +48,8 @@ export function WorkflowAccordionList({
     <Stack sx={{ gap: 1 }}>
       <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
         <Typography
-          sx={{ ...mono, fontSize: 10, color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.1em" }}
+          color="textSecondary"
+          sx={{ ...mono, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em" }}
         >
           {workflows.length} workflow definiti
         </Typography>
@@ -84,7 +85,7 @@ export function WorkflowAccordionList({
               {editing ? (
                 <WorkflowForm value={workflow} onChange={onChange} schema={schema} />
               ) : workflow.commands.length === 0 ? (
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color="textSecondary">
                   Nessuno step
                 </Typography>
               ) : (

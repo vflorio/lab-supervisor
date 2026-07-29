@@ -33,7 +33,7 @@ export function AddDeviceDialog({
           onChange={(e) => onChange({ ...device, target: e.target.value })}
           fullWidth
         />
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           Candybox, Camere e TV sono gestiti da config seed / sync Suitest: qui puoi registrare solo un host ADB (es. un
           tablet), assegnabile in seguito a una camera con "Assign ADB Host".
         </Typography>

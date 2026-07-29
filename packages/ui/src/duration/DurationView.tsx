@@ -13,7 +13,7 @@ export function DurationView({ value }: DurationViewProps) {
       sx={{
         display: "inline-flex",
         px: 1,
-        py: 0.25,
+        py: 0.5,
         borderRadius: 999,
         border: "1px solid",
         borderColor: "divider",

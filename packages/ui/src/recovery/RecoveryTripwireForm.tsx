@@ -42,8 +42,8 @@ export function RecoveryTripwireForm({ value, onChange, retrySchema, notifyTarge
       {expanded && (
         <Stack sx={{ gap: 1.5, pl: 4, mt: 1 }} onClick={(event) => event.stopPropagation()}>
           <DurationForm label="grace" value={value.grace} onChange={(grace) => onChange({ ...value, grace })} />
-          <Stack sx={{ gap: 0.5 }}>
-            <Typography variant="overline" color="text.secondary">
+          <Stack sx={{ gap: 1 }}>
+            <Typography variant="overline" color="textSecondary">
               Predicate
             </Typography>
             <PredicateExpressionForm
@@ -51,14 +51,14 @@ export function RecoveryTripwireForm({ value, onChange, retrySchema, notifyTarge
               onChange={(predicate) => onChange({ ...value, predicate })}
             />
           </Stack>
-          <Stack sx={{ gap: 0.5 }}>
-            <Typography variant="overline" color="text.secondary">
+          <Stack sx={{ gap: 1 }}>
+            <Typography variant="overline" color="textSecondary">
               Pipeline
             </Typography>
             <PipelineForm value={value.pipeline} onChange={(pipeline) => onChange({ ...value, pipeline })} />
           </Stack>
-          <Stack sx={{ gap: 0.5 }}>
-            <Typography variant="overline" color="text.secondary">
+          <Stack sx={{ gap: 1 }}>
+            <Typography variant="overline" color="textSecondary">
               Retry
             </Typography>
             <RetryPolicyForm
@@ -67,8 +67,8 @@ export function RecoveryTripwireForm({ value, onChange, retrySchema, notifyTarge
               schema={retrySchema}
             />
           </Stack>
-          <Stack sx={{ gap: 0.5 }}>
-            <Typography variant="overline" color="text.secondary">
+          <Stack sx={{ gap: 1 }}>
+            <Typography variant="overline" color="textSecondary">
               Notify
             </Typography>
             <NotifyRuleListForm

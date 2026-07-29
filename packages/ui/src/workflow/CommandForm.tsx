@@ -61,7 +61,7 @@ export function CommandForm({ value, onChange, schema }: CommandFormProps) {
         if (field.kind === "coords") {
           const coords = (raw as { x: number; y: number } | undefined) ?? { x: 0, y: 0 };
           return (
-            <Stack key={field.key} direction="row" sx={{ gap: 0.5 }}>
+            <Stack key={field.key} direction="row" sx={{ gap: 1 }}>
               <TextField
                 size="small"
                 type="number"

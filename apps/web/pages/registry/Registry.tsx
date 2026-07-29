@@ -1,4 +1,4 @@
-import { Add } from "@mui/icons-material";
+import { Add, Devices } from "@mui/icons-material";
 import {
   Alert,
   Box,
@@ -17,8 +17,8 @@ import {
 import { entryRowGridSx } from "@supervisor/ui/EntryRow";
 import { match } from "ts-pattern";
 import { useData } from "vike-react/useData";
-import { Section } from "../../components/Section";
 import { type AdbDevice, useAdbDevices } from "../../hooks/useAdbDevices";
+import { Panel } from "../../layout/Panel";
 import type { Data } from "../index/+data";
 import { AddDeviceDialog } from "./AddDeviceDialog";
 import { AssignCameraDialog } from "./AssignCameraDialog";
@@ -88,8 +88,9 @@ function HierarchyView({
   } = useRegistryController(db, adbDevices, workflows);
 
   return (
-    <Section
+    <Panel
       title="Device Registry"
+      icon={<Devices sx={{ fontSize: 16 }} />}
       actions={
         <>
           <Chip label={`${totalDevices} devices`} size="small" />
@@ -123,13 +124,13 @@ function HierarchyView({
           />
         ))}
 
-        <Typography variant="subtitle2" sx={{ color: "text.secondary", display: "block", mb: 1 }}>
+        <Typography variant="subtitle2" sx={{ color: "textSecondary", display: "block", mb: 1 }}>
           Unlinked
         </Typography>
 
         {unallocatedTvs.length > 0 && (
           <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="overline" sx={{ color: "text.secondary", display: "block", mb: 1 }}>
+            <Typography variant="overline" sx={{ color: "textSecondary", display: "block", mb: 1 }}>
               TVs
             </Typography>
             <Box sx={{ ...entryRowGridSx, rowGap: 1 }}>
@@ -154,7 +155,7 @@ function HierarchyView({
 
         {orphanCameras.length > 0 && (
           <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="overline" sx={{ color: "text.secondary", display: "block", mb: 1 }}>
+            <Typography variant="overline" sx={{ color: "textSecondary", display: "block", mb: 1 }}>
               Cameras
             </Typography>
             <Box sx={{ ...entryRowGridSx, rowGap: 1 }}>
@@ -224,6 +225,6 @@ function HierarchyView({
         onLink={handleLinkSuitest}
         onClose={() => setLinking(null)}
       />
-    </Section>
+    </Panel>
   );
 }

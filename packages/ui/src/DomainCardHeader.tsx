@@ -39,26 +39,26 @@ export function DomainCardHeader({ icon, title, subtitle, showJson, onToggleJson
             sx={{
               ...mono,
               fontSize: 10,
-              color: "text.secondary",
+              color: "textSecondary",
               textTransform: "uppercase",
               letterSpacing: "0.12em",
-              mb: 0.25,
+              mb: 0.5,
             }}
           >
-            config domain
+            Domain
           </Typography>
           <Typography sx={{ ...mono, fontSize: 13, fontWeight: 600, color: "text.primary", lineHeight: 1 }}>
             {title}
           </Typography>
-          {subtitle && <Typography sx={{ fontSize: 11, color: "text.secondary", mt: 0.25 }}>{subtitle}</Typography>}
+          {subtitle && <Typography sx={{ fontSize: 11, color: "textSecondary", mt: 0.5 }}>{subtitle}</Typography>}
         </Box>
       </Stack>
       <Stack direction="row" sx={{ gap: 1, alignItems: "center" }}>
         {actions}
-        <Stack direction="row" sx={{ gap: 0.5, alignItems: "center" }}>
-          <Typography sx={{ ...mono, fontSize: 11, color: "text.secondary" }}>JSON</Typography>
+        <Stack direction="row" sx={{ gap: 1, alignItems: "center" }}>
+          <Typography sx={{ ...mono, fontSize: 11, color: "textSecondary" }}>JSON</Typography>
           <Switch checked={showJson} onChange={onToggleJson} size="small" color="primary" />
-          <Code sx={{ fontSize: 14, color: showJson ? "primary.main" : "text.secondary" }} />
+          <Code sx={{ fontSize: 14, color: showJson ? "primary.main" : "textSecondary" }} />
         </Stack>
       </Stack>
     </Stack>

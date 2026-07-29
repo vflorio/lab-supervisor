@@ -36,7 +36,8 @@ export function CommandView({ value, schema }: CommandViewProps) {
       <Chip
         label={value.type}
         size="small"
-        color="info"
+        color="primary"
+        variant="outlined"
         sx={{ ...mono, fontSize: 10, height: 18, borderRadius: "4px" }}
       />
       {fields.map((field) => {
@@ -45,13 +46,13 @@ export function CommandView({ value, schema }: CommandViewProps) {
         if (field.kind === "coords") {
           const coords = raw as { x: number; y: number };
           return (
-            <Typography key={field.key} sx={{ ...mono, fontSize: 10, color: "text.secondary" }}>
+            <Typography key={field.key} sx={{ ...mono, fontSize: 10, color: "textSecondary" }}>
               ({coords.x}, {coords.y})
             </Typography>
           );
         }
         return (
-          <Typography key={field.key} sx={{ ...mono, fontSize: 10, color: "text.secondary" }}>
+          <Typography key={field.key} sx={{ ...mono, fontSize: 10, color: "textSecondary" }}>
             {String(raw)}
           </Typography>
         );

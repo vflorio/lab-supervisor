@@ -80,6 +80,12 @@ export const theme = createTheme({
         root: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11 },
       },
     },
+    MuiAutocomplete: {
+      styleOverrides: {
+        listbox: { fontFamily: "'JetBrains Mono', monospace", fontSize: 12, padding: 4 },
+        option: { borderRadius: 4 },
+      },
+    },
     MuiButton: {
       styleOverrides: {
         root: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11 },

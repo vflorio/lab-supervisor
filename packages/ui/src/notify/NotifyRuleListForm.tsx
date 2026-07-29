@@ -44,6 +44,7 @@ export function NotifyRuleListForm({ value, onChange, targetSchema }: NotifyRule
         // biome-ignore lint/suspicious/noArrayIndexKey: rule controllata via value/onChange, nessun id
         <Stack key={index} direction="row" sx={{ gap: 1, alignItems: "flex-start" }}>
           <NotifyRuleForm value={rule} onChange={(next) => updateRule(index, next)} targetSchema={targetSchema} />
+          <div style={{ flexGrow: 1 }} />
           <IconButton size="small" onClick={() => moveRule(index, -1)} disabled={index === 0}>
             <KeyboardArrowUp fontSize="small" />
           </IconButton>

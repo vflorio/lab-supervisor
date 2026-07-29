@@ -14,7 +14,7 @@ export function RecoveryPolicyView({ value }: RecoveryPolicyViewProps) {
         <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
           {value.label}
         </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           {value.domain}
         </Typography>
       </Stack>

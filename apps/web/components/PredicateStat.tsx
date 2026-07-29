@@ -60,7 +60,7 @@ export function PredicateStat({ domain, entityId, name, label, colorFor, detail 
             display: "block",
             fontSize: "0.65rem",
             lineHeight: 1.4,
-            color: "text.secondary",
+            color: "textSecondary",
             textTransform: "uppercase",
             letterSpacing: "0.04em",
           },

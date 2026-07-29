@@ -27,7 +27,7 @@ export function AssignCameraDialog({
       selectedId={selectedTarget}
       options={candidates.map((d) => ({
         id: d.target,
-        primary: <span style={{ fontFamily: "monospace" }}>{d.target}</span>,
+        primary: d.target,
         trailing: <Chip size="small" label={d.status} color={d.status === "device" ? "success" : "default"} />,
       }))}
       emptyMessage={

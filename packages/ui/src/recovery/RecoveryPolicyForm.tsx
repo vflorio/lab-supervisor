@@ -26,8 +26,10 @@ const defaultTripwire = (): RecoveryTripwire => ({
 export function RecoveryPolicyForm({ value, onChange, retrySchema, notifyTargetSchema }: RecoveryPolicyFormProps) {
   const updateTripwire = (index: number, next: RecoveryTripwire) =>
     onChange({ ...value, tripwires: value.tripwires.map((t, i) => (i === index ? next : t)) });
+
   const removeTripwire = (index: number) =>
     onChange({ ...value, tripwires: value.tripwires.filter((_, i) => i !== index) });
+
   const moveTripwire = (index: number, delta: number) => {
     const target = index + delta;
     if (target < 0 || target >= value.tripwires.length) return;
@@ -35,6 +37,7 @@ export function RecoveryPolicyForm({ value, onChange, retrySchema, notifyTargetS
     [next[index], next[target]] = [next[target]!, next[index]!];
     onChange({ ...value, tripwires: next });
   };
+
   const addTripwire = () => onChange({ ...value, tripwires: [...value.tripwires, defaultTripwire()] });
 
   return (
@@ -78,6 +81,7 @@ export function RecoveryPolicyForm({ value, onChange, retrySchema, notifyTargetS
                 notifyTargetSchema={notifyTargetSchema}
               />
             </Box>
+            <div style={{ flexGrow: 1 }} />
             <IconButton size="small" onClick={() => moveTripwire(index, -1)} disabled={index === 0}>
               <KeyboardArrowUp fontSize="small" />
             </IconButton>

@@ -68,7 +68,7 @@ export function RecoveryCard({ config, onSaved }: { config: Config; onSaved: (ne
     <Paper variant="outlined" sx={{ p: 2.5 }}>
       <DomainCardHeader
         icon={<Security sx={{ fontSize: 16 }} />}
-        title="recovery"
+        title="Recovery"
         subtitle="Monitoraggio e ripristino automatico dei dispositivi"
         showJson={showJson}
         onToggleJson={() => setShowJson((v) => !v)}

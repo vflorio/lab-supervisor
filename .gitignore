@@ -36,5 +36,6 @@ AdManager.js
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+.playwright-cli/
 
 data/

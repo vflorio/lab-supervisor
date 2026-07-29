@@ -47,11 +47,7 @@ export function EntryCard({
           description={summary}
           actions={
             (actions || hasBody) && (
-              <Stack
-                direction="row"
-                sx={{ gap: 0.5, alignItems: "center" }}
-                onClick={(event) => event.stopPropagation()}
-              >
+              <Stack direction="row" sx={{ gap: 1, alignItems: "center" }} onClick={(event) => event.stopPropagation()}>
                 {actions}
                 {hasBody && (
                   <IconButton size="small" onClick={toggle} title={expanded ? "Collapse" : "Expand"}>

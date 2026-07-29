@@ -1,5 +1,5 @@
 import * as M from "fp-ts/Monoid";
-import { getDay } from "./date-time";
+import { getDay } from "../date-time";
 
 // -------------------------------------------------------------------------------------
 // Model
@@ -96,26 +96,13 @@ export const invert =
 // Instances
 // -------------------------------------------------------------------------------------
 
-// Nella teoria dei Gruppi, un monoide è una struttura algebrica che rispetta gli assiomi:
-// - Chiusura: a * b ∈ M
-//     (Magma) il risultato rientra nell'insieme M
-// - Associatività: (a * b) * c = a * (b * c)
-//     (Semigruppo) Il risultato non dipende da come si raggruppano gli operandi
-// - Elemento neutro: a * e = e * a = a
-//     (Monoide) esiste un elemento neutro e tale che la composizione con esso non cambia l'elemento
-// M rappresenta l'insieme degli elementi
-// ∗ rappresenta un'operazione binaria
-// ∈ rappresenta l'appartenenza all'insieme
-
-// Unione di due schedule:
-// visibile se ALMENO UNO dei due è attivo
+// Union: visibile se almeno uno è attivo
 export const MonoidUnion: M.Monoid<Schedule> = {
   concat: (first, second) => (slot) => first(slot) || second(slot),
   empty: () => false,
 };
 
-// Intersezione di due schedule:
-// visibile solo se ENTRAMBI sono attivi
+// Intersection: visibile solo se entrambi sono attivi
 export const MonoidIntersection: M.Monoid<Schedule> = {
   concat: (first, second) => (slot) => first(slot) && second(slot),
   empty: () => true,

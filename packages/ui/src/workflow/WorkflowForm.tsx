@@ -64,11 +64,12 @@ export function WorkflowForm({ value, onChange, schema }: WorkflowFormProps) {
               border: "1px solid",
               borderColor: "divider",
               borderRadius: 1,
-              px: 1,
-              py: 0.5,
+              px: 2,
+              py: 1.5,
             }}
           >
             <CommandForm value={command} schema={schema} onChange={(next) => updateCommand(index, next)} />
+            <div style={{ flexGrow: 1 }} />
             <IconButton size="small" onClick={() => moveCommand(index, -1)} disabled={index === 0}>
               <KeyboardArrowUp fontSize="small" />
             </IconButton>

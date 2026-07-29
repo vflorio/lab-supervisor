@@ -8,16 +8,16 @@ export interface NotifyRuleViewProps {
 
 export function NotifyRuleView({ value }: NotifyRuleViewProps) {
   return (
-    <Stack sx={{ gap: 0.25 }}>
+    <Stack sx={{ gap: 0.5 }}>
       <Stack direction="row" sx={{ gap: 0.75, alignItems: "center" }}>
         <Typography variant="body2" sx={{ fontWeight: 600 }}>
           {value.type.type}
         </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           #{value.channel} · {value.policy.join(", ")}
         </Typography>
       </Stack>
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="textSecondary">
         {value.message.message}
       </Typography>
     </Stack>

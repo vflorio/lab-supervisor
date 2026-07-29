@@ -20,9 +20,9 @@ export function PageHeader({ eyebrow, title, actions }: PageHeaderProps) {
         {eyebrow && (
           <Typography
             variant="caption"
-            color="text.secondary"
+            color="textSecondary"
             noWrap
-            sx={{ display: "block", textTransform: "uppercase", letterSpacing: 0.5 }}
+            sx={{ display: "block", textTransform: "uppercase", letterSpacing: 1 }}
           >
             {eyebrow}
           </Typography>

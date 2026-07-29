@@ -31,9 +31,9 @@ export function StatusPill({ label, tone, icon }: StatusPillProps) {
       sx={{
         display: "inline-flex",
         alignItems: "center",
-        gap: 0.5,
+        gap: 1,
         px: 1.25,
-        py: 0.25,
+        py: 0.5,
         borderRadius: 999,
         bgcolor: bg,
         color: fg,

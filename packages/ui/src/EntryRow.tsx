@@ -81,10 +81,10 @@ export function EntryRow({
   onDelete,
 }: EntryRowProps) {
   return (
-    <Box sx={{ ...entryRowSubgridSx, alignItems: "center", columnGap: 1.5, py: 0.5 }}>
+    <Box sx={{ ...entryRowSubgridSx, alignItems: "center", columnGap: 1.5, py: 1 }}>
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0 }}>
         <Checkbox checked={checked} onChange={onToggle} size="small" title={checkedTitle} sx={{ flexShrink: 0 }} />
-        <Box sx={{ color: "text.secondary", display: "flex", flexShrink: 0 }}>{icon}</Box>
+        <Box sx={{ color: "textSecondary", display: "flex", flexShrink: 0 }}>{icon}</Box>
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap>
             {label}

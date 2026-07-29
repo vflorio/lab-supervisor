@@ -38,9 +38,9 @@ export function ScheduleGrid({ value }: ScheduleGridProps) {
         <Box sx={{ display: "flex", borderBottom: "1px solid", borderColor: "divider" }}>
           <Box sx={{ width: 40, flexShrink: 0, borderRight: "1px solid", borderColor: "divider" }} />
           {HOURS.map((h) => (
-            <Box key={h} sx={{ flex: 1, textAlign: "center", py: 0.5 }}>
+            <Box key={h} sx={{ flex: 1, textAlign: "center", py: 1 }}>
               {h % 6 === 0 && (
-                <Typography sx={{ ...mono, fontSize: 9, color: "text.secondary" }}>
+                <Typography sx={{ ...mono, fontSize: 9, color: "textSecondary" }}>
                   {String(h).padStart(2, "0")}
                 </Typography>
               )}
@@ -87,7 +87,7 @@ export function ScheduleGrid({ value }: ScheduleGridProps) {
                       height: 26,
                       borderRight: "1px solid rgba(255,255,255,0.04)",
                       "&:last-child": { borderRight: 0 },
-                      bgcolor: lit ? "rgba(74,222,128,0.25)" : "transparent",
+                      bgcolor: lit ? "rgba(74,222,128,0.5)" : "transparent",
                       transition: "background-color 0.15s",
                     }}
                   />
@@ -99,7 +99,7 @@ export function ScheduleGrid({ value }: ScheduleGridProps) {
       </Box>
       <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
         {[
-          { color: "rgba(74,222,128,0.25)", label: `Attivo ${value.from}–${value.to}`, border: false },
+          { color: "rgba(74,222,128,0.5)", label: `Attivo ${value.from}–${value.to}`, border: false },
           { color: "transparent", label: "Inattivo", border: true },
         ].map((l) => (
           <Stack key={l.label} direction="row" sx={{ gap: 0.75, alignItems: "center" }}>
@@ -113,7 +113,7 @@ export function ScheduleGrid({ value }: ScheduleGridProps) {
                 borderColor: "divider",
               }}
             />
-            <Typography sx={{ ...mono, fontSize: 10, color: "text.secondary" }}>{l.label}</Typography>
+            <Typography sx={{ ...mono, fontSize: 10, color: "textSecondary" }}>{l.label}</Typography>
           </Stack>
         ))}
       </Stack>

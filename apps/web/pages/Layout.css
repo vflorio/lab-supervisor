@@ -4,6 +4,37 @@ a {
   color: inherit;
 }
 
+/* Scrollbars - sottili e coerenti col tema scuro invece della scrollbar di sistema, applicate
+   ovunque (#page-content, LogPanel, JsonView, tabelle, dropdown/drawer MUI...) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.26);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* Page Transition Animation */
 #page-content {
   opacity: 1;

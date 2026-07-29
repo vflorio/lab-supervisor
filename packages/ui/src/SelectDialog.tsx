@@ -1,27 +1,13 @@
-import {
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Paper,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from "@mui/material";
 import type { ReactNode } from "react";
+import { Picker, type PickerOption } from "./picker/Picker";
 
 // -------------------------------------------------------------------------------------
-// Generic "pick one from a list" dialog: a title, a list of selectable option cards
-// (primary/secondary/trailing), and a close action. No knowledge of what's being picked.
+// Generic "pick one from a list" dialog: a title, a searchable Picker, and a close
+// action. No knowledge of what's being picked.
 // -------------------------------------------------------------------------------------
 
-export interface SelectOption {
-  readonly id: string;
-  readonly primary: ReactNode;
-  readonly secondary?: ReactNode;
-  readonly trailing?: ReactNode;
-}
+export type SelectOption = PickerOption;
 
 export interface SelectDialogProps {
   readonly open: boolean;
@@ -39,37 +25,17 @@ export function SelectDialog({ open, title, options, selectedId, emptyMessage, o
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
         {options.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {emptyMessage ?? "No options available."}
           </Typography>
         ) : (
-          <Stack spacing={1} sx={{ mt: 1 }}>
-            {options.map((option) => (
-              <Paper
-                key={option.id}
-                variant="outlined"
-                sx={{
-                  p: 1.5,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  cursor: "pointer",
-                  bgcolor: option.id === selectedId ? "action.selected" : undefined,
-                }}
-                onClick={() => onSelect(option.id)}
-              >
-                <Box>
-                  <Typography variant="body2">{option.primary}</Typography>
-                  {option.secondary && (
-                    <Typography variant="caption" color="text.secondary">
-                      {option.secondary}
-                    </Typography>
-                  )}
-                </Box>
-                {option.trailing}
-              </Paper>
-            ))}
-          </Stack>
+          <Picker
+            options={options}
+            value={selectedId ?? null}
+            onChange={(id) => id && onSelect(id)}
+            placeholder="Cerca..."
+            autoFocus
+          />
         )}
       </DialogContent>
       <DialogActions>

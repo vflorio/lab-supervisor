@@ -115,13 +115,14 @@ export function TripwireWizard({
       >
         <Box>
           <Typography
-            sx={{ fontSize: 10, color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.1em", mb: 0.25 }}
+            color="textSecondary"
+            sx={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", mb: 0.5 }}
           >
             recovery · {domain}
           </Typography>
           <Typography sx={{ fontSize: 14, fontWeight: 600 }}>Nuovo Tripwire</Typography>
         </Box>
-        <IconButton size="small" onClick={onClose} sx={{ color: "text.secondary" }}>
+        <IconButton color="secondary" size="small" onClick={onClose}>
           <Close />
         </IconButton>
       </Box>

@@ -30,7 +30,7 @@ export function ActivationScheduleForm({ value, onChange }: ActivationScheduleFo
           sx={{
             ...mono,
             fontSize: 10,
-            color: "text.secondary",
+            color: "textSecondary",
             textTransform: "uppercase",
             letterSpacing: "0.1em",
             mb: 1,
@@ -70,7 +70,7 @@ export function ActivationScheduleForm({ value, onChange }: ActivationScheduleFo
           sx={{ width: 130 }}
           slotProps={{ inputLabel: { shrink: true } }}
         />
-        <Box sx={{ pb: 1, color: "text.secondary" }}>→</Box>
+        <Box sx={{ pb: 1, color: "textSecondary" }}>→</Box>
         <TextField
           label="To"
           size="small"

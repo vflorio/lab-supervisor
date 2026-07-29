@@ -68,7 +68,8 @@ export function RecoveryPolicyAccordionList({
       <Stack sx={{ gap: 1 }}>
         <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
           <Typography
-            sx={{ ...mono, fontSize: 10, color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.1em" }}
+            color="textSecondary"
+            sx={{ ...mono, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em" }}
           >
             {policies.length} dominio/i di recovery
           </Typography>
@@ -91,7 +92,7 @@ export function RecoveryPolicyAccordionList({
             >
               <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "primary.main" }} />
               <Typography sx={{ ...mono, fontSize: 12, fontWeight: 600 }}>{policy.domain}</Typography>
-              <Typography sx={{ ...mono, fontSize: 11, color: "text.secondary" }}>/ {policy.label}</Typography>
+              <Typography sx={{ ...mono, fontSize: 11, color: "textSecondary" }}>/ {policy.label}</Typography>
               <Chip
                 label={`${policy.tripwires.length} tripwires`}
                 size="small"
@@ -118,7 +119,7 @@ export function RecoveryPolicyAccordionList({
                         { key: "label", value: policy.label },
                       ].map((field) => (
                         <Box key={field.key} sx={fieldBox}>
-                          <Typography sx={{ ...mono, fontSize: 9, color: "text.secondary", mb: 0.25 }}>
+                          <Typography sx={{ ...mono, fontSize: 9, color: "textSecondary", mb: 0.5 }}>
                             {field.key}
                           </Typography>
                           <Typography sx={{ ...mono, fontSize: 12 }}>{field.value}</Typography>

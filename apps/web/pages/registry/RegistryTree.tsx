@@ -123,7 +123,7 @@ function HierarchyTree({
 
       {unallocatedTvs.length > 0 && (
         <Box sx={{ mt: 3 }}>
-          <Typography variant="overline" sx={{ color: "text.secondary", display: "block", mb: 1 }}>
+          <Typography variant="overline" sx={{ color: "textSecondary", display: "block", mb: 1 }}>
             TVs
           </Typography>
           <DeviceCardList items={unallocatedTvs} getKey={(tvGroup) => tvGroup.tv.deviceId}>
@@ -147,7 +147,7 @@ function HierarchyTree({
 
       {orphanCameras.length > 0 && (
         <Box sx={{ mt: 3 }}>
-          <Typography variant="overline" sx={{ color: "text.secondary", display: "block", mb: 1 }}>
+          <Typography variant="overline" sx={{ color: "textSecondary", display: "block", mb: 1 }}>
             Cameras
           </Typography>
           <DeviceCardList items={orphanCameras} getKey={(camera) => camera.id}>

@@ -1,7 +1,6 @@
 import { Box, Stack, Typography } from "@mui/material";
 
 const mono = { fontFamily: "'JetBrains Mono', monospace" } as const;
-const DOTS = ["#ef4444", "#f59e0b", "#4ade80"];
 
 // Riquadro terminal-style per il toggle JSON di una DomainCardHeader: stesso sfondo scuro
 // annidato (#0a0c0e) usato da ScheduleGrid/CommandView per isolare i layer di dati.
@@ -15,7 +14,7 @@ export function JsonView({ data }: JsonViewProps) {
       <Stack
         direction="row"
         sx={{
-          gap: 0.5,
+          gap: 1,
           alignItems: "center",
           px: 1.5,
           py: 1,
@@ -24,10 +23,7 @@ export function JsonView({ data }: JsonViewProps) {
           bgcolor: "#0d0f11",
         }}
       >
-        {DOTS.map((color) => (
-          <Box key={color} sx={{ width: 9, height: 9, borderRadius: "50%", bgcolor: color, opacity: 0.7 }} />
-        ))}
-        <Typography sx={{ ...mono, fontSize: 10, color: "text.secondary", ml: 0.5 }}>JSON</Typography>
+        <Typography sx={{ ...mono, fontSize: 10, color: "textSecondary", ml: 1 }}>JSON</Typography>
       </Stack>
       <Box
         component="pre"

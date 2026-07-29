@@ -2,6 +2,7 @@ import type * as Activity from "@supervisor/core/activity/stream";
 import * as Adb from "@supervisor/core/adapters/adb/shell";
 import * as Config from "@supervisor/core/config";
 import * as Db from "@supervisor/core/db";
+import * as Errors from "@supervisor/core/errors";
 import type * as LogStream from "@supervisor/core/logger/log-stream";
 import type * as Logger from "@supervisor/core/logger/logger";
 import * as Network from "@supervisor/core/network";
@@ -11,6 +12,7 @@ import type * as Recovery from "@supervisor/core/recovery/index";
 import type * as Trpc from "@supervisor/core/trpc";
 import type * as WorkflowInterpreter from "@supervisor/core/workflow/interpreter";
 import { pipe } from "fp-ts/function";
+import * as O from "fp-ts/Option";
 import * as RA from "fp-ts/ReadonlyArray";
 import * as TE from "fp-ts/TaskEither";
 import type * as AdbStream from "./adb/adb-stream";
@@ -27,6 +29,8 @@ const toDeviceSnapshot = (devices: readonly Adb.Device[]): readonly Trpc.Android
 
 export type Deps = {
   readonly config: Config.Service;
+  // `None` se la config è caricata da `--config-url`: `setConfig` non ha un file su cui persistere.
+  readonly configPath: O.Option<string>;
   readonly trpcLog: Logger.Tagged;
   readonly logStream: LogStream.LogStream;
   readonly adbDeviceStream: AdbStream.AdbDeviceStream;
@@ -43,6 +47,7 @@ export type Deps = {
 
 export const create = ({
   config,
+  configPath,
   trpcLog,
   adbDeviceStream,
   logStream,
@@ -53,8 +58,9 @@ export const create = ({
   resetRecovery,
   runManualWorkflow,
 }: Deps): Trpc.Services => {
-  // In-memory soltanto: nessun writer su file ancora, si perde al riavvio (vedi commento su
-  // Trpc.Services["settings"]["updateActivationSchedule"])
+  // In-memory soltanto: nessun writer su file, si perde al riavvio (vedi commento su
+  // Trpc.Services["settings"]["updateActivationSchedule"]) - eccetto `setConfig`, che persiste
+  // (vedi sotto).
   let currentConfig = config;
 
   return {
@@ -81,6 +87,26 @@ export const create = ({
         currentConfig = { ...currentConfig, recovery: recovery as Config.Service["recovery"] };
         return Config.redact(currentConfig);
       },
+      // Endomorfismo: legge il file, applica il patch, riscrive solo i campi cambiati (i commenti
+      // nel resto del file sopravvivono, vedi Config.modify) - fallisce se la config viene da URL.
+      setConfig: (patch) =>
+        pipe(
+          configPath,
+          O.match(
+            () =>
+              TE.left<Config.ConfigError | Errors.AppError, Config.Service>(
+                Errors.of("ConfigWriteError")("Config caricata da --config-url: impossibile persistere su file"),
+              ),
+            (path) =>
+              pipe(
+                Config.modify(path)(Config.applyPatch(patch))(Node.fsEnv),
+                TE.map((next) => {
+                  currentConfig = next;
+                  return Config.redact(next);
+                }),
+              ),
+          ),
+        ),
     },
 
     logs: logStream,

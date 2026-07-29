@@ -9,7 +9,7 @@ import * as Notify from "@supervisor/core/notify/stream";
 import * as Predicates from "@supervisor/core/predicates/index";
 import * as Recovery from "@supervisor/core/recovery/index";
 import * as RetryPolicy from "@supervisor/core/retry/retry";
-import type * as Schedule from "@supervisor/core/schedule";
+import type * as Schedule from "@supervisor/core/schedule/schedule";
 import type * as Validation from "@supervisor/core/validation";
 import * as WorkflowInterpreter from "@supervisor/core/workflow/interpreter";
 import * as E from "fp-ts/Either";
@@ -30,6 +30,9 @@ import * as TrpcServices from "./trpc-services";
 export interface Env {
   readonly logger: Logger.Tagged;
   readonly configFetcher: Config.ConfigFetcher;
+  // Percorso del file di config, se la sorgente è `--config <path>` - `None` per `--config-url`,
+  // nel qual caso `setConfig` (persistenza su file, vedi trpc-services.ts) non è disponibile.
+  readonly configPath: O.Option<string>;
   readonly process: Node.Process;
 }
 
@@ -84,8 +87,9 @@ export const create: Effect<ServiceHandle> = pipe(
   logInfo("Loading config..."),
   RTE.bind("config", () => loadConfig),
   RTE.bind("policies", ({ config }) => parseConfigPolicies(config)),
+  RTE.bind("configPath", () => RTE.asks((env: Env) => env.configPath)),
 
-  RTE.map(({ config, policies }) => {
+  RTE.map(({ config, policies, configPath }) => {
     const logStream = LogStream.createLogStream();
     const logger = pipe(ServiceLogger.create(config.log, [logStream.transport]), Logger.tagged("Service"));
 
@@ -131,6 +135,7 @@ export const create: Effect<ServiceHandle> = pipe(
       logger: trpcLog,
       services: TrpcServices.create({
         config,
+        configPath,
         trpcLog,
         logStream,
         adbDeviceStream,

@@ -22,10 +22,10 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
       sx={{
         ...mono,
         fontSize: 9,
-        color: "text.secondary",
+        color: "textSecondary",
         textTransform: "uppercase",
         letterSpacing: "0.1em",
-        mb: 0.5,
+        mb: 1,
       }}
     >
       {children}

@@ -25,6 +25,7 @@
     "./workflow": "./src/workflow/index.tsx",
     "./predicates": "./src/predicates/index.tsx",
     "./pipeline": "./src/pipeline/index.tsx",
+    "./picker": "./src/picker/index.tsx",
     "./notify": "./src/notify/index.tsx",
     "./recovery": "./src/recovery/index.tsx"
   },

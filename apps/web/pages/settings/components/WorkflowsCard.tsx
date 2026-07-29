@@ -50,7 +50,7 @@ export function WorkflowsCard({ config, onSaved }: { config: Config; onSaved: (n
     <Paper variant="outlined" sx={{ p: 2.5 }}>
       <DomainCardHeader
         icon={<AccountTree sx={{ fontSize: 16 }} />}
-        title="workflows"
+        title="Workflows"
         subtitle="Sequenze di azioni lanciabili dalle pipeline"
         showJson={showJson}
         onToggleJson={() => setShowJson((v) => !v)}

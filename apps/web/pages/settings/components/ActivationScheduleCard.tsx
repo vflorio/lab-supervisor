@@ -33,7 +33,7 @@ export function ActivationScheduleCard({ config, onSaved }: { config: Config; on
     <Paper variant="outlined" sx={{ p: 2.5 }}>
       <DomainCardHeader
         icon={<Schedule sx={{ fontSize: 16 }} />}
-        title="activationSchedule"
+        title="Activation Schedule"
         subtitle="Periodo di attivazione del servizio"
         showJson={showJson}
         onToggleJson={() => setShowJson((v) => !v)}

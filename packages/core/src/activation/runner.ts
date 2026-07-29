@@ -1,7 +1,7 @@
 import * as IntervalLoop from "@supervisor/core/interval-loop";
 import * as Logger from "@supervisor/core/logger/logger";
 import * as Retry from "@supervisor/core/retry/retry";
-import * as Schedule from "@supervisor/core/schedule";
+import * as Schedule from "@supervisor/core/schedule/schedule";
 import type * as T from "fp-ts/Task";
 import { type ActivationMachineEnv, type ActivationState, dispatch, init } from "./machine";
 

@@ -57,7 +57,7 @@ export function ActivityStat({ source, entityId, label, colorFor, detail }: Acti
             display: "block",
             fontSize: "0.65rem",
             lineHeight: 1.4,
-            color: "text.secondary",
+            color: "textSecondary",
             textTransform: "uppercase",
             letterSpacing: "0.04em",
           },

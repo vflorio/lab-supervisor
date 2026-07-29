@@ -37,6 +37,7 @@ const retag = <Node, Leaf>(ops: BooleanTreeOps<Node, Leaf>, node: Node, kind: No
   if (kind === "not") return ops.not(items[0] ?? ops.leaf(defaultLeaf));
 
   const first = items[0];
+
   return first !== undefined && kindOf(ops, first) === "leaf" ? first : ops.leaf(defaultLeaf);
 };
 
@@ -74,11 +75,15 @@ function Junction<Node, Leaf>({
   renderLeafForm,
 }: JunctionProps<Node, Leaf>) {
   const updateItem = (index: number, next: Node) => onChange(items.map((item, i) => (i === index ? next : item)));
+
   const removeItem = (index: number) => onChange(items.filter((_, i) => i !== index));
+
   const moveItem = (index: number, delta: number) => {
     const target = index + delta;
+
     if (target < 0 || target >= items.length) return;
     const next = [...items];
+
     [next[index], next[target]] = [next[target]!, next[index]!];
     onChange(next);
   };
@@ -98,6 +103,7 @@ function Junction<Node, Leaf>({
               defaultLeaf={defaultLeaf}
               renderLeafForm={renderLeafForm}
             />
+            <div style={{ flexGrow: 1 }} />
             <IconButton size="small" onClick={() => moveItem(index, -1)} disabled={index === 0}>
               <KeyboardArrowUp fontSize="small" />
             </IconButton>
@@ -125,6 +131,7 @@ export function BooleanTreeForm<Node, Leaf>({
   renderLeafForm,
 }: BooleanTreeFormProps<Node, Leaf>) {
   const kind = kindOf(ops, value);
+
   const kindSelect = <KindSelect value={kind} onChange={(next) => onChange(retag(ops, value, next, defaultLeaf))} />;
 
   return ops.match<ReactNode>(value, {

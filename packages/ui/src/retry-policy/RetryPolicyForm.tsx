@@ -25,20 +25,25 @@ const stepFor = (schema: readonly PolicyStepSchema[], name: string): PolicyStepJ
 
 export function RetryPolicyForm({ value, onChange, schema }: RetryPolicyFormProps) {
   const updateStep = (index: number, step: PolicyStepJson) => onChange(value.map((s, i) => (i === index ? step : s)));
+
   const removeStep = (index: number) => onChange(value.filter((_, i) => i !== index));
+
   const moveStep = (index: number, delta: number) => {
     const target = index + delta;
     if (target < 0 || target >= value.length) return;
+
     const next = [...value];
     [next[index], next[target]] = [next[target]!, next[index]!];
     onChange(next);
   };
+
   const addStep = () => schema[0] && onChange([...value, stepFor(schema, schema[0].name)]);
 
   return (
     <Stack sx={{ gap: 1 }}>
       {value.map((step, index) => {
         const stepSchema = schema.find((s) => s.name === step[0]);
+
         const args = step.slice(1) as PolicyStepArg[];
 
         return (
@@ -58,6 +63,7 @@ export function RetryPolicyForm({ value, onChange, schema }: RetryPolicyFormProp
             </Select>
             {stepSchema?.args.map((argSchema, argIndex) => {
               const arg = args[argIndex];
+
               const setArg = (next: PolicyStepArg) => {
                 const nextArgs = [...args];
                 nextArgs[argIndex] = next;
@@ -85,6 +91,7 @@ export function RetryPolicyForm({ value, onChange, schema }: RetryPolicyFormProp
                 />
               );
             })}
+            <div style={{ flexGrow: 1 }} />
             <IconButton size="small" onClick={() => moveStep(index, -1)} disabled={index === 0}>
               <KeyboardArrowUp fontSize="small" />
             </IconButton>

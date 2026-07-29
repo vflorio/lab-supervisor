@@ -32,13 +32,13 @@ export function DeviceCard({ icon, title, subtitle, status, description, actions
       }}
     >
       <Stack direction="row" sx={{ alignItems: "flex-start", gap: 1.5 }}>
-        <Box sx={{ color: "text.secondary", display: "flex", pt: 0.25, flexShrink: 0 }}>{icon}</Box>
+        <Box sx={{ color: "textSecondary", display: "flex", pt: 0.5, flexShrink: 0 }}>{icon}</Box>
         <Box sx={{ minWidth: 0, flexGrow: 1 }}>
           <Typography variant="body1" sx={{ fontWeight: 600 }} noWrap>
             {title}
           </Typography>
           {subtitle && (
-            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
+            <Typography variant="caption" color="textSecondary" noWrap sx={{ display: "block" }}>
               {subtitle}
             </Typography>
           )}
@@ -50,13 +50,13 @@ export function DeviceCard({ icon, title, subtitle, status, description, actions
         <Stack direction="row" sx={{ alignItems: "center", gap: 1.5 }}>
           <Box sx={{ minWidth: 0, flexGrow: 1 }}>
             {description && (
-              <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
+              <Typography variant="caption" color="textSecondary" noWrap sx={{ display: "block" }}>
                 {description}
               </Typography>
             )}
           </Box>
           {actions && (
-            <Stack direction="row" sx={{ flexShrink: 0, gap: 0.5 }}>
+            <Stack direction="row" sx={{ flexShrink: 0, gap: 1 }}>
               {actions}
             </Stack>
           )}

@@ -1,10 +1,12 @@
 import { PlayArrow } from "@mui/icons-material";
-import { Button, Menu, MenuItem } from "@mui/material";
+import { Box, Button, Popover } from "@mui/material";
+import { Picker } from "@supervisor/ui/picker";
 import { useState } from "react";
 
 // -------------------------------------------------------------------------------------
-// Bottone + menu a scomparsa per lanciare manualmente uno dei workflow configurati
-// (config `workflows`) contro l'entità della row corrente - vedi CameraRow.tsx.
+// Bottone + popover con ricerca per lanciare manualmente uno dei workflow configurati
+// (config `workflows`) contro l'entità della row corrente - vedi CameraRow.tsx. Popover
+// (non Menu) perché Autocomplete dentro un MenuList genera conflitti di focus/keyboard nav.
 // -------------------------------------------------------------------------------------
 
 export interface WorkflowLauncherProps {
@@ -27,19 +29,27 @@ export function WorkflowLauncher({ workflows, onLaunch }: WorkflowLauncherProps)
       >
         Launch workflow
       </Button>
-      <Menu anchorEl={anchorEl} open={anchorEl !== null} onClose={() => setAnchorEl(null)}>
-        {workflows.map((workflow) => (
-          <MenuItem
-            key={workflow.name}
-            onClick={() => {
-              setAnchorEl(null);
-              onLaunch(workflow.name);
+      <Popover
+        anchorEl={anchorEl}
+        open={anchorEl !== null}
+        onClose={() => setAnchorEl(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+      >
+        <Box sx={{ p: 1, width: 260 }}>
+          <Picker
+            options={workflows.map((workflow) => ({ id: workflow.name, primary: workflow.name }))}
+            value={null}
+            onChange={(name) => {
+              if (name) {
+                setAnchorEl(null);
+                onLaunch(name);
+              }
             }}
-          >
-            {workflow.name}
-          </MenuItem>
-        ))}
-      </Menu>
+            placeholder="Cerca workflow..."
+            autoFocus
+          />
+        </Box>
+      </Popover>
     </>
   );
 }

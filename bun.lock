@@ -64,7 +64,7 @@
         "typescript": "6.0.3",
       },
     },
-    "apps/figma": {
+    "apps/figma.old": {
       "name": "@supervisor/figma",
       "version": "0.0.1",
       "dependencies": {
@@ -193,6 +193,7 @@
         "notistack": "3.0.2",
         "react": "19.2.7",
         "react-dom": "19.2.7",
+        "react-window": "^2.3.0",
         "ts-pattern": "5.9.0",
         "vike": "0.4.260",
         "vike-react": "0.6.25",
@@ -210,6 +211,9 @@
     "packages/core": {
       "name": "@supervisor/core",
       "version": "0.1.0",
+      "dependencies": {
+        "jsonc-parser": "3.3.1",
+      },
       "devDependencies": {
         "fp-ts": "2.16.11",
         "io-ts": "2.2.22",
@@ -1217,7 +1221,7 @@
 
     "@supervisor/docs": ["@supervisor/docs@workspace:apps/docs"],
 
-    "@supervisor/figma": ["@supervisor/figma@workspace:apps/figma"],
+    "@supervisor/figma": ["@supervisor/figma@workspace:apps/figma.old"],
 
     "@supervisor/service": ["@supervisor/service@workspace:apps/service"],
 
@@ -3122,6 +3126,8 @@
     "react-style-singleton": ["react-style-singleton@2.2.3", "", { "dependencies": { "get-nonce": "^1.0.0", "tslib": "^2.0.0" }, "peerDependencies": { "@types/react": "*", "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc" }, "optionalPeers": ["@types/react"] }, "sha512-b6jSvxvVnyptAiLjbkWLE/lOnR4lfTtDAl+eUC7RZy+QQWc6wRzIV2CE6xBuMmDxc2qIihtDCZD5NPOFl7fRBQ=="],
 
     "react-transition-group": ["react-transition-group@4.4.5", "", { "dependencies": { "@babel/runtime": "^7.5.5", "dom-helpers": "^5.0.1", "loose-envify": "^1.4.0", "prop-types": "^15.6.2" }, "peerDependencies": { "react": ">=16.6.0", "react-dom": ">=16.6.0" } }, "sha512-pZcd1MCJoiKiBR2NRxeCRg13uCXbydPnmB4EOeRrY7480qNWO8IIgQG6zlDkm6uRMsURXPuKq0GWtiM59a5Q6g=="],
+
+    "react-window": ["react-window@2.3.0", "", { "peerDependencies": { "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" } }, "sha512-FW6TIpaOH646k51X7yE+LSCWGkt5Pfsnc1fVyq/sCI9h0pTqmMiBXM04pzFKg3Bt7NGkeV6kqbU8d/QjmFS7Ug=="],
 
     "read-yaml-file": ["read-yaml-file@2.1.0", "", { "dependencies": { "js-yaml": "^4.0.0", "strip-bom": "^4.0.0" } }, "sha512-UkRNRIwnhG+y7hpqnycCL/xbTk7+ia9VuVTC0S+zVbwd65DI9eUpRMfsWIGrCWxTU/mi+JW8cHQCrv+zfCbEPQ=="],
 

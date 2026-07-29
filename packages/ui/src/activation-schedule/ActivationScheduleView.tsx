@@ -10,7 +10,7 @@ export interface ActivationScheduleViewProps {
 export function ActivationScheduleView({ value }: ActivationScheduleViewProps) {
   return (
     <Stack spacing={1}>
-      <Typography sx={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: "text.secondary" }}>
+      <Typography sx={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: "textSecondary" }}>
         {value.days.length === 7 ? "Tutti i giorni" : value.days.join(", ")} · {value.from}–{value.to}
       </Typography>
       <ScheduleGrid value={value} />
