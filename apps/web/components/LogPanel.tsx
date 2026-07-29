@@ -82,6 +82,8 @@ function LogRow({ index, style, ariaAttributes, entries, showTimestamp, showTag 
   );
 }
 
+const shouldStickToBottom = false;
+
 // Pannello log globale (in +Layout.tsx, visibile su ogni pagina), ridimensionabile
 // trascinando il bordo sinistro - la dimensione scelta dall'utente persiste tra le sessioni
 // (ResizablePanel), quindi nessun limite massimo: il controllo è delegato all'utente.
@@ -95,7 +97,7 @@ export function LogPanel() {
   // tab/consumer, o una successiva riapertura del pannello, continuano a vederle tutte)
   const [clearedBeforeId, setClearedBeforeId] = useState(-1);
 
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [search, setSearch] = useState("");
   const [disabledTags, setDisabledTags] = useState<ReadonlySet<string>>(new Set());
   const [showTimestamp, setShowTimestamp] = useState(true);
@@ -180,6 +182,7 @@ export function LogPanel() {
   };
 
   useEffect(() => {
+    if (!shouldStickToBottom) return;
     if (!stickToBottomRef.current || filteredEntries.length === 0) return;
 
     const scrollToLastRow = () => listRef.current?.scrollToRow({ index: filteredEntries.length - 1, align: "end" });
@@ -259,7 +262,7 @@ export function LogPanel() {
             />
           )}
         </Box>
-        {!stuckToBottom && filteredEntries.length > 0 && (
+        {shouldStickToBottom && !stuckToBottom && filteredEntries.length > 0 && (
           <Fab
             size="small"
             onClick={scrollToBottom}

@@ -11,7 +11,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { match } from "ts-pattern";
 import { useLogFeed } from "../hooks/useLogFeed";
 import { PANEL_HEADER_HEIGHT, panelHeaderIconSx } from "./PanelHeader";
@@ -34,7 +34,7 @@ export function Sidebar({ urlPathname }: { urlPathname: string }) {
   // Idrata lo stato persistito solo dopo il mount (mai durante l'SSR): il primo render deve
   // combaciare esattamente con l'HTML del server (default true), altrimenti React segnala un
   // hydration mismatch - stesso pattern di ResizablePanel per la width del LogPanel.
-  useEffect(() => {
+  useLayoutEffect(() => {
     const raw = window.localStorage.getItem(COLLAPSED_STORAGE_KEY);
     if (raw !== null) setCollapsedState(raw === "true");
   }, []);
@@ -78,6 +78,7 @@ export function Sidebar({ urlPathname }: { urlPathname: string }) {
           {collapsed ? <ChevronRight fontSize="small" /> : <ChevronLeft fontSize="small" />}
         </IconButton>
       </Box>
+      <Divider />
       <List sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
         {NAV_ITEMS.map((item) => {
           const isActive = item.href === "/" ? urlPathname === item.href : urlPathname.startsWith(item.href);

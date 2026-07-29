@@ -27,7 +27,7 @@ export const create = (
 ): Handle => {
   const controller = new AbortController();
 
-  const pilLogger = logger.child("Interval-Loop");
+  const pilLogger = logger.child("Module name");
 
   let status: Retry.Status = Retry.initialStatus;
 
@@ -48,7 +48,7 @@ export const create = (
 
     pilLogger.debug(`${formattedJobLabel} - Tick: ${status.iteration} - Next delay: ${Logger.formatMs(delay)}`)();
 
-    await sleep(delay);
+    await sleep(delay, controller.signal);
 
     return tick();
   };
@@ -65,7 +65,25 @@ export const create = (
   };
 };
 
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+// Abortabile: si risolve subito su abort invece di aspettare lo scadere di `ms`, altrimenti
+// `stop()` resterebbe bloccato fino al prossimo tick (fino a minuti, con backoff esponenziale).
+const sleep = (ms: number, signal: AbortSignal): Promise<void> =>
+  new Promise((resolve) => {
+    if (signal.aborted) {
+      resolve();
+      return;
+    }
+
+    const onAbort = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
 
 // Detach: esegue un TaskEither in background, senza attendere il risultato
 export const detach =
