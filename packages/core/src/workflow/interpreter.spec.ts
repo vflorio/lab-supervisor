@@ -115,4 +115,20 @@ describe("workflow interpreter", () => {
     const result = await Interpreter.run([], "does-not-exist")(env)();
     expect(E.isLeft(result)).toBe(true);
   });
+
+  it("sleep pauses for the given duration without touching capabilities", async () => {
+    const env = noopEnv();
+
+    const workflow: Workflow.Workflow = {
+      name: "sleep-wf",
+      commands: [{ type: "sleep", duration: "20ms" }],
+    };
+
+    const start = Date.now();
+    const result = await Interpreter.interpretWorkflow(workflow)(env)();
+    const elapsed = Date.now() - start;
+
+    expect(E.isRight(result)).toBe(true);
+    expect(elapsed).toBeGreaterThanOrEqual(20);
+  });
 });

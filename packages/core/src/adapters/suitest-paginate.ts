@@ -7,10 +7,6 @@ import { format } from "../errors";
 import { type BasicAuth, getJsonAuth, type HTTPError } from "../http";
 import * as Logger from "../logger/logger";
 
-// -------------------------------------------------------------------------------------
-// Model - Paginated response
-// -------------------------------------------------------------------------------------
-
 const PaginatedResponseSchema = <C extends t.Mixed>(itemCodec: C) =>
   t.intersection([
     t.type({ values: t.array(itemCodec) }),
@@ -32,15 +28,7 @@ export interface PaginatedResponse<A> {
   readonly previous?: string;
 }
 
-// -------------------------------------------------------------------------------------
-// Errors
-// -------------------------------------------------------------------------------------
-
 export type PaginationFetchError = HTTPError | Validation.ValidationError;
-
-// -------------------------------------------------------------------------------------
-// Single page - fetch and validate by URL
-// -------------------------------------------------------------------------------------
 
 const fetchPage = <A>(
   url: string,
@@ -57,21 +45,12 @@ const fetchPage = <A>(
     TE.flatMapEither((data) =>
       pipe(PaginatedResponseSchema(itemCodec).decode(data), E.mapLeft(Validation.createValidationError)),
     ),
-    //TE.tapIO((page) =>
-    //  logger
-    //    ? logger.debug(`  -> page ${page.page ?? 1}: ${page.values.length} items (total: ${page.total ?? "?"})`)
-    //    : () => {},
-    //),
     TE.tapError((err) =>
       logger ? TE.fromIO(logger.error(`PaginationFetchError: ${format(err)}`)) : TE.right(undefined),
     ),
   );
 
-// -------------------------------------------------------------------------------------
-// Auto-pagination - accumulates all pages following "next"
-// -------------------------------------------------------------------------------------
-
-// Recupera tutti gli elementi iterando automaticamente sulle pagine
+// Accumula tutte le pagine seguendo "next"
 export const fetchAllPages = <A>(
   initialUrl: string,
   auth: BasicAuth,

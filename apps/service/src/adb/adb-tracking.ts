@@ -8,11 +8,7 @@ import type * as Retry from "@supervisor/core/retry/retry";
 import * as E from "fp-ts/Either";
 import type { AdbDeviceStream } from "./adb-stream";
 
-// -------------------------------------------------------------------------------------
-// ADB reachability tracker - dominio "adb":
-// raggiungibilità dei device Android via rete locale
-// -------------------------------------------------------------------------------------
-
+// ADB reachability tracker - dominio "adb": raggiungibilità dei device Android via rete locale
 export const DOMAIN = "adb";
 
 const keyOf = (device: Adb.Device): string => Network.format(device.target);
@@ -29,10 +25,9 @@ export interface Deps {
   readonly predicateStream: Predicates.PredicateStream;
 }
 
-// Un target che sparisce del tutto dall'output di `adb devices` (a differenza di un item che vi
-// resta con status "offline") non produce alcun item da diffare - Predicates.diff aggiorna un
-// fatto solo per gli item presenti nella lista, quindi senza questo passaggio adb_device_reachable
-// resterebbe congelato al suo ultimo valore noto (`true`) per sempre.
+// Un target sparito del tutto dall'output di `adb devices` (a differenza di uno con status
+// "offline") non produce item da diffare - senza questo passaggio adb_device_reachable
+// resterebbe congelato al suo ultimo valore noto per sempre.
 const retractVanished = (
   knownTargets: ReadonlySet<string>,
   seenTargets: ReadonlySet<string>,

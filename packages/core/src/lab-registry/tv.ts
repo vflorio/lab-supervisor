@@ -3,10 +3,6 @@ import type { Endomorphism } from "fp-ts/Endomorphism";
 import * as t from "io-ts";
 import type { LabRegistry } from "./registry";
 
-// -------------------------------------------------------------------------------------
-// Model
-// -------------------------------------------------------------------------------------
-
 // Identità = deviceId Suitest: come i Candybox, una TV non ha esistenza indipendente da
 // Suitest (a differenza di Camera, che può essere preconfigurata offline), quindi `deviceId`
 // è la chiave primaria obbligatoria; `ip` è un dato secondario opzionale.
@@ -25,10 +21,6 @@ export const TvUpdateInputCodec = t.intersection([
 ]);
 
 export type TvUpdateInput = t.TypeOf<typeof TvUpdateInputCodec>;
-
-// -------------------------------------------------------------------------------------
-// Combinators - TVs
-// -------------------------------------------------------------------------------------
 
 export const addTv =
   (entry: TvEntry): Endomorphism<LabRegistry> =>

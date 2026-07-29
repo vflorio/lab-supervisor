@@ -3,13 +3,10 @@ import * as TE from "fp-ts/TaskEither";
 import type { Logger } from "../logger/logger";
 import { initialStatus, type Policy, type Status } from "./retry";
 
-// -------------------------------------------------------------------------------------
-// Interpret - metà impura del modello in retry.ts: prende una Policy pura (Status -> delay
-// o null) e la esegue davvero, ritentando un'azione con delay reali (setTimeout) tra un
-// tentativo e l'altro, con logging opzionale del progresso. Le tre varianti sotto differiscono
-// solo per come riconoscono "successo" nell'azione ritentata: un Right (retrying), un valore
-// che soddisfa un predicato (retryingWhile), o un booleano (retryingUntil).
-// -------------------------------------------------------------------------------------
+// Metà impura del modello: prende una Policy pura (Status -> delay o null) e la esegue
+// davvero, ritentando un'azione con delay reali (setTimeout). Le tre varianti sotto
+// differiscono solo per come riconoscono "successo": un Right (retrying), un valore che
+// soddisfa un predicato (retryingWhile), o un booleano (retryingUntil).
 
 // Avanza lo Status di un'iterazione, consultando la policy per il prossimo delay
 export const applyPolicy =

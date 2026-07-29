@@ -3,11 +3,9 @@ import * as t from "io-ts";
 import { match } from "ts-pattern";
 import type { PredicateExpression } from "./expression";
 
-// -------------------------------------------------------------------------------------
-// Codec - JSON: tuple taggate, coerenti con Command/Pipeline
+// Tuple taggate, coerenti con Command/Pipeline:
 // ["ref", "name"] | ["equals", "name", value] | ["includes", "name", "substr"]
 // ["and", e, e, ...] | ["or", e, e, ...] | ["not", e]
-// -------------------------------------------------------------------------------------
 
 const PredicateValueCodec = t.union([t.boolean, t.string, t.number]);
 

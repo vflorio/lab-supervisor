@@ -5,12 +5,8 @@ import * as Errors from "./errors";
 import * as Logger from "./logger/logger";
 import * as Retry from "./retry/retry";
 
-// -------------------------------------------------------------------------------------
-// Interval Loop
-// Motore minimale per un ciclo `onTick` a cadenza guidata da una Retry.Policy, senza
-// alcuna nozione di schedule/orario di lavoro (a differenza di apps/service/src/machines/
-// activation.ts, che combina le due cose): un tracker di monitoring deve poter girare in continuo.
-// -------------------------------------------------------------------------------------
+// Motore minimale per un ciclo `onTick` a cadenza guidata da una Retry.Policy, senza alcuna
+// nozione di schedule/orario di lavoro: un tracker di monitoring deve poter girare in continuo.
 
 export interface StartError extends Errors.AppError<"StartError"> {}
 
@@ -71,9 +67,7 @@ export const create = (
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-// -------------------------------------------------------------------------------------
 // Detach: esegue un TaskEither in background, senza attendere il risultato
-// -------------------------------------------------------------------------------------
 export const detach =
   <A>(task: TE.TaskEither<Errors.AppError<any>, A>): IO.IO<void> =>
   () => {

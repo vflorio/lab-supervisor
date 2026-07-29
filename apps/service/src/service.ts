@@ -26,19 +26,11 @@ import * as ServiceLifecycle from "./service-lifecycle";
 import * as Trpc from "./trpc";
 import * as TrpcServices from "./trpc-services";
 
-// -------------------------------------------------------------------------------------
-// Env
-// -------------------------------------------------------------------------------------
-
 export interface Env {
   readonly logger: Logger.Tagged;
   readonly configFetcher: Config.ConfigFetcher;
   readonly process: Node.Process;
 }
-
-// -------------------------------------------------------------------------------------
-// Internal
-// -------------------------------------------------------------------------------------
 
 type Effect<A> = RTE.ReaderTaskEither<
   Env,
@@ -58,7 +50,6 @@ const loadConfig: Effect<ConfigModel.Service> = (env) => Config.load(env.configF
 const parseConfigPolicies = (
   config: ConfigModel.Service,
 ): Effect<{
-  adbReconnectPolicy: RetryPolicy.Policy;
   adbTrackingPolicy: RetryPolicy.Policy;
   suitestCameraTrackingPolicy: RetryPolicy.Policy;
   suitestControlUnitTrackingPolicy: RetryPolicy.Policy;
@@ -66,11 +57,10 @@ const parseConfigPolicies = (
 }> =>
   pipe(
     E.Do,
-    E.bind("adbReconnectPolicy", () => RetryPolicy.decode(config.adb.reconnect)),
-    E.bind("adbTrackingPolicy", () => RetryPolicy.decode(config.tracking.adb.polling)),
-    E.bind("suitestCameraTrackingPolicy", () => RetryPolicy.decode(config.tracking.suitestCamera.polling)),
-    E.bind("suitestControlUnitTrackingPolicy", () => RetryPolicy.decode(config.tracking.suitestControlUnit.polling)),
-    E.bind("suitestDeviceTrackingPolicy", () => RetryPolicy.decode(config.tracking.suitestDevice.polling)),
+    E.bind("adbTrackingPolicy", () => RetryPolicy.decode(config.tracking.adb.policy)),
+    E.bind("suitestCameraTrackingPolicy", () => RetryPolicy.decode(config.tracking.suitestCamera.policy)),
+    E.bind("suitestControlUnitTrackingPolicy", () => RetryPolicy.decode(config.tracking.suitestControlUnit.policy)),
+    E.bind("suitestDeviceTrackingPolicy", () => RetryPolicy.decode(config.tracking.suitestDevice.policy)),
     RTE.fromEither,
   );
 
@@ -84,10 +74,6 @@ const devActivationSchedule = (): Schedule.Schedule => {
     return now >= debugActiveFrom && now < debugActiveTo;
   };
 };
-
-// -------------------------------------------------------------------------------------
-// Public
-// -------------------------------------------------------------------------------------
 
 export interface ServiceHandle {
   readonly stop: () => void;
@@ -118,8 +104,7 @@ export const create: Effect<ServiceHandle> = pipe(
 
     let active: O.Option<ServiceLifecycle.ActiveLifecycle> = O.none;
 
-    // Il motore di recovery esiste solo mentre il servizio è "active" (vedi ActiveLifecycle) -
-    // instrada verso di esso solo se attivo, altrimenti non c'è nulla da riarmare.
+    // Il motore di recovery esiste solo mentre il servizio è "active": senza, non c'è nulla da riarmare.
     const resetRecovery = (policyLabel: string, entityId: string, tripwireIndex: number): boolean =>
       pipe(
         active,

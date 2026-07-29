@@ -1,15 +1,7 @@
 import * as TE from "fp-ts/TaskEither";
 import { type AppError, fromUnknown } from "./errors";
 
-// -------------------------------------------------------------------------------------
-// Model
-// -------------------------------------------------------------------------------------
-
 export interface HTTPError extends AppError<"HTTPError"> {}
-
-// -------------------------------------------------------------------------------------
-// Constructors
-// -------------------------------------------------------------------------------------
 
 const toHTTPError = fromUnknown("HTTPError");
 
@@ -19,10 +11,6 @@ const request = (url: string, init?: RequestInit): TE.TaskEither<HTTPError, unkn
     if (!response.ok) throw new Error(`Status: ${response.status} Message: ${await response.text()}`);
     return await response.json();
   }, toHTTPError);
-
-// -------------------------------------------------------------------------------------
-// Clients
-// -------------------------------------------------------------------------------------
 
 export const getJson = (url: string): TE.TaskEither<HTTPError, unknown> => request(url);
 

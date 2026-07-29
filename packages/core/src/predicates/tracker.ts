@@ -7,10 +7,8 @@ import type * as Retry from "../retry/retry";
 import type { PredicateStream } from "./feed";
 import { factKey, type PredicateFact, type PredicateValue } from "./model";
 
-// -------------------------------------------------------------------------------------
-// Tracker - scarica periodicamente un dominio, ne deriva un set di predicati nominati per
-// entità, ed emette sullo stream solo i fatti il cui valore è realmente cambiato.
-// -------------------------------------------------------------------------------------
+// Scarica periodicamente un dominio, ne deriva un set di predicati nominati per entità, ed
+// emette sullo stream solo i fatti il cui valore è realmente cambiato.
 
 export interface TrackerConfig<Env, Err extends Errors.AppError, RawItem> {
   readonly domain: string;

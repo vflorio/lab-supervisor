@@ -41,8 +41,7 @@ import { onTransition } from "./tracing";
 //
 // -----------------------------------------------------------------------------------------
 // TRANSITIONS  <FROM> -> <EVENT> -> <TO> [/ <COMMAND>]
-// Le coppie (stato, evento) non elencate sono self-loop senza comandi
-// (evento fuori sequenza: ignorato, vedi commento in reduce.ts).
+// Le coppie (stato, evento) non elencate sono self-loop senza comandi (evento fuori sequenza: ignorato).
 //
 //   Unknown     -> TargetDiscovered          -> Temporary   / ConnectTemporary
 //   Temporary   -> TemporaryHandshakeOk      -> Temporary   / ConfigurePersistentPort

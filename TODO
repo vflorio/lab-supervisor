@@ -1,6 +1,6 @@
 # TODO
 
-## v1.0.0
+## v0.1.0
 
 ### Core
 
@@ -35,9 +35,9 @@
     - [X] ADB over wifi automation
     - [X] Avvia suitest-camera, imposta profilo experimental-wide, e premi tasto connect (le coordinate considerare orientamento schermo)
 - [X] Verifica camera stream dopo recovery (gestito tramite predicati)
-- [ ] Fix waitForDevice: gestire il caso in cui mDNS non rileva un device tornato online durante l'esecuzione del workflow (vedi RECOVERY-REBOOT-LOOP.md)
-- [ ] Gating dei comandi workflow su AndroidBridge.acceptsCommands(cameraId) - oggi definito ma mai interrogato prima di eseguire un comando
-- [ ] Disconnect+reconnect esplicito su comando fallito, per i transport ADB "incastrati" che adb devices continua a riportare come device pur non rispondendo più (non rilevabile da ConnectionLost)
+- [X] Fix waitForDevice: gestire il caso in cui mDNS non rileva un device tornato online durante l'esecuzione del workflow
+- [X] Gating dei comandi workflow su AndroidBridge.acceptsCommands(cameraId) - oggi definito ma mai interrogato prima di eseguire un comando
+- [X] Disconnect+reconnect esplicito su comando fallito, per i transport ADB "incastrati" che adb devices continua a riportare come device pur non rispondendo più (non rilevabile da ConnectionLost)
 
 ### Retry Engine
 - [X] Retry model (constant, exponential, limit, cap)
@@ -65,7 +65,7 @@
 - [X] Device registry stabile: database locale [device-name, ip-statico] al posto di discovery puramente mDNS
 - [X] Integrazione invio notifiche Slack
 
-## v1.1.0
+## v0.2.0
 
 ### Service
 - [ ] Docker/PM2 per ambiente production
@@ -73,21 +73,22 @@
 ### Candybox
 - [ ] Shared-host failure detection: se tutti i device appartenenti allo stesso Candybox risultano OFFLINE, riavvia del Candybox
 
-## v1.2.0
-
-### Scheduling
-
-- [ ] Scheduling core
-  - [ ] Esporre il concetto di stato controlled per ogni entity (es. utilizzo TV1 dalle 14:00 alle 18:00)
-  - [ ] Riutilizzare il modello di stato controlled come base per altre feature di scheduling e prenotazione
-
 ### Android Camera
 
 - [ ] Workflow / scripting engine
   - [ ] Coordinate relative per inputTap: supportare coordinate normalizzate (`0.0–1.0`) oltre a quelle assolute
   - [ ] Sistema di predicati/guard per l'esecuzione condizionale dei comandi in un workflow
 - [ ] Comando ensureOrientation: forza uno specifico orientamento (es. ensureOrientation(Landscape))
-- [ ] Comando wait/sleep nella config workflow (per tap-scripting e timing)
+- [X] Comando wait/sleep nella config workflow (per tap-scripting e timing)
+- [ ] Comando wakeUp dovrebbe controllare lo schermo prima di mandare lo swipe
+
+## v0.3.0
+
+### Scheduling
+
+- [ ] Scheduling core
+  - [ ] Esporre il concetto di stato controlled per ogni entity (es. utilizzo TV0 dalle 14:00 alle 18:00)
+  - [ ] Riutilizzare il modello di stato controlled come base per altre feature di scheduling e prenotazione
 
 ### TV Device
 

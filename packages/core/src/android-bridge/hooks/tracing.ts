@@ -5,17 +5,14 @@ import { match } from "ts-pattern";
 import type { AndroidBridgeMachineEnv } from "../interpret";
 import type { AndroidBridgeEvent, AndroidBridgeState } from "../model";
 
-// -------------------------------------------------------------------------------------
-// Tracing - visibilità automatica sulle transizioni di fase (debugging)
-// -------------------------------------------------------------------------------------
-// Stesso principio di adb-connection/tracing.ts: logga solo quando cambia la "fase" (`_tag`),
-// livello error quando si regredisce a Disconnected da una fase più avanzata.
-// -------------------------------------------------------------------------------------
+// Tracing: logga solo quando cambia la "fase" (`_tag`), livello error quando si regredisce
+// a Disconnected da una fase più avanzata.
 
 const describeState = (state: AndroidBridgeState): string =>
   match(state)
     .with({ _tag: "Connecting" }, (s) => `Connecting(${s.id}, ${Network.formatHost(s.host)})`)
     .with({ _tag: "Idle" }, (s) => `Idle(${s.id}, ${Network.format(s.target)})`)
+    .with({ _tag: "Disconnecting" }, (s) => `Disconnecting(${s.id}, ${Network.formatHost(s.host)})`)
     .with({ _tag: "Disconnected" }, (s) => `Disconnected(${s.id}, ${Network.formatHost(s.host)})`)
     .exhaustive();
 
@@ -25,10 +22,14 @@ const describeEvent = (event: AndroidBridgeEvent): string =>
     .with({ _tag: "ConnectionEstablished" }, (e) => `ConnectionEstablished(${Network.format(e.target)})`)
     .with({ _tag: "ConnectionFailed" }, (e) => `ConnectionFailed(${e.reason})`)
     .with({ _tag: "ConnectionLost" }, (e) => `ConnectionLost(${e.reason})`)
+    .with({ _tag: "RebootDispatched" }, () => "RebootDispatched")
+    .with({ _tag: "TransportSuspect" }, (e) => `TransportSuspect(${e.reason})`)
     .exhaustive();
 
-const isRegression = (from: AndroidBridgeState, to: AndroidBridgeState): boolean =>
-  from._tag !== "Disconnected" && to._tag === "Disconnected";
+// Una perdita di connessione è una regressione da segnalare a livello error - tranne quando è
+// attesa: dopo un reboot dispacciato di proposito il device *deve* sparire, non è un guasto.
+const isRegression = (from: AndroidBridgeState, event: AndroidBridgeEvent, to: AndroidBridgeState): boolean =>
+  event._tag !== "RebootDispatched" && from._tag !== "Disconnected" && to._tag === "Disconnected";
 
 export const logStateChange: Machine.TransitionHook<
   AndroidBridgeMachineEnv,
@@ -39,7 +40,9 @@ export const logStateChange: Machine.TransitionHook<
   from._tag === to._tag
     ? TE.right(undefined)
     : TE.fromIO(
-        (isRegression(from, to) ? env.logger.child("AndroidBridge").error : env.logger.child("AndroidBridge").info)(
+        (isRegression(from, event, to)
+          ? env.logger.child("AndroidBridge").error
+          : env.logger.child("AndroidBridge").info)(
           `State Machine\n  -> Event = [${describeEvent(event)}]\n  -> Transition = [${describeState(from)} -> ${describeState(to)}]`,
         ),
       );

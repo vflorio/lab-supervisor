@@ -1,15 +1,10 @@
 import * as E from "fp-ts/Either";
 import * as t from "io-ts";
 import { match } from "ts-pattern";
+import { DurationString } from "../date-time";
 import type { Command, Workflow } from "./workflow";
 
-// -------------------------------------------------------------------------------------
-// Codecs
-// -------------------------------------------------------------------------------------
-
 const TapCoordsCodec = t.type({ x: t.number, y: t.number });
-
-// Command
 
 const isCommand = (u: unknown): u is Command => typeof u === "object" && u !== null && "type" in u;
 
@@ -62,6 +57,14 @@ const validateCommand = (u: unknown, c: t.Context): t.Validation<Command> => {
 
       return t.success({ type: "run" as const, workflowName });
     })
+    .with("sleep", () => {
+      const duration = args[0];
+      if (!DurationString.is(duration)) {
+        return t.failure(u, c, "sleep requires a human-readable duration (e.g. 500ms, 2s, 1m)");
+      }
+
+      return t.success({ type: "sleep" as const, duration });
+    })
     .otherwise(() => t.failure(u, c, `Unknown command: "${name}"`));
 };
 
@@ -77,6 +80,7 @@ const encodeCommand = (cmd: Command): unknown[] =>
     .with({ type: "waitForDevice" }, () => ["waitForDevice"])
     .with({ type: "waitForActivity" }, ({ activity }) => ["waitForActivity", activity])
     .with({ type: "run" }, ({ workflowName }) => ["run", workflowName])
+    .with({ type: "sleep" }, ({ duration }) => ["sleep", duration])
     .exhaustive();
 
 // JSON: ["commandName", ...args] -> Command
@@ -87,9 +91,7 @@ export const CommandCodec = new t.Type<Command, unknown[], unknown>(
   encodeCommand,
 );
 
-// ----
 // Workflow - JSON: ["name", [[cmd], [cmd], ...]]
-
 const isWorkflow = (u: unknown): u is Workflow => typeof u === "object" && u !== null && "name" in u;
 
 const validateWorkflow = (u: unknown, c: t.Context): t.Validation<Workflow> => {

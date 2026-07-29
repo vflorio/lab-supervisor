@@ -4,15 +4,7 @@ import * as TE from "fp-ts/TaskEither";
 import type { AppError } from "./errors";
 import type { Logger } from "./logger/logger";
 
-// -------------------------------------------------------------------------------------
-// Model
-// -------------------------------------------------------------------------------------
-
 export interface FileSystemError extends AppError<"FileSystemError"> {}
-
-// -------------------------------------------------------------------------------------
-// Dependencies
-// -------------------------------------------------------------------------------------
 
 export type ReadFile = (path: string) => TE.TaskEither<FileSystemError, string>;
 export type WriteFile = (path: string, content: string) => TE.TaskEither<FileSystemError, void>;
@@ -22,10 +14,6 @@ export type Env = {
   readonly readFile: ReadFile;
   readonly writeFile: WriteFile;
 };
-
-// -------------------------------------------------------------------------------------
-// Operations
-// -------------------------------------------------------------------------------------
 
 export const read =
   (path: string): RTE.ReaderTaskEither<Env, FileSystemError, string> =>

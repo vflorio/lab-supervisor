@@ -1,9 +1,6 @@
 import type { LogRecord, Transport } from "./logger";
 
-// -------------------------------------------------------------------------------------
 // In-memory log broadcast (structured records -> live subscribers)
-// -------------------------------------------------------------------------------------
-
 export interface LogEntry extends LogRecord {
   readonly id: number;
 }

@@ -6,18 +6,12 @@ import type { AppError } from "../errors";
 import type { PredicateLookup } from "../predicates/expression";
 import * as Machine from "../state-machine/machine";
 
-// -------------------------------------------------------------------------------------
-// Macchina a stati di un singolo RecoveryTripwire
-//
-// il tripwire osserva solo il proprio predicate: se resta falso ininterrottamente per >=
-// grace, la pipeline scatta (`recovering`). L'esito del tentativo (successo, retry esauriti,
-// o un vero errore della pipeline) è un evento di follow-up (`recoveryOutcome`) ridispatchato
-// sullo stesso reducer (vedi state-machine/machine.ts#dispatch) - così ogni cambio di stato,
-// incluso l'esito, passa dallo stesso canale (`onTransition`, vedi make()) invece di un
-// side-channel separato che può arrivare fuori ordine rispetto alle transizioni pure.
-// `exhausted`/`fatalError` sono entrambi terminali finché il predicate non torna vero da solo
-// o non arriva un reset esplicito (vedi entity-runner.ts#reset) - intervento manuale.
-// -------------------------------------------------------------------------------------
+// Macchina a stati di un singolo RecoveryTripwire: osserva solo il proprio predicate, se
+// resta falso ininterrottamente per >= grace la pipeline scatta (`recovering`). L'esito del
+// tentativo è un evento di follow-up (`recoveryOutcome`) ridispatchato sullo stesso reducer -
+// così ogni cambio di stato passa dallo stesso canale (`onTransition`), mai un side-channel
+// che può arrivare fuori ordine. `exhausted`/`fatalError` sono terminali finché il predicate
+// non torna vero da solo o non arriva un reset esplicito (intervento manuale).
 
 export type TripwireState =
   | { readonly tag: "healthy" }
@@ -36,9 +30,8 @@ export interface Observe {
 }
 
 // Esito di un tentativo di recovery, ridispatchato come evento (mai un side-channel): un
-// `Left` vero della pipeline (errore di configurazione/bug, non un tentativo fallito - vedi
-// retry/interpret.ts#retryingUntil) diventa `fatalError` invece di essere silenziosamente
-// inghiottito.
+// `Left` vero della pipeline (errore di configurazione/bug, non un tentativo fallito) diventa
+// `fatalError` invece di essere silenziosamente inghiottito.
 export type RecoveryOutcome =
   | { readonly tag: "recoveryOutcome"; readonly outcome: "succeeded" }
   | { readonly tag: "recoveryOutcome"; readonly outcome: "exhausted" }
@@ -96,13 +89,11 @@ export const reduce =
       )
       .exhaustive();
 
-// Esegue la pipeline (già composta con retry dal chiamante) e converte l'esito - successo,
-// retry esauriti, o un vero errore - in un evento `recoveryOutcome`, mai in un Left del
-// CommandHandler stesso (Err = never): così ogni caso, incluso l'errore, ridiventa una
-// transizione osservabile invece di propagare fuori dal motore e andare perso (vedi il
-// vecchio comportamento pre-refactor, dove un Left veniva solo loggato da entity-runner.ts).
-// `runRecovery` è funzione del lookup corrente (passato attraverso comando/evento) perché il
-// predicate va rivalutato ad ogni tentativo, non catturato una volta sola.
+// Esegue la pipeline e converte l'esito - successo, retry esauriti, o un vero errore - in un
+// evento `recoveryOutcome`, mai in un Left del CommandHandler stesso (Err = never): così ogni
+// caso, incluso l'errore, ridiventa una transizione osservabile invece di propagare fuori dal
+// motore e andare perso. `runRecovery` è funzione del lookup corrente perché il predicate va
+// rivalutato ad ogni tentativo, non catturato una volta sola.
 export const makeHandler =
   <Err extends AppError>(
     runRecovery: (lookup: PredicateLookup) => TE.TaskEither<Err, boolean>,

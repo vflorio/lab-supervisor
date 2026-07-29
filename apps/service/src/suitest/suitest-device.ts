@@ -1,10 +1,7 @@
 import * as Suitest from "@supervisor/core/adapters/suitest";
 import type * as Predicates from "@supervisor/core/predicates/index";
 
-// -------------------------------------------------------------------------------------
 // Suitest device tracker - dominio "suitest-device": status (enum) e presenza di inUseBy
-// -------------------------------------------------------------------------------------
-
 export const DOMAIN = "suitest-device";
 
 const keyOf = (item: Suitest.Device): string => item.deviceId;

@@ -8,16 +8,13 @@ import { match } from "ts-pattern";
 import * as AdbTracking from "../adb/adb-tracking";
 import * as SuitestCamera from "../suitest/suitest-camera";
 
-// -------------------------------------------------------------------------------------
-// Risolve l'entityId di un dominio tracciato (packages/core/src/predicates) nel Network.Endpoint
-// ADB da usare per le CommandCapabilities di una pipeline di recovery. Pura funzione contro un
-// LabRegistry già letto dal chiamante (nessun I/O qui) - un dominio non ancora ADB-capable
-// (TV/candybox, vedi TODO) ritorna semplicemente O.none, non un errore di programma.
-// -------------------------------------------------------------------------------------
+// Risolve l'entityId di un dominio tracciato nel Network.Endpoint ADB per le CommandCapabilities
+// di una pipeline di recovery. Pura, nessun I/O; un dominio non ancora ADB-capable ritorna
+// semplicemente O.none, non un errore.
 
 export const resolveTarget = (domain: string, entityId: string, registry: Db.LabRegistry): O.Option<Network.Endpoint> =>
   match(domain)
-    // Dominio "adb": l'entityId è già Network.format(target) (vedi adb-tracking.ts:keyOf)
+    // Dominio "adb": l'entityId è già Network.format(target)
     .with(AdbTracking.DOMAIN, () => O.fromEither(Network.decode(entityId)))
     // Dominio "suitest-camera": l'entityId è il videoCaptureDeviceId Suitest, risolto via
     // CameraEntry.videoCaptureDeviceId -> CameraEntry.adbId -> registry.adb[adbId].target
@@ -41,13 +38,36 @@ const resolveCameraTarget = (videoCaptureDeviceId: string, registry: Db.LabRegis
     O.map((entry) => entry.target),
   );
 
-// -------------------------------------------------------------------------------------
-// Descrive un'entità per i placeholder di un messaggio di notifica (vedi ../../../../
-// packages/core/src/notify/template.ts e ./engine.ts): stesso `match` su domain di
-// resolveTarget sopra, ma per label leggibile + ip invece che per un Network.Endpoint
-// operativo. Un dominio/lookup non risolvibile ricade sul solo entityId - una notifica
-// non deve mai fallire per un dettaglio del device mancante.
-// -------------------------------------------------------------------------------------
+const findCameraByAdbId = (adbId: string, registry: Db.LabRegistry): O.Option<Db.CameraEntry> =>
+  pipe(
+    Object.values(registry.cameras),
+    RA.findFirst((camera) => O.elem(S.Eq)(adbId)(camera.adbId)),
+  );
+
+// Risolve l'entityId di un dominio tracciato nell'id camera usato dall'AndroidBridgeOrchestrator
+// (chiave = CameraEntry.id) - a differenza di resolveTarget, che dà l'endpoint ADB, qui serve
+// l'identità stabile locale per interrogare acceptsCommands/awaitIdle.
+
+export const resolveAndroidBridgeId = (domain: string, entityId: string, registry: Db.LabRegistry): O.Option<string> =>
+  match(domain)
+    // Dominio "adb": l'entityId è Network.format(target) == la stessa chiave di registry.adb[adbId]
+    .with(AdbTracking.DOMAIN, () =>
+      pipe(
+        findCameraByAdbId(entityId, registry),
+        O.map((camera) => camera.id),
+      ),
+    )
+    .with(SuitestCamera.DOMAIN, () =>
+      pipe(
+        findCameraByVideoCaptureDeviceId(entityId, registry),
+        O.map((camera) => camera.id),
+      ),
+    )
+    .otherwise(() => O.none);
+
+// Descrive un'entità per i placeholder di un messaggio di notifica: stesso `match` su domain
+// di resolveTarget, ma per label leggibile + ip. Un lookup non risolvibile ricade sul solo
+// entityId - una notifica non deve mai fallire per un dettaglio del device mancante.
 
 export interface EntityDescriptor {
   readonly id: string;

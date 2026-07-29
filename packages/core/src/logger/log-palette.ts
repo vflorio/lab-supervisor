@@ -1,10 +1,6 @@
-// -------------------------------------------------------------------------------------
-// Log color palette
-//
-// Colors are plain data (ANSI code + hex), never baked into log text. Terminal
-// transports render `ansi`, the web UI renders `hex` — both read the same index.
-// Zero dependencies so it's safe to import from browser bundles.
-// -------------------------------------------------------------------------------------
+// Colors are plain data (ANSI code + hex), never baked into log text. Terminal transports
+// render `ansi`, the web UI renders `hex` — both read the same index. Zero dependencies so
+// it's safe to import from browser bundles.
 
 export interface LogColor {
   readonly ansi: string;
@@ -13,7 +9,7 @@ export interface LogColor {
 
 export const ANSI_RESET = "\x1b[0m";
 
-// Assigned to tags in rotation (see getModuleColor in logger.ts). The 5 base + 6 bright
+// Assigned to tags in rotation (see getModuleColor). The 5 base + 6 bright
 // entries below are the full set of standard 16-color ANSI hues usable on a dark
 // background (black/white excluded for legibility, normal red reserved for the error
 // level) - already exhausted, so the extras use 256-color codes (`\x1b[38;5;<n>m`) for

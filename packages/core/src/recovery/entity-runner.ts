@@ -13,15 +13,10 @@ import type { Workflow } from "../workflow/workflow";
 import type { CompiledTripwire } from "./compile";
 import * as TripwireMachine from "./tripwire-machine";
 
-// -------------------------------------------------------------------------------------
-// Elabora ogni tripwire di un'entità (es. un device) in base al proprio predicate,
-// alla propria macchina a stati e al proprio logger.
-//
-// Ogni cambio di stato (incluso l'esito di un tentativo di recovery) passa da un solo canale:
-// il `TransitionHook` passato a TripwireMachine.make (stesso meccanismo di
-// machines/android-bridge/activity.ts#forwardToActivity) - niente diffing "prima/dopo" fatto
-// a mano qui, niente side-channel che può arrivare fuori ordine.
-// -------------------------------------------------------------------------------------
+// Elabora ogni tripwire di un'entità in base al proprio predicate, alla propria macchina a
+// stati e al proprio logger. Ogni cambio di stato (incluso l'esito di un tentativo di
+// recovery) passa da un solo canale, il `TransitionHook` passato a TripwireMachine.make -
+// niente diffing "prima/dopo" fatto a mano, niente side-channel che può arrivare fuori ordine.
 
 export interface EntityRunnerEnv {
   readonly logger: Logger.Tagged;
@@ -117,10 +112,9 @@ export const create = (compiledTripwires: readonly CompiledTripwire[], env: Enti
         lookup,
       })(undefined)();
 
-      // Err = never per la macchina del tripwire (vedi tripwire-machine.ts#makeHandler): un
-      // vero errore della pipeline è oggi una transizione fatalError (un Right), non più un
-      // Left del dispatch - questo ramo non dovrebbe più essere raggiungibile, resta solo come
-      // rete di sicurezza difensiva.
+      // Err = never per la macchina del tripwire: un vero errore della pipeline è oggi una
+      // transizione fatalError (un Right), non più un Left del dispatch - questo ramo non
+      // dovrebbe più essere raggiungibile, resta solo come rete di sicurezza.
       if (E.isRight(result)) {
         instance.state = result.right;
       } else {

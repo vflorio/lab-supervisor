@@ -1,13 +1,10 @@
 import type { AppError } from "../errors";
 import type { TripwireState } from "./tripwire-machine";
 
-// -------------------------------------------------------------------------------------
 // Status feed - broadcast delle transizioni di ogni tripwire (healthy/pending/recovering/
-// exhausted/fatalError - vedi tripwire-machine.ts#TripwireState). Ricalca predicates/feed.ts
-// (ring buffer + subscribe/history, più uno snapshot "valore corrente"): ogni transizione,
-// incluso l'esito di un tentativo di recovery, è la STESSA entry con un nuovo `state` - non
-// un side-channel separato come il vecchio campo `outcome`.
-// -------------------------------------------------------------------------------------
+// exhausted/fatalError). Ring buffer + subscribe/history, più uno snapshot "valore corrente":
+// ogni transizione, incluso l'esito di un tentativo di recovery, è la stessa entry con un
+// nuovo `state` - non un side-channel separato.
 
 export interface RecoveryStatusEntry {
   readonly id: number;
@@ -21,8 +18,7 @@ export interface RecoveryStatusEntry {
   readonly error?: AppError;
 }
 
-// Chiave univoca dell'"ultimo stato noto" per un tripwire, usata per indicizzare lo snapshot
-// corrente - stesso schema di predicates/model.ts#factKey / activity/model.ts#activityKey.
+// Chiave univoca dell'"ultimo stato noto" per un tripwire, usata per indicizzare lo snapshot corrente.
 export const recoveryKey = (
   entry: Pick<RecoveryStatusEntry, "policy" | "domain" | "entityId" | "tripwireIndex">,
 ): string => `${entry.policy}:${entry.domain}:${entry.entityId}:${entry.tripwireIndex}`;

@@ -1,9 +1,5 @@
 import * as E from "fp-ts/Either";
 
-// -------------------------------------------------------------------------------------
-// Args
-// -------------------------------------------------------------------------------------
-
 export type ConfigSource = { type: "file"; path: string } | { type: "url"; url: string };
 
 export const parse = (argv: string[]): E.Either<string, { config: ConfigSource }> => {

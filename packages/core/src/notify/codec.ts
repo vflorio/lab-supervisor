@@ -2,11 +2,8 @@ import * as t from "io-ts";
 import { match } from "ts-pattern";
 import type { NotifyTarget, NotifyTemplateMessage } from "./model";
 
-// -------------------------------------------------------------------------------------
-// Codec - JSON: tupla taggata per il target, coerente con Predicate/Pipeline
-// ["slack"] - un solo branch oggi, stesso stampo delle altre tuple taggate per estendersi
-// senza refactor (es. un futuro ["webhook", url])
-// -------------------------------------------------------------------------------------
+// Tupla taggata per il target: ["slack"], un solo branch oggi, stesso stampo delle altre
+// tuple taggate per estendersi senza refactor (es. un futuro ["webhook", url]).
 
 const isNotifyTarget = (u: unknown): u is NotifyTarget => typeof u === "object" && u !== null && "type" in u;
 
@@ -35,9 +32,8 @@ export const NotifyTargetCodec = new t.Type<NotifyTarget, unknown[], unknown>(
 
 export const NotifyLifecycleCodec = t.union([t.literal("immediate"), t.literal("exhausted")]);
 
-// Wrap/unwrap - stessa forma minimale di Validation.optionFromNullable: nessuna validazione
-// di struttura da hardcodare, il JSON resta una stringa semplice, solo il tipo decodificato
-// diventa l'ADT (vedi model.ts)
+// Wrap/unwrap: nessuna validazione di struttura da hardcodare, il JSON resta una stringa
+// semplice, solo il tipo decodificato diventa l'ADT.
 export const NotifyTemplateMessageCodec: t.Type<NotifyTemplateMessage, string, unknown> = new t.Type(
   "NotifyTemplateMessage",
   (u): u is NotifyTemplateMessage =>

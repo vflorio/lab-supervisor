@@ -12,7 +12,21 @@ import type * as DeviceRegistry from "./registry";
 
 const mapWorkflowError = (
   error: WorkflowInterpreter.WorkflowError | Adb.Error | Shell.ShellSpawnError | DeviceRegistry.SyncError,
-): WorkflowInterpreter.WorkflowError => WorkflowInterpreter.workflowError(error.message);
+): WorkflowInterpreter.WorkflowError => ({
+  ...WorkflowInterpreter.workflowError(error.message),
+  // Preserva il tag dell'errore originale (es. CommandTimeout) - vedi WorkflowError#cause
+  cause: error,
+});
+
+// Bound per waitForActivity: Retry.constantDelay da solo non esaurisce mai - senza limitRetries
+// un'activity che non torna mai in foreground farebbe girare il polling per sempre.
+const WAIT_FOR_ACTIVITY_POLL_MS = 1_000;
+const WAIT_FOR_ACTIVITY_TIMEOUT_MS = 30_000;
+
+const waitForActivityPolicy = pipe(
+  Retry.constantDelay(WAIT_FOR_ACTIVITY_POLL_MS),
+  Retry.concat(Retry.limitRetries(Math.ceil(WAIT_FOR_ACTIVITY_TIMEOUT_MS / WAIT_FOR_ACTIVITY_POLL_MS))),
+);
 
 export interface WorkflowRunnerEnv {
   readonly logger: Logger.Tagged;
@@ -92,7 +106,7 @@ export const makeCapabilities = (
     waitForActivity: (activity) =>
       pipe(
         Retry.retrying(
-          Retry.constantDelay(1000),
+          waitForActivityPolicy,
           env.logger,
         )(
           pipe(

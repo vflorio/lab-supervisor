@@ -1,11 +1,9 @@
 import * as E from "fp-ts/Either";
+import type { DurationString } from "../date-time";
 import { type AppError, of } from "../errors";
 
-// -------------------------------------------------------------------------------------
-// Model - Workflow: una sequenza piatta e nominata di comandi.
-// Nessuna policy di retry, nessuna escalation: quella logica vive nel Recovery Model
-// (packages/core/src/recovery) e nella Pipeline (./pipeline.ts) che compone più workflow.
-// -------------------------------------------------------------------------------------
+// Workflow: una sequenza piatta e nominata di comandi. Nessuna policy di retry, nessuna
+// escalation: quella logica vive nel Recovery Model e nella Pipeline che compone più workflow.
 
 // Coordinate per tap ADB (valori normalizzati 0-1 o pixel)
 export type TapCoords = { readonly x: number; readonly y: number };
@@ -22,7 +20,10 @@ export type Command =
   | { readonly type: "inputTap"; readonly coords: TapCoords }
   | { readonly type: "waitForDevice" }
   | { readonly type: "waitForActivity"; readonly activity: string }
-  | { readonly type: "run"; readonly workflowName: string };
+  | { readonly type: "run"; readonly workflowName: string }
+  // Pausa fissa, indipendente da qualunque condizione del device (a differenza di wait*) - utile
+  // per dare respiro tra due comandi (es. dopo un tap, prima che l'UI finisca di animare)
+  | { readonly type: "sleep"; readonly duration: DurationString };
 
 // Un workflow è un nome + una sequenza ordinata di comandi.
 // JSON: ["nome", [command, command, ...]]
@@ -34,10 +35,6 @@ export interface Workflow {
 export interface WorkflowDecodeError extends AppError<"WorkflowDecodeError"> {}
 
 export const workflowDecodeError = of("WorkflowDecodeError");
-
-// -------------------------------------------------------------------------------------
-// Utilities
-// -------------------------------------------------------------------------------------
 
 // Risolve un nome workflow dall'elenco (usato dal comando "run" per concatenare workflow)
 export const findWorkflow = (workflows: readonly Workflow[], name: string): E.Either<WorkflowDecodeError, Workflow> =>

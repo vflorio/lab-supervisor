@@ -2,14 +2,11 @@ import { pipe } from "fp-ts/function";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
+import { durationToMs } from "../date-time";
 import { type AppError, format, of } from "../errors";
 import type { Logger } from "../logger/logger";
 import type { Command, TapCoords, Workflow } from "../workflow/workflow";
 import { findWorkflow } from "../workflow/workflow";
-
-// -------------------------------------------------------------------------------------
-// Model
-// -------------------------------------------------------------------------------------
 
 export interface WorkflowEnv {
   readonly logger: Logger;
@@ -29,23 +26,17 @@ export interface CommandCapabilities {
   readonly waitForActivity: (activity: string) => TE.TaskEither<WorkflowError, void>;
 }
 
-// -------------------------------------------------------------------------------------
-// Error
-// -------------------------------------------------------------------------------------
-
-export interface WorkflowError extends AppError<"WorkflowError"> {}
+// `cause`: preserva l'errore sottostante *con il suo tag* attraverso il mapping generico che
+// appiattisce tutto in un WorkflowError. Senza, un chiamante a valle non può più distinguere
+// un trasporto ADB incastrato (CommandTimeout) da un comando fallito normalmente (es. app non
+// trovata). Restando un AppError, ogni nuova regola di rimedio è un `.with({ type: "..." })` in più.
+export interface WorkflowError extends AppError<"WorkflowError"> {
+  readonly cause?: AppError;
+}
 
 export const workflowError = of("WorkflowError");
 
-// -------------------------------------------------------------------------------------
-// Effect type
-// -------------------------------------------------------------------------------------
-
 export type Effect<A> = RTE.ReaderTaskEither<WorkflowEnv, WorkflowError, A>;
-
-// -------------------------------------------------------------------------------------
-// Helpers
-// -------------------------------------------------------------------------------------
 
 const logInfo =
   (message: string): Effect<void> =>
@@ -69,6 +60,7 @@ const commandToString = (cmd: Command): string =>
     .with({ type: "waitForDevice" }, () => "waitForDevice")
     .with({ type: "waitForActivity" }, ({ activity }) => `waitForActivity(${activity})`)
     .with({ type: "run" }, ({ workflowName }) => `run(${workflowName})`)
+    .with({ type: "sleep" }, ({ duration }) => `sleep(${duration})`)
     .exhaustive();
 
 const liftCommand =
@@ -76,9 +68,9 @@ const liftCommand =
   ({ capabilities }) =>
     effect(capabilities);
 
-// -------------------------------------------------------------------------------------
-// Interpreters
-// -------------------------------------------------------------------------------------
+// Pausa pura: a differenza degli altri comandi, non passa da CommandCapabilities (nessuna
+// interazione col device), non fallisce mai.
+const sleep = (ms: number): Effect<void> => RTE.fromTask(() => new Promise<void>((resolve) => setTimeout(resolve, ms)));
 
 const interpretCommand = (cmd: Command): Effect<void> =>
   pipe(
@@ -104,6 +96,7 @@ const interpretCommand = (cmd: Command): Effect<void> =>
             RTE.flatMap((workflow) => interpretCommands(workflow.commands)),
           ),
         )
+        .with({ type: "sleep" }, ({ duration }) => sleep(durationToMs(duration)))
         .exhaustive(),
     ),
     RTE.tapError((error) => logError(`  X ${commandToString(cmd)} failed: ${format(error)}`)),
@@ -124,10 +117,6 @@ export const interpretCommands = (commands: readonly Command[]): Effect<void> =>
 
 // Esegue un workflow (la sua sequenza piatta di comandi, in ordine)
 export const interpretWorkflow = (workflow: Workflow): Effect<void> => interpretCommands(workflow.commands);
-
-// -------------------------------------------------------------------------------------
-// Recovery runner
-// -------------------------------------------------------------------------------------
 
 // Esegue un workflow per nome, risolto dall'elenco dei workflow disponibili
 export const run = (workflows: readonly Workflow[], workflowName: string): Effect<void> => {

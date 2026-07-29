@@ -5,11 +5,7 @@ import { match } from "ts-pattern";
 import type { AdbConnectionMachineEnv } from "./interpret";
 import type { ConnectionEvent, ConnectionState } from "./model";
 
-// -------------------------------------------------------------------------------------
-// Tracing - visibilità automatica sulle transizioni di fase (debugging)
-// -------------------------------------------------------------------------------------
-// Logga solo quando cambia la "fase" (`_tag`): i passaggi interni alla stessa fase
-// (es. handshake temporaneo ok -> configura tcpip) non generano rumore.
+// Tracing: logga solo quando cambia la "fase" (`_tag`), non i passaggi interni alla stessa fase.
 
 const describeState = (state: ConnectionState): string =>
   match(state)
@@ -41,8 +37,7 @@ export const onTransition: Machine.TransitionHook<AdbConnectionMachineEnv, never
       ? TE.right(undefined)
       : TE.fromIO(
           (isRegression(from, to)
-            ? //
-              env.logger.child("ADB-Connection").error
+            ? env.logger.child("ADB-Connection").error
             : env.logger.child("ADB-Connection").info)(
             `State Machine\n  -> Event = [${describeEvent(event)}]\n  -> Transition = [${describeState(from)} -> ${describeState(to)}]`,
           ),

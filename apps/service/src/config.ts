@@ -8,10 +8,6 @@ import * as TE from "fp-ts/TaskEither";
 import { parse as parseJsonc } from "jsonc-parser";
 import type * as Args from "./args";
 
-// -------------------------------------------------------------------------------------
-// Config fetcher
-// -------------------------------------------------------------------------------------
-
 export interface FetchError extends Errors.AppError<"FetchError"> {}
 
 export type ConfigFetcher = () => TE.TaskEither<FetchError, unknown>;
@@ -35,12 +31,8 @@ const fromUrl =
 export const toFetcher = (source: Args.ConfigSource): ConfigFetcher =>
   source.type === "file" ? fromFile(source.path) : fromUrl(source.url);
 
-// -------------------------------------------------------------------------------------
-// Config loading
-//
-// Un decode fallito è una ValidationError come qualsiasi altro decode io-ts nel
-// progetto - niente LoadError dedicato per la stessa identica causa.
-// -------------------------------------------------------------------------------------
+// Un decode fallito è una ValidationError come qualsiasi altro decode io-ts - niente
+// LoadError dedicato per la stessa identica causa.
 
 export const load = (fetcher: ConfigFetcher): TE.TaskEither<Validation.ValidationError | FetchError, Config.Service> =>
   pipe(fetcher(), TE.flatMapEither(Config.decode));

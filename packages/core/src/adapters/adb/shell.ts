@@ -1,17 +1,14 @@
-import type * as Errors from "@supervisor/core/errors";
+import * as Errors from "@supervisor/core/errors";
 import type * as Logger from "@supervisor/core/logger/logger";
 import * as A from "fp-ts/Array";
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
 import * as RTE from "fp-ts/ReaderTaskEither";
+import * as TE from "fp-ts/TaskEither";
 import { match, P } from "ts-pattern";
 import * as Network from "../../network";
 import * as Shell from "../../shell";
-
-// -------------------------------------------------------------------------------------
-// Model
-// -------------------------------------------------------------------------------------
 
 export interface AdbEnv {
   readonly logger: Logger.Tagged;
@@ -47,19 +44,22 @@ export const matchDeviceState = (raw: string): O.Option<Status> =>
     )
     .otherwise(() => O.none);
 
-// -------------------------------------------------------------------------------------
-// Shell runner
-// -------------------------------------------------------------------------------------
+// Limite di default per ogni comando ADB "one-shot": senza, un transport incastrato (adb
+// devices lo riporta ancora come "device" ma non risponde più) blocca per sempre il comando e
+// tutto ciò che lo aspetta. Esplicitamente escluso per `waitForState`: quei comandi sono
+// bloccanti-per-design (aspettano un cambio di stato reale, non un timeout applicativo).
+const DEFAULT_COMMAND_TIMEOUT_MS = 15_000;
 
 const run =
-  (args: readonly string[], target?: Network.Endpoint): Effect<string> =>
+  (
+    args: readonly string[],
+    target?: Network.Endpoint,
+    timeoutMs: number | undefined = DEFAULT_COMMAND_TIMEOUT_MS,
+  ): Effect<string> =>
   ({ logger, spawn: shell }) =>
-    Shell.run("adb", target ? ["-s", Network.format(target), ...args] : [...args])({ spawn: shell, logger });
+    Shell.run("adb", target ? ["-s", Network.format(target), ...args] : [...args], timeoutMs)({ spawn: shell, logger });
 
-// -------------------------------------------------------------------------------------
-// Parser - `adb devices` output
-// -------------------------------------------------------------------------------------
-// Output format:
+// Parser per `adb devices`. Output format:
 //   List of devices attached
 //   192.168.1.4:5555\tdevice -> catturato
 //   emulator-5554\toffline   -> escluso
@@ -87,10 +87,6 @@ const parseDevices = (stdout: string): Device[] =>
     A.filterMap(parseDevicesLine),
   );
 
-// -------------------------------------------------------------------------------------
-// Public API - Connection & device state
-// -------------------------------------------------------------------------------------
-
 export const getState = (target: Network.Endpoint): Effect<Status> =>
   pipe(
     run(["get-state"], target),
@@ -105,80 +101,74 @@ export const getState = (target: Network.Endpoint): Effect<Status> =>
     ),
   );
 
-// Pair
 export const pair =
   (pairingCode: string) =>
   (target: Network.Endpoint): Effect<void> =>
     pipe(run(["pair", Network.format(target), pairingCode]), RTE.asUnit);
 
-// Connect
 export const connect = (target: Network.Endpoint): Effect<void> =>
   pipe(run(["connect", Network.format(target)]), RTE.asUnit);
 
-// Disconnect
 export const disconnect = (target: Network.Endpoint): Effect<void> =>
   pipe(run(["disconnect", Network.format(target)]), RTE.asUnit);
 
-// TCP-IP protocol set
+// Variante best-effort di `disconnect`: un fallimento non è mai bloccante - si sta ripulendo una
+// entry di transport che potrebbe benissimo non esistere più, e l'obiettivo (nessun transport
+// stale verso quel target) è raggiunto comunque. Si logga soltanto.
+// Usata sia per gli host stray sia per l'intent Disconnect della macchina android-bridge.
+export const disconnectQuietly =
+  (target: Network.Endpoint): RTE.ReaderTaskEither<AdbEnv, never, void> =>
+  (env) =>
+    pipe(
+      disconnect(target)(env),
+      TE.orElseFirstIOK((error) =>
+        env.logger.error(`Disconnect failed for ${Network.format(target)}: ${Errors.format(error)}`),
+      ),
+      TE.orElse((): TE.TaskEither<never, void> => TE.right(undefined)),
+    );
+
 export const tcpip =
   (port: number) =>
   (target: Network.Endpoint): Effect<void> =>
     pipe(run(["tcpip", String(port)], target), RTE.asUnit);
 
-// List connected devices with their status
 export const devices: Effect<Device[]> = pipe(run(["devices"]), RTE.map(parseDevices));
 
-// Wait for a device to reach a specific state (e.g., "device" or "disconnect")
+// Wait for a device to reach a specific state - nessun timeout: bloccante per design, a
+// differenza di tutti gli altri comandi (vedi DEFAULT_COMMAND_TIMEOUT_MS).
 export const waitForState =
   (state: Status) =>
   (target: Network.Endpoint): Effect<void> =>
-    pipe(run([`wait-for-${state}`], target), RTE.asUnit);
+    pipe(run([`wait-for-${state}`], target, undefined), RTE.asUnit);
 
 export const waitForDevice = waitForState("device");
 export const waitForDisconnect = waitForState("disconnect");
 
-// -------------------------------------------------------------------------------------
-// Public API - Power control
-// -------------------------------------------------------------------------------------
-
-// Reboot the device
 export const reboot = (target: Network.Endpoint): Effect<void> => pipe(run(["reboot"], target), RTE.asUnit);
 
-// -------------------------------------------------------------------------------------
-// Public API - Input & UI interaction
-// -------------------------------------------------------------------------------------
-
-// Wake the screen up (KEYCODE_WAKEUP = 224, does not toggle off if already on)
+// KEYCODE_WAKEUP = 224, non fa toggle-off se lo schermo è già acceso
 export const wakeUp = (target: Network.Endpoint): Effect<void> =>
   pipe(run(["shell", "input", "keyevent", "KEYCODE_WAKEUP"], target), RTE.asUnit);
 
-// Dismiss keyguard (swipe up gesture for non-secure lockscreen)
+// Swipe up - funziona solo su lockscreen non sicura (senza PIN)
 export const dismissKeyguard = (target: Network.Endpoint): Effect<void> =>
   pipe(run(["shell", "input", "swipe", "540", "1800", "540", "400", "300"], target), RTE.asUnit);
 
-// Tap at screen coordinates (x, y)
 export const inputTap =
   (x: number, y: number) =>
   (target: Network.Endpoint): Effect<void> =>
     pipe(run(["shell", "input", "tap", String(x), String(y)], target), RTE.asUnit);
 
-// -------------------------------------------------------------------------------------
-// Public API - App lifecycle
-// -------------------------------------------------------------------------------------
-
-// Launch an app by package id
 export const launchApp =
   (packageId: string) =>
   (target: Network.Endpoint): Effect<void> =>
     pipe(run(["shell", "monkey", "-p", packageId, "-c", "android.intent.category.LAUNCHER", "1"], target), RTE.asUnit);
 
-// Force-stop an app by package id
 export const forceStopApp =
   (packageId: string) =>
   (target: Network.Endpoint): Effect<void> =>
     pipe(run(["shell", "am", "force-stop", packageId], target), RTE.asUnit);
 
-// Force-stop and then start an app by package id
 export const restartApp =
   (packageId: string) =>
   (target: Network.Endpoint): Effect<void> =>
@@ -188,24 +178,18 @@ export const restartApp =
       RTE.asUnit,
     );
 
-// Open a URL in the default browser via ACTION_VIEW intent
+// ACTION_VIEW intent
 export const openUrl =
   (url: string) =>
   (target: Network.Endpoint): Effect<void> =>
     pipe(run(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", url], target), RTE.asUnit);
 
-// Open the "Developement Settings" screen (Settings > System > Development)
+// Settings > System > Development
 export const openDeveloperSettings = (target: Network.Endpoint): Effect<void> =>
   pipe(run(["shell", "am", "start", "-a", "android.settings.APPLICATION_DEVELOPMENT_SETTINGS"], target), RTE.asUnit);
 
-// -------------------------------------------------------------------------------------
-// Public API - Activity / window introspection
-// -------------------------------------------------------------------------------------
-
-// Get the currently focused (foreground) app activity
-// Uses `dumpsys window` and reads `mFocusedApp` which reports the actual foreground activity
-// even when system UI (NotificationShade, etc.) has window focus.
-// Format: "mFocusedApp=ActivityRecord{hash u0 com.pkg/com.pkg.Activity} ..."
+// Usa `dumpsys window`/`mFocusedApp`: riporta il vero foreground anche quando la system UI
+// (NotificationShade, ecc.) ha il window focus.
 export const getResumedActivity = (target: Network.Endpoint): Effect<O.Option<string>> =>
   pipe(
     run(["shell", "dumpsys", "window"], target),

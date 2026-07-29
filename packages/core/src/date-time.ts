@@ -3,12 +3,7 @@ import * as Ord from "fp-ts/Ord";
 import * as t from "io-ts";
 import { match } from "ts-pattern";
 
-// -------------------------------------------------------------------------------------
-// Constants
-// -------------------------------------------------------------------------------------
-
 // Start of week = monday
-
 export const DayOfWeek = t.union([
   t.literal("monday"),
   t.literal("tuesday"),
@@ -32,10 +27,7 @@ export const toDayNumber = (day: DayOfWeek): number =>
     .with("sunday", () => 6)
     .exhaustive();
 
-// -------------------------------------------------------------------------------------
 // TimeString - format "HH:MM" (00-23:00-59) -> [hour, minute]
-// -------------------------------------------------------------------------------------
-
 const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 const isValidTime = (t: string): t is TimeString => TIME_REGEX.test(t);
@@ -72,10 +64,7 @@ export const getDay = (date: Date): number => {
   return jsDay === 0 ? 6 : jsDay - 1;
 };
 
-// -------------------------------------------------------------------------------------
 // DurationString - format "Ns", "Nm", "Nh" (seconds, minutes, hours) -> milliseconds
-// -------------------------------------------------------------------------------------
-
 const DURATION_REGEX = /^(\d+(?:\.\d+)?)(ms|s|m|h)$/;
 
 const DURATION_MULTIPLIERS: Record<string, number> = {

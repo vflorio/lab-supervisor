@@ -8,10 +8,6 @@ import { pipe } from "fp-ts/lib/function";
 import * as TE from "fp-ts/TaskEither";
 import { WebSocketServer } from "ws";
 
-// -------------------------------------------------------------------------------------
-// Server
-// -------------------------------------------------------------------------------------
-
 export interface Deps {
   readonly services: Services;
   readonly logger: Logger.Tagged;

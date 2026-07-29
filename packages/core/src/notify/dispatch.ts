@@ -10,13 +10,9 @@ import type * as Logger from "../logger/logger";
 import type { NotifyLifecycle, NotifyRule } from "./model";
 import * as Template from "./template";
 
-// -------------------------------------------------------------------------------------
-// Dispatch - per ogni rule il cui `policy` include il lifecycle corrente:
-// logga e se il target è "slack" e `ctx.slack`  è presente (config.slack.active),
-// posta il messaggio via Services.Slack.postMessage.
-// Un fallimento di dispatch viene loggato e inghiottito:
-// una notifica persa non deve mai far fallire il motore che la genera
-// -------------------------------------------------------------------------------------
+// Per ogni rule il cui `policy` include il lifecycle corrente: logga e, se il target è
+// "slack" e `ctx.slack` è presente, posta il messaggio. Un fallimento di dispatch viene
+// loggato e inghiottito: una notifica persa non deve mai far fallire il motore che la genera.
 
 export interface NotifyContext {
   readonly logger: Logger.Tagged;
@@ -42,8 +38,8 @@ const describeSlackResult = (result: SlackDispatchResult): string =>
 
 export interface NotifyDispatchResult {
   readonly rule: NotifyRule;
-  // rule.message dopo la sostituzione dei placeholder (vedi ./template.ts) - il testo
-  // effettivamente postato/emesso, non il template grezzo
+  // rule.message dopo la sostituzione dei placeholder - il testo effettivamente postato/emesso,
+  // non il template grezzo
   readonly message: string;
   readonly slack: SlackDispatchResult;
 }

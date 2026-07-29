@@ -19,21 +19,13 @@ import * as RecoveryEngine from "./recovery/engine";
 import * as Registry from "./registry";
 import * as SuitestTracking from "./suitest/tracking";
 
-// -------------------------------------------------------------------------------------
-// Active Lifecycle
-//
-// Tutto ciò che esiste solo mentre il servizio è "active" secondo l'ActivationSchedule:
-// i tracker ADB/Suitest, l'orchestrator android-bridge (sottoscrive adbDeviceStream)
-// e il sync del registry.
-//
+// Active Lifecycle: tutto ciò che esiste solo mentre il servizio è "active" secondo
+// l'ActivationSchedule - tracker ADB/Suitest, orchestrator android-bridge, sync del registry.
 // `deactivateActiveLifecycle` richiede in input esattamente il valore ritornato da
-// `createActiveLifecycle`: non esiste un modo di fermare risorse che non si è prima
-// ottenute da una create riuscita (il chiamante non può costruirsi un ActiveLifecycle
-// a mano, i suoi campi sono derivati dalle singole create dei tracker).
-// -------------------------------------------------------------------------------------
+// `createActiveLifecycle`: non si possono fermare risorse che non si sono prima ottenute
+// da una create riuscita.
 
 export interface Policies {
-  readonly adbReconnectPolicy: RetryPolicy.Policy;
   readonly adbTrackingPolicy: RetryPolicy.Policy;
   readonly suitestCameraTrackingPolicy: RetryPolicy.Policy;
   readonly suitestControlUnitTrackingPolicy: RetryPolicy.Policy;
@@ -55,15 +47,16 @@ export interface ActiveLifecycle {
   readonly adbTracking: IntervalLoop.Handle;
   readonly suitestTracking: IntervalLoop.Handle;
   readonly androidBridge: AndroidBridgeOrchestrator.Handle;
-  readonly reconcileLoop: IntervalLoop.Handle;
+  readonly adbReconciler: IntervalLoop.Handle;
   readonly recovery: RecoveryEngine.Handle;
 }
 
 export type CreateError = Registry.SyncError | RecoveryEngine.StartError;
 
-// -------------------------------------------------------------------------------------
-// Internal
-// -------------------------------------------------------------------------------------
+// Cadenza del tick di reconcile dell'AndroidBridge - non configurabile: un giro costa solo
+// `Registry.read` (locale) più, per camera Disconnected, un tentativo già limitato/backoff-ato
+// dalla propria policy di retry. Un tick più fitto non costa una richiesta esterna in più.
+const ADB_RECONCILE_TICK_MS = 5000;
 
 const readRegistry = (env: Env) =>
   Registry.read({
@@ -74,22 +67,27 @@ const readRegistry = (env: Env) =>
     fsEnv: Node.fsEnv,
   });
 
-const createReconcileLoop = (env: Env, androidBridge: AndroidBridgeOrchestrator.Handle): IntervalLoop.Handle => {
+const createAdbReconciler = (env: Env, androidBridge: AndroidBridgeOrchestrator.Handle): IntervalLoop.Handle => {
   const reconcileLog = env.logger.child("AndroidBridge");
 
   const tick = pipe(
     readRegistry(env),
-    TE.orElseFirstIOK((error) => reconcileLog.error(`Reconcile: registry read failed - ${Errors.format(error)}`)),
+    TE.orElseFirstIOK((error) => reconcileLog.error(`registry read failed - ${Errors.format(error)}`)),
     TE.flatMap((registry) =>
       pipe(
         androidBridge.reconcile(registry.lab),
-        TE.orElseFirstIOK((error) => reconcileLog.error(`Reconcile failed: ${Errors.format(error)}`)),
+        TE.orElseFirstIOK((error) => reconcileLog.error(`reconcile failed: ${Errors.format(error)}`)),
       ),
     ),
     TE.match(constVoid, constVoid),
   );
 
-  return IntervalLoop.create(reconcileLog, Retry.constantDelay(5000), tick, "(AndroidBridge) reconcile");
+  return IntervalLoop.create(
+    reconcileLog,
+    Retry.constantDelay(ADB_RECONCILE_TICK_MS),
+    tick,
+    "(AndroidBridge) reconcile",
+  );
 };
 
 const createRecovery = (
@@ -104,6 +102,7 @@ const createRecovery = (
       recoveryStream: env.recoveryStream,
       notifyStream: env.notifyStream,
       activityStream: env.activityStream,
+      androidBridge: resources.androidBridge,
     }),
     TE.fromEither,
     TE.map((recovery): ActiveLifecycle => ({ ...resources, recovery })),
@@ -119,11 +118,12 @@ const createResources =
         logger: env.logger.child("AndroidBridge"),
         spawn: Node.spawn,
         adbPort: env.config.adb.port,
-        adbReconnectPolicy: env.policies.adbReconnectPolicy,
         activityStream: env.activityStream,
       },
       env.adbDeviceStream,
     );
+
+    const adbReconciler = createAdbReconciler(env, androidBridge);
 
     const adbTracking = AdbTracking.create({
       logger: trackingLog,
@@ -144,15 +144,13 @@ const createResources =
       },
     });
 
-    const reconcileLoop = createReconcileLoop(env, androidBridge);
-
-    return { androidBridge, adbTracking, suitestTracking, reconcileLoop };
+    return { androidBridge, adbTracking, suitestTracking, adbReconciler };
   };
 
-const startBackgroundLoops = ({ adbTracking, suitestTracking, reconcileLoop }: ActiveLifecycle): IO.IO<void> =>
+const startBackgroundLoops = ({ adbTracking, suitestTracking, adbReconciler }: ActiveLifecycle): IO.IO<void> =>
   IntervalLoop.detach(
     pipe(
-      [adbTracking.start, suitestTracking.start, reconcileLoop.start],
+      [suitestTracking.start, adbTracking.start, adbReconciler.start],
       TE.traverseArray(flow(IntervalLoop.detach, TE.fromIO)),
     ),
   );
@@ -161,7 +159,7 @@ const stopResources = ({
   adbTracking,
   suitestTracking,
   androidBridge,
-  reconcileLoop,
+  adbReconciler,
   recovery,
 }: ActiveLifecycle): IO.IO<void> =>
   pipe(
@@ -169,13 +167,9 @@ const stopResources = ({
     IO.flatMap(() => recovery.stop),
     IO.flatMap(() => adbTracking.stop),
     IO.flatMap(() => suitestTracking.stop),
-    IO.flatMap(() => reconcileLoop.stop),
+    IO.flatMap(() => adbReconciler.stop),
     IO.flatMap(() => androidBridge.stop),
   );
-
-// -------------------------------------------------------------------------------------
-// Public
-// -------------------------------------------------------------------------------------
 
 export const createActiveLifecycle = (env: Env): TE.TaskEither<CreateError, ActiveLifecycle> =>
   pipe(

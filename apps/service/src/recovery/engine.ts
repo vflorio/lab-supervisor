@@ -1,6 +1,7 @@
 import type * as Activity from "@supervisor/core/activity/stream";
 import type { SlackConfig } from "@supervisor/core/adapters/slack";
 import type * as ConfigModel from "@supervisor/core/config";
+import { durationToMs } from "@supervisor/core/date-time";
 import type * as Logger from "@supervisor/core/logger/logger";
 import * as NotifyDispatch from "@supervisor/core/notify/dispatch";
 import type { NotifyLifecycle, NotifyRule } from "@supervisor/core/notify/model";
@@ -15,25 +16,22 @@ import * as O from "fp-ts/Option";
 import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
+import type * as AndroidBridgeOrchestrator from "../android-bridge";
 import * as Node from "../node";
 import * as Registry from "../registry";
 import type * as Workflow from "../workflow";
 import * as Capabilities from "./capabilities";
 import * as Target from "./target";
 
-// -------------------------------------------------------------------------------------
-// Composizione a livello di ActiveLifecycle:
-// una Recovery.start per ogni RecoveryPolicy configurata (config.recovery, opzionale)
-// - ognuna osserva solo il proprio dominio (Recovery.start filtra già sul policy.domain)
-//  sullo stesso PredicateFeed, ed emette sullo stesso RecoveryStream.
-//
-// Ogni transizione di stato alimenta anche il notify dispatcher :
-// "immediate" quando il tripwire scatta (entra in "recovering"), "exhausted" quando i retry
-// sono esauriti senza successo o la pipeline fallisce con un errore vero ("fatalError" riusa
-// lo stesso NotifyLifecycle - merita almeno la stessa attenzione di un retry esaurito) -
-// nessun altro stato genera notifiche.
-// -------------------------------------------------------------------------------------
+// Una Recovery.start per ogni RecoveryPolicy configurata (opzionale), ognuna filtrata sul
+// proprio dominio, sullo stesso PredicateFeed, che emette sullo stesso RecoveryStream.
+// Ogni transizione di stato alimenta anche il notify dispatcher: "immediate" quando il
+// tripwire scatta, "exhausted" quando i retry sono esauriti o la pipeline fallisce
+// (fatalError riusa lo stesso lifecycle) - nessun altro stato notifica.
 
+// Cadenza del tick di ri-osservazione di ogni RecoveryRunner - non configurabile: serve solo
+// a rilevare un grace period scaduto anche senza nuovi fatti dal predicate feed (nessun I/O
+// proprio). Un tick più fitto costa solo CPU locale, non richieste esterne.
 const TICK_POLICY: RetryPolicy.Policy = RetryPolicy.constantDelay(1000);
 
 export interface Env {
@@ -43,23 +41,19 @@ export interface Env {
   readonly recoveryStream: Recovery.RecoveryStream;
   readonly notifyStream: NotifyStream.NotifyStream;
   readonly activityStream: Activity.ActivityStream;
+  readonly androidBridge: AndroidBridgeOrchestrator.Handle;
 }
 
 export type StartError = PolicyDecodeError;
 
 export interface Handle {
   readonly stop: () => void;
-  // Riarma il tripwire di un'entità dopo un esaurimento dei retry (intervento manuale) -
-  // instrada verso il RecoveryRunnerHandle della policy corrispondente. `false` se la policy
-  // non esiste (più) o se l'entità non è mai stata osservata da quella policy.
+  // Riarma il tripwire di un'entità dopo un esaurimento dei retry (intervento manuale).
+  // `false` se la policy non esiste o l'entità non è mai stata osservata da quella policy.
   readonly reset: (policyLabel: string, entityId: string, tripwireIndex: number) => boolean;
 }
 
-// Deriva il NotifyLifecycle (se presente) dal tag di TripwireState raggiunto -
-// "immediate" quando il tripwire scatta (entra in "recovering")
-// "exhausted" quando i retry sono esauriti O la pipeline fallisce con un errore vero
-// (fatalError riusa lo stesso lifecycle: nessun NotifyLifecycle dedicato per ora, vedi TODO)
-// nessun altro stato notifica (in particolare un ritorno a "healthy" non notifica).
+// Deriva il NotifyLifecycle dal tag di TripwireState raggiunto; un ritorno a "healthy" non notifica.
 const lifecycleOf = (tag: Recovery.TripwireState["tag"]): O.Option<NotifyLifecycle> =>
   match(tag)
     .with("recovering", (): O.Option<NotifyLifecycle> => O.some("immediate"))
@@ -89,11 +83,12 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
       seedDevices: env.config.registry.devices,
       fsEnv: Node.fsEnv,
     },
+    androidBridge: env.androidBridge,
+    waitForDeviceTimeoutMs: durationToMs(env.config.adb.waitForDeviceTimeout),
   };
 
-  // Descrive l'entità coinvolta (label/ip leggibili, oltre al solo entityId) per i
-  // placeholder del messaggio (vedi NotifyRule.message / notify/template.ts) - un fallimento
-  // di lettura registry ricade sul solo entityId invece di far fallire la notifica.
+  // Descrive l'entità (label/ip leggibili) per i placeholder del messaggio di notifica; un
+  // fallimento di lettura registry ricade sul solo entityId invece di far fallire la notifica.
   const describeSource = (source: NotifyStream.NotifyEventSource): T.Task<Target.EntityDescriptor> =>
     pipe(
       Registry.read(capabilitiesEnv.registryEnv),
@@ -101,8 +96,7 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
       TE.getOrElse(() => T.of<Target.EntityDescriptor>({ id: source.entityId, label: source.entityId, ip: "unknown" })),
     );
 
-  // Dispatcha un lifecycle e pubblica ogni esito sul NotifyStream.
-  // Un Task singolo e limitato (una POST Slack per rule)
+  // Dispatcha un lifecycle e pubblica ogni esito sul NotifyStream (un Task per rule).
   const notify = (
     source: NotifyStream.NotifyEventSource,
     lifecycle: NotifyLifecycle,
@@ -169,11 +163,8 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
                 () => {},
                 (lifecycle) => {
                   const rules = policy.tripwires[tripwireIndex]?.notify ?? [];
-                  // onStatus è un callback sincrono del motore di recovery (deriva da un IO
-                  // dentro entity-runner.ts) - non può essere await-ato qui. Il dispatch
-                  // resta comunque un Task singolo e breve (una richiesta HTTP per rule),
-                  // non un loop di lunga durata come IntervalLoop: "detach and forget" è
-                  // sufficiente, non serve un Handle/stop dedicato.
+                  // onStatus è un callback sincrono, non può essere await-ato: detach and
+                  // forget, il dispatch resta comunque breve (una richiesta HTTP per rule).
                   void notify(source, lifecycle, rules)();
                 },
               ),

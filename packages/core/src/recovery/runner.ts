@@ -13,12 +13,9 @@ import * as EntityRunner from "./entity-runner";
 import type { RecoveryPolicy } from "./model";
 import type * as TripwireMachine from "./tripwire-machine";
 
-// -------------------------------------------------------------------------------------
-// Orchestrazione multi-entità: osserva il PredicateFeed dal vivo, filtra per il dominio
-// della policy, crea un EntityRunner per ogni entityId incontrato e lo guida sia sui
-// cambi di predicato sia su un tick periodico (necessario per rilevare un grace period
-// scaduto anche quando nessun nuovo fatto arriva).
-// -------------------------------------------------------------------------------------
+// Orchestrazione multi-entità: osserva il PredicateFeed dal vivo, filtra per il dominio della
+// policy, crea un EntityRunner per ogni entityId incontrato e lo guida sia sui cambi di
+// predicato sia su un tick periodico (per rilevare un grace period scaduto anche senza nuovi fatti).
 
 export interface RecoveryRunnerEnv {
   readonly logger: Logger.Tagged;
@@ -99,7 +96,6 @@ export const start = (
         async () => {
           for (const entityId of factsByEntity.keys()) await observeEntity(entityId);
         },
-        //  `RecoveryRunner:${policy.label}`,
       );
 
       // Avvia il loop in background

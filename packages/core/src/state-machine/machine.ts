@@ -3,16 +3,10 @@ import * as O from "fp-ts/Option";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as RA from "fp-ts/ReadonlyArray";
 
-// -------------------------------------------------------------------------------------
-// Model - state machine: reducer + comandi dichiarativi
-// -------------------------------------------------------------------------------------
-
-// Non è specifico ad alcun dominio: S (stato), E (evento) e C (comando) sono ADT
-// (discriminated union tag).
-// Il reducer decide SOLO "cosa succede", mai "come farlo succedere":
-// produce un nuovo stato più una lista di comandi, cioè descrizioni di effetti da eseguire.
-// L'esecuzione effettiva (I/O) è delegata al CommandHandler isolato,
-// che a sua volta può reimmettere nuovi eventi (feedback loop) interpretati da `dispatch`.
+// State machine generica: non è specifico ad alcun dominio, S/E/C (stato/evento/comando)
+// sono ADT. Il reducer decide SOLO "cosa succede", mai "come farlo succedere": produce un
+// nuovo stato più una lista di comandi (descrizioni di effetti). L'esecuzione (I/O) è
+// delegata al CommandHandler isolato, che può reimmettere nuovi eventi interpretati da `dispatch`.
 
 // Esito di una transizione pura: nuovo stato + comandi da eseguire
 export interface Transition<S, C> {
@@ -69,15 +63,10 @@ export const composeTransitionHooks = <Env, Error, State, Event>(
     O.toUndefined,
   );
 
-// -------------------------------------------------------------------------------------
-// Orchestratore / interprete dichiarativo
-// -------------------------------------------------------------------------------------
-// dispatch applica un evento allo stato corrente tramite il reducer,
-// poi esegue in sequenza i comandi generati.
-// Ogni comando può produrre nuovi eventi, che vengono ridispatchati ricorsivamente
-// sullo stesso riduttore fino al punto fisso (nessun nuovo evento prodotto).
-// L'orchestratore stesso non contiene logica di dominio: si limita a
-// far girare il ciclo comando -> effetto -> evento -> transizione.
+// dispatch applica un evento allo stato corrente tramite il reducer, poi esegue in sequenza
+// i comandi generati. Ogni comando può produrre nuovi eventi, ridispatchati ricorsivamente
+// sullo stesso reducer fino al punto fisso. L'orchestratore non contiene logica di dominio:
+// si limita a far girare il ciclo comando -> effetto -> evento -> transizione.
 
 export const dispatch =
   <Environment, Error, State, Event, Command>(machine: Machine<Environment, Error, State, Event, Command>) =>

@@ -4,9 +4,7 @@ import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
 import * as RA from "fp-ts/ReadonlyArray";
 
-// -------------------------------------------------------------------------------------
 // Gating: quali host ADB il discovery/connection deve considerare
-// -------------------------------------------------------------------------------------
 
 // Risolve la foreign key `adbId` nel registro `lab.adb` per ottenere il target ADB associato
 const resolveAdbTarget =
@@ -40,9 +38,8 @@ export const cameraHosts = (registry: LabRegistry): readonly string[] =>
   pipe(Object.values(registry.cameras), RA.filterMap(resolveAdbHost(registry)));
 
 // (id camera -> host ADB) delle camere controllate - usato per istanziare/ritentare le FSM
-// android-bridge all'avvio e ad ogni tick di reconcile (machines/android-bridge/orchestrator.ts).
-// Solo l'IP (non la porta registrata, che può essere stale): la connessione effettiva risolve
-// di nuovo la porta corrente via mDNS (target-resolution.ts).
+// android-bridge. Solo l'IP (non la porta registrata, che può essere stale): la connessione
+// effettiva risolve di nuovo la porta corrente via mDNS.
 export const controlledCameraHostsById = (registry: LabRegistry): ReadonlyMap<string, Network.Host> =>
   new Map(
     pipe(
