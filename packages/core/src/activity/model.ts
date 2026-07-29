@@ -1,13 +1,8 @@
-// -------------------------------------------------------------------------------------
-// Model - "cosa sta facendo l'entità in questo momento", una riga per (source, entityId):
-// a differenza dei predicati (valori osservati) o delle notifiche (eventi puntuali),
-// qui il valore interessante è lo STATO CORRENTE di ogni sottosistema
-// che agisce su un'entità - da cui il ring buffer + "ultimo per chiave"
-//
-// `entityId` è quello nativo della fonte (nessuna canonicalizzazione sul registry in
-// questa fase): la stessa entità fisica può comparire con entityId diversi tra fonti
-// diverse finché una fase successiva non li unifica.
-// -------------------------------------------------------------------------------------
+// "Cosa sta facendo l'entità in questo momento", una riga per (source, entityId): a differenza
+// dei predicati (valori osservati) o delle notifiche (eventi puntuali), qui interessa lo stato
+// corrente di ogni sottosistema che agisce su un'entità.
+// `entityId` è quello nativo della fonte, senza canonicalizzazione: la stessa entità fisica può
+// comparire con id diversi tra fonti diverse finché una fase successiva non li unifica.
 
 export type ActivitySource = "recovery" | "adb" | "workflow";
 

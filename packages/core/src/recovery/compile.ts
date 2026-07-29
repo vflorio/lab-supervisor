@@ -7,11 +7,9 @@ import type { Policy } from "../retry/retry";
 import type { Pipeline } from "../workflow/pipeline";
 import type { RecoveryTripwire } from "./model";
 
-// -------------------------------------------------------------------------------------
 // Prepara un RecoveryTripwire per l'esecuzione: decodifica la retry policy (può fallire, quindi
-// va fatto una volta sola in anticipo, non per ogni entità) e compila predicate/grace.
-// Indipendente dall'entità - riutilizzabile per ogni device visto nel dominio della policy.
-// -------------------------------------------------------------------------------------
+// va fatto una volta sola in anticipo) e compila predicate/grace. Indipendente dall'entità -
+// riutilizzabile per ogni device visto nel dominio della policy.
 
 export interface CompiledTripwire {
   readonly graceMs: number;

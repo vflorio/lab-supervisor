@@ -14,9 +14,8 @@ export * from "./model";
 // =========================================================================================
 //
 // Layer applicativo sopra target-resolution/adb-connection: rappresenta il ciclo di vita di
-// UNA camera controlled (vedi orchestrator.ts per la gestione multi-camera).
-// Non conosce i dettagli di mDNS/ADB - delega tutto a TargetResolution.connect (vedi interpret.ts)
-// e si limita a tradurne l'esito in "posso accettare comandi per questa camera adesso?".
+// UNA camera controlled. Non conosce i dettagli di mDNS/ADB - delega tutto a
+// TargetResolution.connect e si limita a tradurne l'esito in "posso accettare comandi adesso?".
 //
 // STATES     Connecting{id, host}   Idle{id, target}   Disconnecting{id, host}
 //            Disconnected{id, host, reason}
@@ -38,7 +37,7 @@ export * from "./model";
 //     Idle          --> Disconnecting: TransportSuspect / Disconnect
 //     Disconnecting --> Disconnected : ConnectionLost
 // -----------------------------------------------------------------------------------------
-// TRANSITIONS  <FROM> -> <EVENT> -> <TO> [/ <COMMAND>]     (definite in reduce.ts)
+// TRANSITIONS  <FROM> -> <EVENT> -> <TO> [/ <COMMAND>]     (definite nel reducer)
 //
 //   Disconnected  -> ReconnectRequested    -> Connecting    / Connect
 //   Connecting    -> ReconnectRequested    -> Connecting    / Connect

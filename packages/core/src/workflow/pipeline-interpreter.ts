@@ -5,12 +5,10 @@ import { type Effect, interpretCommands, type WorkflowEnv, workflowError } from 
 import type { Pipeline } from "./pipeline";
 import { findWorkflow, type Workflow } from "./workflow";
 
-// -------------------------------------------------------------------------------------
-// Interprete Pipeline: risolve un nome workflow, lo esegue e converte l'esito in booleano
-// (successo -> true, comando fallito -> false: un tentativo di recovery fallito non è un
-// errore). Un riferimento a un workflow inesistente resta invece un Left (config rotta).
-// and/or sequenziano con short-circuit (rispettivamente su false/true, come &&/||); not nega.
-// -------------------------------------------------------------------------------------
+// Risolve un nome workflow, lo esegue e converte l'esito in booleano (successo -> true,
+// comando fallito -> false: un tentativo di recovery fallito non è un errore). Un riferimento
+// a un workflow inesistente resta un Left (config rotta). and/or sequenziano con
+// short-circuit (rispettivamente su false/true, come &&/||); not nega.
 
 const interpretLeaf = (workflowName: string): Effect<boolean> =>
   pipe(

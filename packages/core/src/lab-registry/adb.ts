@@ -3,14 +3,9 @@ import * as t from "io-ts";
 import * as Network from "../network";
 import type { LabRegistry } from "./registry";
 
-// -------------------------------------------------------------------------------------
-// Model - target ADB registrato manualmente (host:port), referenziato per id da altre
-// entità (es. CameraEntry.adbId) invece di essere embeddato direttamente.
-//
-// `id` coincide con la forma stringa del target stesso (es. "192.168.1.4:5555"): è una
-// chiave naturale, coerente con `TvEntry` (chiave = ip) - registrare due volte lo stesso
-// target è quindi un upsert idempotente, senza bisogno di generare/deduplicare un id.
-// -------------------------------------------------------------------------------------
+// Target ADB registrato manualmente (host:port), referenziato per id da altre entità (es.
+// CameraEntry.adbId). `id` coincide con la forma stringa del target (es. "192.168.1.4:5555"):
+// è una chiave naturale, registrare due volte lo stesso target è quindi un upsert idempotente.
 
 export const AdbEntryCodec = t.type({
   id: t.string,
@@ -23,10 +18,6 @@ export type AdbEntry = t.TypeOf<typeof AdbEntryCodec>;
 export const AdbUpdateInputCodec = t.intersection([t.type({ id: t.string }), t.partial({ label: t.string })]);
 
 export type AdbUpdateInput = t.TypeOf<typeof AdbUpdateInputCodec>;
-
-// -------------------------------------------------------------------------------------
-// Combinators - ADB targets
-// -------------------------------------------------------------------------------------
 
 export const addAdbEntry =
   (entry: AdbEntry): Endomorphism<LabRegistry> =>

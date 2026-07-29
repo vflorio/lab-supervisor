@@ -4,13 +4,7 @@ import { match } from "ts-pattern";
 import { DurationString } from "../date-time";
 import type { Command, Workflow } from "./workflow";
 
-// -------------------------------------------------------------------------------------
-// Codecs
-// -------------------------------------------------------------------------------------
-
 const TapCoordsCodec = t.type({ x: t.number, y: t.number });
-
-// Command
 
 const isCommand = (u: unknown): u is Command => typeof u === "object" && u !== null && "type" in u;
 
@@ -97,9 +91,7 @@ export const CommandCodec = new t.Type<Command, unknown[], unknown>(
   encodeCommand,
 );
 
-// ----
 // Workflow - JSON: ["name", [[cmd], [cmd], ...]]
-
 const isWorkflow = (u: unknown): u is Workflow => typeof u === "object" && u !== null && "name" in u;
 
 const validateWorkflow = (u: unknown, c: t.Context): t.Validation<Workflow> => {

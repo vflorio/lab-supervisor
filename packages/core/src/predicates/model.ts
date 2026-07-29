@@ -1,11 +1,6 @@
-// -------------------------------------------------------------------------------------
-// Model - Predicati di monitoring
-// Un predicato è un fatto nominato su un'entità di un dominio monitorato
-// (es. "questa camera Suitest sta streammando").
-// Il valore è tipizzato (non solo booleano) per poter rappresentare anche stati a più valori
-// (es. lo status enum di un device Suitest)
-// senza dover derivare N booleani distinti per ogni possibile valore.
-// -------------------------------------------------------------------------------------
+// Un predicato è un fatto nominato su un'entità di un dominio monitorato (es. "questa camera
+// Suitest sta streammando"). Il valore è tipizzato, non solo booleano, per rappresentare
+// anche stati a più valori (es. lo status enum di un device) senza derivare N booleani distinti.
 
 export type PredicateValue = boolean | string | number;
 

@@ -18,9 +18,8 @@ const mapWorkflowError = (
   cause: error,
 });
 
-// Bound per waitForActivity: Retry.constantDelay da solo non esaurisce mai (vedi retry/retry.ts),
-// senza limitRetries un'activity che non torna mai in foreground (app crashata, nome sbagliato,
-// ecc.) farebbe girare il polling per sempre.
+// Bound per waitForActivity: Retry.constantDelay da solo non esaurisce mai - senza limitRetries
+// un'activity che non torna mai in foreground farebbe girare il polling per sempre.
 const WAIT_FOR_ACTIVITY_POLL_MS = 1_000;
 const WAIT_FOR_ACTIVITY_TIMEOUT_MS = 30_000;
 

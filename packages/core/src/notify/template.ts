@@ -1,10 +1,7 @@
-// -------------------------------------------------------------------------------------
-// Template - sostituzione minimale di placeholder `{{key}}` in un messaggio di notifica
-// (vedi model.ts: `NotifyRule.message`) con valori noti solo al momento del dispatch
-// (es. entityId/label/ip del device coinvolto - non disponibili in fase di configurazione).
-// Un placeholder senza corrispondenza in `vars` resta letterale invece di sparire: un
-// messaggio mal configurato deve essere visibile/debuggabile, non silenziosamente vuoto.
-// -------------------------------------------------------------------------------------
+// Sostituzione minimale di placeholder `{{key}}` con valori noti solo al momento del dispatch
+// (es. entityId/label/ip del device coinvolto). Un placeholder senza corrispondenza in `vars`
+// resta letterale invece di sparire: un messaggio mal configurato deve essere visibile, non
+// silenziosamente vuoto.
 
 const PLACEHOLDER = /\{\{\s*([\w.]+)\s*\}\}/g;
 

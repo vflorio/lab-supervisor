@@ -7,10 +7,6 @@ import * as N from "fp-ts/number";
 import * as S from "fp-ts/string";
 import * as t from "io-ts";
 
-// -------------------------------------------------------------------------------------
-// IP
-// -------------------------------------------------------------------------------------
-
 export type IP = string & { readonly _brand: "IP" };
 
 const IP_REGEX = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
@@ -26,10 +22,6 @@ export const IPCodec = new t.Type<IP, IP, unknown>(
 
 export const EqIP: Equality.Eq<IP> = S.Eq;
 
-// -------------------------------------------------------------------------------------
-// PORT
-// -------------------------------------------------------------------------------------
-
 export type PORT = number & { readonly _brand: "PORT" };
 
 const isPort = (u: unknown): u is PORT => typeof u === "number" && Number.isInteger(u) && u > 0 && u <= 65535;
@@ -43,10 +35,7 @@ export const PortCodec = new t.Type<PORT, PORT, unknown>(
 
 export const EqPort: Equality.Eq<PORT> = N.Eq;
 
-// -------------------------------------------------------------------------------------
-// Target = IP x PORT - validated "host:port" string <-> { ip, port } record
-// -------------------------------------------------------------------------------------
-
+// Endpoint = IP x PORT - validated "host:port" string <-> { ip, port } record
 export interface Endpoint {
   readonly ip: IP;
   readonly port: PORT;
@@ -94,10 +83,7 @@ export const withIp =
   (ip: IP): Endomorphism<Endpoint> =>
   (target) => ({ ...target, ip });
 
-// -------------------------------------------------------------------------------------
-// HOST = IP soltanto - un target di rete la cui porta non è (ancora) nota
-// (es. prima della risoluzione mDNS, vedi target-resolution)
-// -------------------------------------------------------------------------------------
+// Host = IP soltanto - un target di rete la cui porta non è (ancora) nota (es. prima della risoluzione mDNS)
 
 export interface Host {
   readonly ip: IP;

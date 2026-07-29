@@ -1,11 +1,5 @@
 import type * as Network from "@supervisor/core/network";
 
-// -------------------------------------------------------------------------------------
-// Model - Target Machine (vedi apps/docs/docs/android-bridge.mdx#target-machine)
-// -------------------------------------------------------------------------------------
-
-// State machine: le decisioni di flusso (quale stato segue quale evento)
-
 export type ConnectionState =
   | { readonly _tag: "Unknown"; readonly host: string }
   | { readonly _tag: "Temporary"; readonly target: Network.Endpoint }

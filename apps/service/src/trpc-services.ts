@@ -47,47 +47,28 @@ export const create = ({
   activityStream,
   resetRecovery,
 }: Deps): Trpc.Services => ({
-  // Servizio di logging persistente per web-app
   logger: trpcLog.child("web"),
-
-  // Servizio di gestione delle dispositivi android
   android: android(trpcLog, adbDeviceStream),
-
-  // Feed live delle notifiche dispatchate dal motore di recovery
   notifications: notifyStream,
-
-  // Feed live di "cosa sta facendo l'applicazione" per entità
   activity: activityStream,
-
-  // Servizio di gestione del registry dei device
   registry: registry(config.registry.dbPath),
 
-  // Config di servizio in sola lettura (già redatta - mai esporre credenziali raw)
+  // Già redatta - mai esporre credenziali raw
   settings: {
     getConfig: () => Config.redact(config),
   },
 
-  // tRPC (consumati dalle subscriptions per la web-app)
-
-  // Feed live dei log di servizio
   logs: logStream,
-  // Feed live dei predicati di monitoring
   tracking: predicateStream,
-  // Feed live delle transizioni di stato del motore di recovery
   recovery: recoveryStream,
-  // Riarma manualmente il tripwire di un'entità dopo un esaurimento dei retry
   recoveryReset: resetRecovery,
 });
 
 const android = (trpcLog: Logger.Tagged, stream: AdbStream.AdbDeviceStream): Trpc.Services["android"] => ({
-  // Recupera la lista dei device connessi tramite ADB
   devices: () => pipe(Adb.devices({ logger: trpcLog, spawn: Node.spawn }), TE.map(toDeviceSnapshot)),
-
-  // Riavvia un device tramite ADB
   reboot: (target) => Adb.reboot(target)({ logger: trpcLog, spawn: Node.spawn }),
 
-  // Live feed dei device ADB alimentato dal tracker centralizzato (apps/service/src/tracking/adb):
-  // consolidato qui per evitare che `android.devicesTail` ripolli `adb devices` per conto proprio
+  // Alimentato dal tracker centralizzato: evita che questo feed ripolli `adb devices` per conto proprio
   devicesFeed: {
     subscribe: (listener) => stream.subscribe((devices) => listener(toDeviceSnapshot(devices))),
     snapshot: () => toDeviceSnapshot(stream.snapshot()),

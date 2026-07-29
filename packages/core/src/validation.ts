@@ -4,13 +4,9 @@ import * as Option from "fp-ts/Option";
 import * as t from "io-ts";
 import { type AppError, of } from "./errors";
 
-// -------------------------------------------------------------------------------------
-// Validation
-//
 // Errore condiviso per ogni decodifica io-ts fallita nel progetto (config, db, risposte
 // paginate, ...): un solo tag "ValidationError" per un'unica causa semantica, invece di
 // un tipo diverso per ogni modulo che decodifica qualcosa.
-// -------------------------------------------------------------------------------------
 
 export interface ValidationError extends AppError<"ValidationError"> {}
 
@@ -24,14 +20,9 @@ export const validate =
   (data: unknown): E.Either<ValidationError, A> =>
     pipe(data, codec.decode, E.mapLeft(createValidationError));
 
-// -------------------------------------------------------------------------------------
-// Option<A> <-> nullable
-//
-// Per campi la cui chiave è sempre presente ma il cui valore può mancare (foreign key
-// opzionali): a differenza di `t.partial` (chiave assente = valore assente), qui la chiave
-// resta obbligatoria e il valore è `null` quando assente - reso esplicito a livello di tipo
-// come `Option<A>` invece di `A | undefined`.
-// -------------------------------------------------------------------------------------
+// Option<A> <-> nullable: per campi la cui chiave è sempre presente ma il cui valore può
+// mancare (foreign key opzionali) - a differenza di `t.partial` (chiave assente = valore
+// assente), qui la chiave resta obbligatoria e il valore è `null` quando assente.
 
 const isOptionShaped = (u: unknown): u is Option.Option<unknown> =>
   typeof u === "object" && u !== null && "_tag" in u && (u._tag === "None" || u._tag === "Some");

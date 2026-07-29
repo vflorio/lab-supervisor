@@ -1,15 +1,8 @@
-// -------------------------------------------------------------------------------------
-// Base ADT per gli errori applicativi.
-//
-// Ogni errore di dominio dichiara la propria interfaccia (`extends AppError<"Tag">`)
-// nel modulo che lo genera; solo i "verbi" davvero trasversali (I/O, rete, validazione)
-// vanno centralizzati qui per evitare N tipi strutturalmente identici con nomi diversi
-// (es. ValidationError vs PaginationError vs LoadError per la stessa identica causa).
-//
-// Il discriminante è `type`, coerente con la convenzione già in uso nel resto della
-// codebase (vedi workflow/workflow.ts `Command`) - così ts-pattern fa exhaustive
-// matching su tutti gli ADT del progetto allo stesso modo, errori inclusi.
-// -------------------------------------------------------------------------------------
+// Base ADT per gli errori applicativi. Ogni errore di dominio dichiara la propria interfaccia
+// (`extends AppError<"Tag">`) nel modulo che lo genera; solo i "verbi" davvero trasversali
+// (I/O, rete, validazione) vanno centralizzati qui per evitare N tipi strutturalmente
+// identici con nomi diversi. Il discriminante è `type`, stessa convenzione degli altri ADT
+// del progetto - così ts-pattern fa exhaustive matching allo stesso modo, errori inclusi.
 
 export interface AppError<Tag extends string = string> {
   readonly type: Tag;

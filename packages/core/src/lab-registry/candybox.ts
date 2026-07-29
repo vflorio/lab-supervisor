@@ -3,10 +3,6 @@ import * as t from "io-ts";
 import type { ControlUnit } from "../adapters/suitest";
 import type { LabRegistry } from "./registry";
 
-// -------------------------------------------------------------------------------------
-// Model
-// -------------------------------------------------------------------------------------
-
 // Identità = id Suitest: un control unit (CandyBox/Raspberry Pi) non ha esistenza indipendente
 // da Suitest (a differenza di TV/Camera non può essere preconfigurato offline), quindi non serve
 // una foreign key separata: `id` qui È l'id Suitest.
@@ -24,10 +20,6 @@ export const CandyboxUpdateInputCodec = t.intersection([
 ]);
 
 export type CandyboxUpdateInput = t.TypeOf<typeof CandyboxUpdateInputCodec>;
-
-// -------------------------------------------------------------------------------------
-// Combinators - Control Units
-// -------------------------------------------------------------------------------------
 
 export const addCandybox =
   (entry: CandyboxEntry): Endomorphism<LabRegistry> =>

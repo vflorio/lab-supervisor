@@ -1,16 +1,9 @@
 import type * as Network from "@supervisor/core/network";
 
-// -------------------------------------------------------------------------------------
-// Model - Android Bridge Machine
-// -------------------------------------------------------------------------------------
-//
 // Ciclo di vita di connessione per una camera Android controllata via ADB: prova a
 // connettersi, resta Idle finché la connessione è viva, torna Disconnected (e riprova)
 // alla prima perdita. `id` = id camera nel lab-registry, `host` = IP non ancora risolto
-// in porta, `target` = Endpoint ADB persistente (vedi target-resolution/adb-connection).
-//
-// Una istanza per camera controlled, gestita da orchestrator.ts.
-// -------------------------------------------------------------------------------------
+// in porta, `target` = Endpoint ADB persistente. Una istanza per camera controlled.
 
 export type AndroidBridgeState =
   | { readonly _tag: "Connecting"; readonly id: string; readonly host: Network.Host }
@@ -33,17 +26,13 @@ export type AndroidBridgeEvent =
   | { readonly _tag: "ConnectionFailed"; readonly reason: string }
   // Driven dalla liveness-detection del dominio chiamante (es. subscription su AdbDeviceStream)
   | { readonly _tag: "ConnectionLost"; readonly reason: string }
-  // Disconnessione ATTESA: il chiamante ha appena dispacciato un reboot con successo, quindi
-  // sa per certo che il device sta per sparire. Senza questo evento lo stato resterebbe Idle
-  // (stale) finché il poll di adbDeviceStream non se ne accorge da solo (fino a
-  // tracking.adb.polling), e un'attesa di riconnessione partita subito dopo leggerebbe quello
-  // stato stale tornando immediatamente, senza aver mai atteso davvero.
+  // Disconnessione attesa: reboot dispacciato con successo, il device sta per sparire per
+  // certo. Senza questo evento lo stato resterebbe Idle (stale) finché il poll non se ne
+  // accorge da solo, e un'attesa di riconnessione partita subito dopo tornerebbe subito.
   | { readonly _tag: "RebootDispatched" }
-  // Disconnessione SOSPETTA: un comando è andato in timeout pur risultando la camera
-  // raggiungibile. È il caso del transport ADB "incastrato" - `adb devices` continua a
-  // riportarlo come "device" ma non risponde più - che la liveness-detection non può rilevare
-  // (per questo non è un ConnectionLost). Richiede un `adb disconnect` esplicito: un semplice
-  // reconnect non ripulisce una entry di transport stale nella tabella locale di adb.
+  // Disconnessione sospetta: comando in timeout pur con camera raggiungibile - transport ADB
+  // "incastrato", invisibile alla liveness-detection. Richiede un `adb disconnect` esplicito:
+  // un semplice reconnect non ripulisce una entry di transport stale.
   | { readonly _tag: "TransportSuspect"; readonly reason: string };
 
 export type AndroidBridgeIntent =

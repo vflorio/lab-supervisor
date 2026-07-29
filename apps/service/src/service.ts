@@ -57,10 +57,10 @@ const parseConfigPolicies = (
 }> =>
   pipe(
     E.Do,
-    E.bind("adbTrackingPolicy", () => RetryPolicy.decode(config.tracking.adb.polling)),
-    E.bind("suitestCameraTrackingPolicy", () => RetryPolicy.decode(config.tracking.suitestCamera.polling)),
-    E.bind("suitestControlUnitTrackingPolicy", () => RetryPolicy.decode(config.tracking.suitestControlUnit.polling)),
-    E.bind("suitestDeviceTrackingPolicy", () => RetryPolicy.decode(config.tracking.suitestDevice.polling)),
+    E.bind("adbTrackingPolicy", () => RetryPolicy.decode(config.tracking.adb.policy)),
+    E.bind("suitestCameraTrackingPolicy", () => RetryPolicy.decode(config.tracking.suitestCamera.policy)),
+    E.bind("suitestControlUnitTrackingPolicy", () => RetryPolicy.decode(config.tracking.suitestControlUnit.policy)),
+    E.bind("suitestDeviceTrackingPolicy", () => RetryPolicy.decode(config.tracking.suitestDevice.policy)),
     RTE.fromEither,
   );
 

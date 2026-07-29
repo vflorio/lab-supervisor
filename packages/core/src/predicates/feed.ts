@@ -1,11 +1,9 @@
 import { factKey, type PredicateEntry, type PredicateFact } from "./model";
 
-// -------------------------------------------------------------------------------------
-// In-memory predicate broadcast (fatti di dominio -> subscriber live + tabella corrente)
-// Ricalca log-stream.ts (subscribe/history, ring buffer), con l'aggiunta di uno
-// `snapshot()`: a differenza dei log (solo append-only), i predicati devono anche poter
-// rispondere "cos'è vero adesso" (query iniziale lato tRPC), non solo "cosa è cambiato".
-// -------------------------------------------------------------------------------------
+// In-memory predicate broadcast (fatti di dominio -> subscriber live + tabella corrente).
+// Subscribe/history (ring buffer) con l'aggiunta di uno `snapshot()`: a differenza dei log
+// (solo append-only), i predicati devono anche poter rispondere "cos'è vero adesso", non
+// solo "cosa è cambiato".
 
 export interface PredicateFeed {
   readonly subscribe: (listener: (entry: PredicateEntry) => void) => () => void;

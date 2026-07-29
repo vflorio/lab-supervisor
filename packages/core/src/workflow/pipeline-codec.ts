@@ -3,10 +3,8 @@ import * as t from "io-ts";
 import { match } from "ts-pattern";
 import type { Pipeline } from "./pipeline";
 
-// -------------------------------------------------------------------------------------
-// Codec - JSON: tuple taggate, coerenti con Command/PolicyStepJson
+// Tuple taggate, coerenti con Command/PolicyStepJson:
 // ["workflow", "name"] | ["and", p, p, ...] | ["or", p, p, ...] | ["not", p]
-// -------------------------------------------------------------------------------------
 
 const isPipeline = (u: unknown): u is Pipeline => typeof u === "object" && u !== null && "type" in u;
 

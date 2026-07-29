@@ -4,10 +4,6 @@ import { match } from "ts-pattern";
 import type { AndroidBridgeMachineEnv } from "../interpret";
 import type { AndroidBridgeEvent, AndroidBridgeState } from "../model";
 
-// -------------------------------------------------------------------------------------
-// Activity forwarding
-// -------------------------------------------------------------------------------------
-
 const describeStatus = (state: AndroidBridgeState): string =>
   match(state)
     .with({ _tag: "Connecting" }, () => "connecting")

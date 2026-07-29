@@ -4,19 +4,11 @@ import type { PredicateExpression } from "../predicates/expression";
 import type { PolicyJson } from "../retry/codec";
 import type { Pipeline } from "../workflow/pipeline";
 
-// -------------------------------------------------------------------------------------
-// Model - Recovery: un livello di recovery ha una condizione di trigger (predicate,
-// vera = strada buona), una tolleranza prima di agire (grace), cosa eseguire quando
-// il predicate resta falso oltre grace (pipeline) e con quale policy ritentare (retry).
-//
-// Più livelli (tripwires) formano un'unica policy nominata (label) - i livelli sono ordinati
-// per grace crescente e rappresentano un'escalation: condizioni/azioni diverse man mano
-// che il tempo passa, non un semplice retry dello stesso identico livello.
-//
-// Nessun interprete/motore qui: solo il modello. L'esecuzione dal vivo (osservare i
-// predicati, far scattare i grace period, guidare l'escalation) resta un passo successivo,
-// presumibilmente sopra state-machine/machine.ts.
-// -------------------------------------------------------------------------------------
+// Un livello di recovery ha una condizione di trigger (predicate, vera = strada buona), una
+// tolleranza prima di agire (grace), cosa eseguire quando il predicate resta falso oltre
+// grace (pipeline) e con quale policy ritentare (retry). Più livelli (tripwires) formano
+// un'unica policy nominata (label), ordinati per grace crescente: un'escalation, non un
+// semplice retry dello stesso livello. Nessun interprete/motore qui, solo il modello.
 
 export interface RecoveryTripwire {
   readonly grace: DurationString;

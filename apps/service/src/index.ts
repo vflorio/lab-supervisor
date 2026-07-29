@@ -15,10 +15,6 @@ const nodeProcess: Node.Process = {
   exit: (code) => process.exit(code),
 };
 
-// -------------------------------------------------------------------------------------
-// Entry point
-// -------------------------------------------------------------------------------------
-
 const main = () => {
   const argsResult = Args.parse(process.argv);
 

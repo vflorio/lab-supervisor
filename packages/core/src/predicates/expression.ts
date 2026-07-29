@@ -2,12 +2,9 @@ import { and, not, or, type Predicate } from "fp-ts/Predicate";
 import { match } from "ts-pattern";
 import type { PredicateValue } from "./model";
 
-// -------------------------------------------------------------------------------------
-// Model - espressione booleana su predicati applicativi nominati (es. quelli emessi dai
-// tracker in ./tracker.ts, "suitest_camera_connected", ...), combinabili con and/or/not
-// da fp-ts/Predicate - a differenza di Pipeline questo livello è puro/sincrono: valuta
+// Espressione booleana su predicati applicativi nominati (es. "suitest_camera_connected"),
+// combinabili con and/or/not - a differenza di Pipeline questo livello è puro/sincrono: valuta
 // solo lo snapshot corrente dei predicati, non esegue I/O.
-// -------------------------------------------------------------------------------------
 
 // Legge il valore corrente di un predicato per nome (`undefined` se non ancora noto)
 export type PredicateLookup = (name: string) => PredicateValue | undefined;
@@ -20,10 +17,7 @@ export type PredicateExpression =
   | { readonly type: "or"; readonly exprs: readonly PredicateExpression[] }
   | { readonly type: "not"; readonly expr: PredicateExpression };
 
-// -------------------------------------------------------------------------------------
-// Compilazione - da PredicateExpression a Predicate<PredicateLookup>, "vero" = strada buona
-// -------------------------------------------------------------------------------------
-
+// Compila una PredicateExpression in Predicate<PredicateLookup>
 const foldAnd = (predicates: readonly Predicate<PredicateLookup>[]): Predicate<PredicateLookup> =>
   predicates.reduce((acc, p) => and(p)(acc));
 

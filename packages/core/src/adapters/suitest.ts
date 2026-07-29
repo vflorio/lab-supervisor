@@ -19,10 +19,6 @@ const BASE_URL = "https://the.suite.st/api/public/v4";
 
 const endpoint = (env: Env, path: string): string => `${env.suitestConfig.baseUrl ?? BASE_URL}${path}`;
 
-// -------------------------------------------------------------------------------------
-// Model - Device Status
-// -------------------------------------------------------------------------------------
-
 // Stati in cui il device è disponibile
 const DeviceAvailableStatusCodec = t.union([
   t.literal("CONTROLLABLE"),
@@ -84,10 +80,7 @@ export const CustomUserInfoCodec = t.partial({
 
 export type CustomUserInfo = t.TypeOf<typeof CustomUserInfoCodec>;
 
-// -------------------------------------------------------------------------------------
-// Model - Device (TV, smart plug, ...)
-// -------------------------------------------------------------------------------------
-
+// Device (TV, smart plug, ...)
 const DeviceRequiredCodec = t.type({
   deviceId: t.string,
   manufacturer: t.string,
@@ -132,10 +125,7 @@ export const DeviceDetailCodec = t.intersection([DeviceDetailRequiredCodec, Devi
 
 export type DeviceDetail = t.TypeOf<typeof DeviceDetailCodec>;
 
-// -------------------------------------------------------------------------------------
-// Model - Control Unit (CandyBox / Raspberry Pi / SuitestDrive)
-// -------------------------------------------------------------------------------------
-
+// Control Unit (CandyBox / Raspberry Pi / SuitestDrive)
 const ControlUnitTypeCodec = t.union([
   t.literal("candybox"),
   t.literal("drive"),
@@ -165,10 +155,7 @@ export type ControlUnit = t.TypeOf<typeof ControlUnitCodec>;
 
 const ControlUnitsResponseCodec = t.array(ControlUnitCodec);
 
-// -------------------------------------------------------------------------------------
-// Model - Video Capture Device (Android app / USB camera che cattura lo schermo di un device)
-// -------------------------------------------------------------------------------------
-
+// Video Capture Device (Android app / USB camera che cattura lo schermo di un device)
 const VideoCaptureDeviceTypeCodec = t.union([t.literal("android-app"), t.literal("usb-camera")]);
 
 export const BatteryStateCodec = t.partial({
@@ -204,10 +191,6 @@ export const VideoCaptureDeviceCodec = t.intersection([
 
 export type VideoCaptureDevice = t.TypeOf<typeof VideoCaptureDeviceCodec>;
 
-// -------------------------------------------------------------------------------------
-// Logging helper
-// -------------------------------------------------------------------------------------
-
 const loggedGet = (env: Env, path: string): TE.TaskEither<HTTP.HTTPError, unknown> => {
   const url = endpoint(env, path);
   return pipe(
@@ -236,10 +219,6 @@ const loggedPost = (env: Env, path: string): TE.TaskEither<HTTP.HTTPError, unkno
   );
 };
 
-// -------------------------------------------------------------------------------------
-// API - Devices
-// -------------------------------------------------------------------------------------
-
 // TVs, Smart Plugs
 export const getAllDevices = (env: Env): TE.TaskEither<SuitestError, readonly Device[]> =>
   pipe(
@@ -257,17 +236,9 @@ export const getDevice = (env: Env, deviceId: string): TE.TaskEither<SuitestErro
     TE.flatMapEither(Validation.validate(DeviceDetailCodec)),
   );
 
-// -------------------------------------------------------------------------------------
-// API - Control Units
-// -------------------------------------------------------------------------------------
-
 // Lista di tutte le control unit (CandyBox, Raspberry Pi, ecc.)
 export const getControlUnits = (env: Env): TE.TaskEither<SuitestError, readonly ControlUnit[]> =>
   pipe(loggedGet(env, "/control-units"), TE.flatMapEither(Validation.validate(ControlUnitsResponseCodec)));
-
-// -------------------------------------------------------------------------------------
-// API - Video Capture Devices
-// -------------------------------------------------------------------------------------
 
 export const getVideoCaptureDevices = (env: Env): TE.TaskEither<SuitestError, readonly VideoCaptureDevice[]> =>
   pipe(

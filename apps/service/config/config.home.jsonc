@@ -12,12 +12,6 @@
     "port": 3001,
     "hostname": "127.0.0.1"
   },
-  "tracking": {
-    "adb": { "polling": [["constantDelay", "10s"]] }, // poll locale, nessun costo esterno
-    "suitestCamera": { "polling": [["constantDelay", "30s"]] },
-    "suitestControlUnit": { "polling": [["constantDelay", "60s"]] },
-    "suitestDevice": { "polling": [["constantDelay", "60s"]] }
-  },
   "log": {
     "level": "debug", // "error" | "warn" | "info" | "debug"
     "path": "data/logs.jsonl", // JSON Lines files
@@ -25,32 +19,39 @@
   },
   "adb": {
     "port": 5555,
-    // Pazienza di waitForDevice: quanto un workflow attende la riconnessione (già in corso in
-    // background) prima di arrendersi. La forma dei singoli tentativi non è configurabile.
-    "waitForDeviceTimeout": "120s"
+    // Se un workflow manda in reboot un device, questo timeout è il tempo massimo che aspettiamo il device per tornare online
+    "waitForDeviceTimeout": "2m"
   },
+  "tracking": {
+    "adb": { "policy": [["constantDelay", "10s"]] },
+    "suitestCamera": { "policy": [["constantDelay", "30s"]] },
+    "suitestControlUnit": { "policy": [["constantDelay", "60s"]] },
+    "suitestDevice": { "policy": [["constantDelay", "60s"]] }
+  },
+
+  // Applicative
+
+  // Periodo di attivazione del servizio
   "activationSchedule": {
     "days": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
     "from": "00:00",
     "to": "23:59"
   },
-  // Escalation sequenziale
+
+  // Workflows lanciabili dalle pipelines
   "workflows": [
     [
       "open-chrome",
       [
-        // wake screen up
+        // TODO: Questa dovrebbe controllare perché altrimenti manda uno scroll
         ["wakeUp"],
-        // Ensure App is running (start if not opened)
         ["ensureActivity", "com.android.chrome", "com.google.android.apps.chrome.Main"]
       ]
     ],
     [
       "open-chrome-reboot",
       [
-        // Assicurarsi che reboot non sia mai al primo livello per evitare loops dato che waitForDevice è fallato
         ["reboot"],
-        // waitForDevice attende ora l'AndroidBridge (mDNS + re-pairing), non la porta 5555 congelata
         ["waitForDevice"],
         ["sleep", "5s"],
         ["ensureActivity", "com.android.chrome", "com.google.android.apps.chrome.Main"]
@@ -58,11 +59,11 @@
     ],
     ["open-developer-settings", [["wakeUp"], ["openDeveloperSettings"]]]
   ],
+
   "recovery": [
     {
       "domain": "suitest-camera",
       "label": "camera-recovery-demo",
-      // Tripwire indipendente
       "tripwires": [
         {
           // Quanto tempo il predicate deve rimanere falso prima di scattare la pipeline
@@ -70,13 +71,12 @@
           // Cosa osservare
           "predicate": ["ref", "suitest_camera_connected"],
           // Cosa fare quando il predicate resta falso per >= grace
-          "pipeline": ["workflow", "open-chrome-reboot"],
-          // Cosa fare se la pipeline fallisce (es. crash, timeout, ecc.): il delay deve superare
-          // sia adb.waitForDeviceTimeout (120s, il tempo massimo che la pipeline può restare
-          // "in attesa" prima di fallire) sia tracking.suitestCamera.polling (30s, il tempo che
-          // Suitest impiega a ripollare e aggiornare il predicate) - altrimenti si ritenta
-          // (quindi si reboota di nuovo) un device già tornato sano ma non ancora ripollato
-          "retry": [["constantDelay", "120s"], ["limitRetries", 2]],
+          //"pipeline": ["workflow", "open-chrome-reboot"],
+          "pipeline": ["or", ["workflow", "open-chrome"], ["workflow", "open-chrome-reboot"]],
+          // Cosa fare se la pipeline fallisce (es. crash, timeout, ecc.) il delay deve superare:
+          // - adb.waitForDeviceTimeout (attesa massima di reboot)
+          // - tracking.suitestCamera.polling (polling di aggiornamento dei predicati)
+          "retry": [["constantDelay", "3m"], ["limitRetries", 3]],
           "notify": [
             {
               "type": ["slack"],

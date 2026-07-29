@@ -2,11 +2,8 @@ import * as E from "fp-ts/Either";
 import type { DurationString } from "../date-time";
 import { type AppError, of } from "../errors";
 
-// -------------------------------------------------------------------------------------
-// Model - Workflow: una sequenza piatta e nominata di comandi.
-// Nessuna policy di retry, nessuna escalation: quella logica vive nel Recovery Model
-// (packages/core/src/recovery) e nella Pipeline (./pipeline.ts) che compone più workflow.
-// -------------------------------------------------------------------------------------
+// Workflow: una sequenza piatta e nominata di comandi. Nessuna policy di retry, nessuna
+// escalation: quella logica vive nel Recovery Model e nella Pipeline che compone più workflow.
 
 // Coordinate per tap ADB (valori normalizzati 0-1 o pixel)
 export type TapCoords = { readonly x: number; readonly y: number };
@@ -38,10 +35,6 @@ export interface Workflow {
 export interface WorkflowDecodeError extends AppError<"WorkflowDecodeError"> {}
 
 export const workflowDecodeError = of("WorkflowDecodeError");
-
-// -------------------------------------------------------------------------------------
-// Utilities
-// -------------------------------------------------------------------------------------
 
 // Risolve un nome workflow dall'elenco (usato dal comando "run" per concatenare workflow)
 export const findWorkflow = (workflows: readonly Workflow[], name: string): E.Either<WorkflowDecodeError, Workflow> =>

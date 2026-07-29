@@ -11,10 +11,6 @@ import {
   idle,
 } from "./model";
 
-// -------------------------------------------------------------------------------------
-// Reducer
-// -------------------------------------------------------------------------------------
-
 // Proiezione Target -> Host richiesta per il retry da Idle a Disconnected: lo stato Idle
 // possiede solo il Target (Endpoint ADB persistente), non l'Host originario da ririsolvere
 // via mDNS - lo si ricostruisce dall'IP dell'Endpoint.
@@ -56,7 +52,6 @@ export const reduce: Machine.Reducer<AndroidBridgeState, AndroidBridgeEvent, And
     .with([{ _tag: "Disconnecting" }, { _tag: "ConnectionLost" }], ([s, e]) =>
       Machine.transition(disconnected(s.id, s.host, e.reason)),
     )
-    // Ogni altra combinazione è un no-op esplicito: è QUI che vive la regola "un evento non
-    // pertinente allo stato corrente non produce transizione" - i chiamanti non devono
-    // riscriverla come guard prima di dispatchare (vedi orchestrator).
+    // Ogni altra combinazione è un no-op esplicito: un evento non pertinente allo stato
+    // corrente non produce transizione, i chiamanti non devono riscriverlo come guard.
     .otherwise(() => Machine.transition(state));

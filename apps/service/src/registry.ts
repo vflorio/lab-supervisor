@@ -18,9 +18,7 @@ export interface RegistrySyncEnv {
 
 export type SyncError = Db.DbError;
 
-// Fetch dei tre endpoint Suitest, in parallelo
-// /devices ritorna TV e smart plug
-// /video-capture-devices ritorna le camera
+// Fetch dei tre endpoint Suitest in parallelo (/devices: TV e smart plug, /video-capture-devices: camere)
 const fetchSuitestLists = (
   logger: Logger.Tagged,
   suitestConfig: Config.Suitest,
@@ -44,8 +42,8 @@ const fetchSuitestLists = (
   );
 };
 
-// Dominio applicativo (lab) è preconfigurabile e operabile offline indipendentemente da Suitest
-// quindi se è offline, ritorniamo None
+// Il dominio applicativo (lab) è operabile offline indipendentemente da Suitest, quindi se è
+// offline ritorniamo None invece di fallire.
 const fetchSuitestListsOrSkip = (
   logger: Logger.Tagged,
   suitestConfig: Config.Suitest,
@@ -63,17 +61,12 @@ const fetchSuitestListsOrSkip = (
 
 export const read = (env: RegistrySyncEnv): TE.TaskEither<Db.DbError, Db.Database> =>
   pipe(
-    // Usiamo Db.init e non Db.read per gestire automaticamente la ricreazione del file
-    // in caso di corruzione in runtime
+    // Db.init, non Db.read: ricrea automaticamente il file in caso di corruzione in runtime
     Db.init(env.dbPath, env.seedDevices)(env.fsEnv),
     TE.tapIO(() => env.logger.info("Registry read")),
   );
 
-// Registry sync:
-//  init db
-//    |> fetch suitest (skippato se irraggiungibile, vedi sopra)
-//    |> replace mirror + auto-import control unit
-//    |> write
+// init db |> fetch suitest (skippato se irraggiungibile) |> replace mirror + auto-import control unit |> write
 export const sync = (env: RegistrySyncEnv): TE.TaskEither<SyncError, Db.Database> =>
   pipe(
     // Init db (crea file JSON se non esiste)

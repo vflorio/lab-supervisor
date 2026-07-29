@@ -13,13 +13,10 @@ import * as SuitestStoreDomain from "./suitest-store";
 export * from "./lab-registry";
 export * from "./suitest-store";
 
-// -------------------------------------------------------------------------------------
-// Model - db multi-dominio:.
-// `suitest` è il mirror in sola lettura dei dati grezzi Suitest (formato originale, indicizzato per id).
-// `lab` è il dominio applicativo del supervisor (label/controlled/ip), preconfigurabile
+// Db multi-dominio: `suitest` è il mirror in sola lettura dei dati grezzi Suitest (indicizzati
+// per id). `lab` è il dominio applicativo del supervisor (label/controlled/ip), preconfigurabile
 // e operabile offline, che referenzia `suitest` tramite un campo `suitestId` opzionale per ogni
 // entry (tranne i control unit, la cui identità coincide con quella Suitest).
-// -------------------------------------------------------------------------------------
 
 export const DbCodec = t.type({
   suitest: SuitestStoreDomain.SuitestStoreCodec,
@@ -33,10 +30,6 @@ export const empty: Database = { suitest: SuitestStoreDomain.empty, lab: Lab.emp
 export type DbError = Fs.FileSystemError | Validation.ValidationError | ParseError;
 
 export interface ParseError extends AppError<"ParseError"> {}
-
-// -------------------------------------------------------------------------------------
-// Persistence: read(mutate(write))
-// -------------------------------------------------------------------------------------
 
 const parseJson = (raw: string): E.Either<ParseError, unknown> =>
   E.tryCatch(() => JSON.parse(raw), fromUnknown("ParseError"));
@@ -68,10 +61,7 @@ export const modifyLab =
   (f: Endomorphism<Lab.LabRegistry>): ((env: Fs.Env) => TE.TaskEither<DbError, Database>) =>
     modify(path)((db) => ({ ...db, lab: f(db.lab) }));
 
-// -------------------------------------------------------------------------------------
 // Init: se non esiste crea il file e seeding, altrimenti legge
-// -------------------------------------------------------------------------------------
-
 const seedDict = <T extends { controlled: boolean }>(items: readonly T[], id: (item: T) => string): Record<string, T> =>
   Object.fromEntries(items.map((item) => [id(item), { ...item, controlled: true }]));
 
@@ -98,12 +88,9 @@ export const init =
       }),
     );
 
-// -------------------------------------------------------------------------------------
-// Sync da Suitest: sostituisce integralmente il mirror `suitest` e auto-importa le
-// control unit nel dominio `lab` (identità condivisa, nessuna riconciliazione manuale necessaria).
-// TV e Camera non vengono toccate: la loro associazione a un'entità Suitest (`suitestId`)
-// è manuale, fatta via UI.
-// -------------------------------------------------------------------------------------
+// Sync da Suitest: sostituisce integralmente il mirror `suitest` e auto-importa le control
+// unit nel dominio `lab` (identità condivisa, nessuna riconciliazione manuale necessaria).
+// TV e Camera non vengono toccate: la loro associazione a un'entità Suitest è manuale, via UI.
 
 export const syncFromSuitest =
   (path: string) =>

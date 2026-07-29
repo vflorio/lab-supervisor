@@ -5,10 +5,6 @@ import { PredicateExpressionCodec } from "../predicates/expression-codec";
 import { PolicyJsonCodec } from "../retry/codec";
 import { PipelineCodec } from "../workflow/pipeline-codec";
 
-// -------------------------------------------------------------------------------------
-// Codec
-// -------------------------------------------------------------------------------------
-
 export const RecoveryTripwireCodec = t.intersection([
   t.type({
     grace: DurationString,

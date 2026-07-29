@@ -14,11 +14,6 @@ export interface Logger {
   readonly logNetwork: (message: string) => IO.IO<void>;
 }
 
-// -------------------------------------------------------------------------------------
-// Log levels
-// -------------------------------------------------------------------------------------
-
-// Configurazione logging
 export const LogLevel = t.keyof({
   fatal: null,
   error: null,
@@ -44,13 +39,9 @@ const LEVEL_PRIORITY: Record<LogLevel, number> = {
 export const isLevelEnabled = (configured: LogLevel, target: LogLevel): boolean =>
   (LEVEL_PRIORITY[target] ?? 0) >= LEVEL_PRIORITY[configured];
 
-// -------------------------------------------------------------------------------------
-// Structured log records
-//
-// `color` is an intrinsic value (an index into TAG_PALETTE), not a rendering
-// instruction. `message` is always plain text - no ANSI is ever baked into it.
-// Each transport decides how (or whether) to render tag/color/depth.
-// -------------------------------------------------------------------------------------
+// `color` is an intrinsic value (an index into TAG_PALETTE), not a rendering instruction.
+// `message` is always plain text - no ANSI is ever baked into it. Each transport decides
+// how (or whether) to render tag/color/depth.
 
 export interface LogRecord {
   readonly level: LogLevel;
@@ -62,10 +53,6 @@ export interface LogRecord {
 }
 
 export type Transport = (record: LogRecord) => void;
-
-// -------------------------------------------------------------------------------------
-// Tag colors (per-module coloring)
-// -------------------------------------------------------------------------------------
 
 let colorIndex = 0;
 const moduleColorMap = new Map<string, number>();
@@ -81,10 +68,7 @@ const getModuleColor = (tag: string): number => {
   return index;
 };
 
-// -------------------------------------------------------------------------------------
-// TaggedLogger [TAG] ...message
-// -------------------------------------------------------------------------------------
-
+// TaggedLogger: renderizza come "[TAG] ...message"
 export interface Tagged extends Logger {
   readonly child: (tag: string) => Tagged;
 }
@@ -145,10 +129,6 @@ export const tagged =
   (base: Tagged): Tagged =>
     base.child(tag);
 
-// -------------------------------------------------------------------------------------
-// Generic logger factory
-// -------------------------------------------------------------------------------------
-
 export const create = (level: LogLevel, transports: readonly Transport[], network = false): Tagged =>
   build({ configuredLevel: level, transports, depth: 0, network });
 
@@ -166,10 +146,6 @@ export const muted = (_logger: Tagged): Tagged => {
   };
   return muted;
 };
-
-// -------------------------------------------------------------------------------------
-// ANSI rendering (terminal transports only)
-// -------------------------------------------------------------------------------------
 
 const INDENT_SIZE = 2;
 
@@ -192,10 +168,6 @@ export const renderAnsi = (record: LogRecord): string => {
   return `${prefix}${indent}${tagAnsi}${levelAnsi}${message}${ANSI_RESET}`;
 };
 
-// -------------------------------------------------------------------------------------
-// Built-in transports
-// -------------------------------------------------------------------------------------
-
 export const consoleTransport: Transport = (record) => {
   console.log(renderAnsi(record));
 };
@@ -204,16 +176,8 @@ export const stdoutTransport: Transport = (record) => {
   (globalThis as any).process?.stdout?.write(`${renderAnsi(record)}\n`);
 };
 
-// -------------------------------------------------------------------------------------
-// Console logger (convenience, no dependencies)
-// -------------------------------------------------------------------------------------
-
 export const createConsoleLogger = (level: LogLevel = "info"): Tagged => create(level, [consoleTransport]);
 export const createStdoutLogger = (level: LogLevel = "info"): Tagged => create(level, [stdoutTransport]);
-
-// -------------------------------------------------------------------------------------
-// formatting
-// -------------------------------------------------------------------------------------
 
 export const formatJsonLog = (entries: readonly Record<string, unknown>[]): string =>
   entries.map((entry) => `(JSON) ${JSON.stringify(entry, null, 2)}`).join("\n");

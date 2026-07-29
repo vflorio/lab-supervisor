@@ -35,17 +35,9 @@ import { match } from "ts-pattern";
 //
 // =========================================================================================
 
-// -------------------------------------------------------------------------------------
-// Model - Activation Machine
-// -------------------------------------------------------------------------------------
-//
-// Traduce uno Schedule (orario di lavoro) in un ciclo di vita a 3 fasi: Init (non ancora
-// valutato) -> Active/Inactive, con transizioni Active <-> Inactive successive. A differenza
-// del vecchio activation/runner.ts (che richiamava onActive/onInactive ad OGNI tick in cui lo
-// schedule risultava attivo/inattivo), qui la callback scatta solo sul cambio di fase - un
-// tick che conferma la fase corrente è un self-loop senza comandi (stessa convenzione di
-// adb-connection/reduce.ts: una coppia stato/evento fuori sequenza, o qui "senza novità", non
-// deve avere effetto).
+// Traduce uno Schedule in un ciclo di vita a 3 fasi: Init -> Active/Inactive, con transizioni
+// Active <-> Inactive successive. La callback scatta solo sul cambio di fase - un tick che
+// conferma la fase corrente è un self-loop senza comandi.
 
 export type ActivationState = { readonly _tag: "Init" } | { readonly _tag: "Active" } | { readonly _tag: "Inactive" };
 
@@ -56,10 +48,6 @@ export const inactive: ActivationState = { _tag: "Inactive" };
 export type ActivationEvent = { readonly _tag: "ScheduleEvaluated"; readonly isActive: boolean };
 
 export type ActivationIntent = { readonly _tag: "EnterActive" } | { readonly _tag: "EnterInactive" };
-
-// -------------------------------------------------------------------------------------
-// Reducer
-// -------------------------------------------------------------------------------------
 
 export const reduce: Machine.Reducer<ActivationState, ActivationEvent, ActivationIntent> = (state, event) =>
   match<[ActivationState, ActivationEvent], Machine.Transition<ActivationState, ActivationIntent>>([state, event])
@@ -77,10 +65,7 @@ export const reduce: Machine.Reducer<ActivationState, ActivationEvent, Activatio
     )
     .otherwise(() => Machine.transition(state));
 
-// -------------------------------------------------------------------------------------
 // Tracing - visibilità automatica sulle transizioni di fase (debugging)
-// -------------------------------------------------------------------------------------
-
 const describeState = (state: ActivationState): string => state._tag;
 
 const onTransition: Machine.TransitionHook<ActivationMachineEnv, never, ActivationState, ActivationEvent> =
@@ -89,13 +74,9 @@ const onTransition: Machine.TransitionHook<ActivationMachineEnv, never, Activati
       ? TE.right(undefined)
       : TE.fromIO(env.logger.child("Activation").info(`Transition = [${describeState(from)} -> ${describeState(to)}]`));
 
-// -------------------------------------------------------------------------------------
-// Interpret
-// -------------------------------------------------------------------------------------
-// I comandi non hanno follow-up event (una volta entrati in fase, si resta lì finché il
-// prossimo tick non rileva un cambio) - onActive/onInactive sono Task, non TaskEither: un
-// eventuale errore va già gestito dal chiamante (vedi service.ts: TE.getOrElse(...) prima di
-// passarli qui), altrimenti resterebbe silenzioso.
+// I comandi non hanno follow-up event: onActive/onInactive sono Task, non TaskEither, un
+// eventuale errore va già gestito dal chiamante prima di passarli qui, altrimenti resterebbe
+// silenzioso.
 
 export interface ActivationMachineEnv {
   readonly logger: Logger.Tagged;
@@ -115,10 +96,6 @@ export const interpret =
       ),
       TE.map((): readonly ActivationEvent[] => []),
     );
-
-// -------------------------------------------------------------------------------------
-// Machine
-// -------------------------------------------------------------------------------------
 
 const machine: Machine.Machine<ActivationMachineEnv, never, ActivationState, ActivationEvent, ActivationIntent> =
   Machine.make(reduce, interpret, onTransition);

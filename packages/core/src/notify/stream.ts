@@ -1,14 +1,10 @@
 import type { SlackDispatchResult } from "./dispatch";
 import type { NotifyLifecycle } from "./model";
 
-// -------------------------------------------------------------------------------------
-// Notify feed - broadcast di ogni notifica valutata (una entry per regola, non solo per
-// quelle inviate con successo), così sia il servizio sia il web vedono "cosa è stato
-// notificato e con che esito" senza doverlo ricostruire dai soli log. Ricalca
-// recovery/status.ts (ring buffer + subscribe/history, nessuno snapshot "per chiave" -
-// a differenza dello stato di un tripwire, una notifica è un evento puntuale, non un
-// valore che si aggiorna nel tempo).
-// -------------------------------------------------------------------------------------
+// Notify feed - broadcast di ogni notifica valutata (una entry per regola, non solo quelle
+// inviate con successo). Ring buffer + subscribe/history, nessuno snapshot "per chiave": a
+// differenza dello stato di un tripwire, una notifica è un evento puntuale, non un valore
+// che si aggiorna nel tempo.
 
 export interface NotifyEventSource {
   readonly policy: string; // RecoveryPolicy.label

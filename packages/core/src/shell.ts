@@ -17,8 +17,6 @@ export type Spawn = (
   timeoutMs?: number,
 ) => TE.TaskEither<ShellSpawnError, string>;
 
-// -------------------------------------------------------------------------------------
-
 export type Env = {
   readonly logger: Logger.Tagged;
   readonly spawn: Spawn;

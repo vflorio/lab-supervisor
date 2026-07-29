@@ -1,10 +1,7 @@
 import * as Suitest from "@supervisor/core/adapters/suitest";
 import type * as Predicates from "@supervisor/core/predicates/index";
 
-// -------------------------------------------------------------------------------------
 // Suitest video-capture-device tracker - dominio "suitest-camera": online/recording/stream
-// -------------------------------------------------------------------------------------
-
 export const DOMAIN = "suitest-camera";
 
 const keyOf = (item: Suitest.VideoCaptureDevice): string => item.id;

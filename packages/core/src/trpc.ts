@@ -10,7 +10,7 @@ import type { NotifyFeed } from "./notify/stream";
 import type { PredicateFeed } from "./predicates/feed";
 import type { RecoveryFeed } from "./recovery/status";
 
-// Funzionalità espone su tRPC
+// Funzionalità esposte su tRPC
 
 export interface AndroidDeviceSnapshot {
   readonly target: string;
@@ -71,8 +71,6 @@ export interface Services {
   // `false` se il servizio non è "active" (nessun motore di recovery in esecuzione) o se
   // l'entità/tripwire indicati non sono mai stati osservati. Web -> Service
   readonly recoveryReset: (policyLabel: string, entityId: string, tripwireIndex: number) => boolean;
-
-  // tRPC Feeds
 
   // Feed dei log di servizio
   readonly logs: LogFeed; // Service -> Web

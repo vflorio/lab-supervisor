@@ -30,7 +30,7 @@ import * as AdbConnection from "./connection/model";
 //     Searching --> Resolved  : PortResolved
 //     Searching --> NotFound  : PortNotFound
 // -----------------------------------------------------------------------------------------
-// TRANSITIONS  <FROM> -> <EVENT> -> <TO> [/ <COMMAND>]     (definite in reduce.ts)
+// TRANSITIONS  <FROM> -> <EVENT> -> <TO> [/ <COMMAND>]     (definite nel reducer)
 //
 //   Searching -> ResolutionRequested -> Searching / LookupPort
 //   Searching -> PortResolved        -> Resolved
@@ -38,14 +38,9 @@ import * as AdbConnection from "./connection/model";
 //
 // =========================================================================================
 
-// -------------------------------------------------------------------------------------
-// Model - Target Resolution Machine
-// -------------------------------------------------------------------------------------
-
 // Risolve un Host (solo IP, porta ignota) nell'Endpoint attualmente pubblicato via mDNS.
-// Layer trasparente sopra la Target Machine (adb-connection):
-// un Host risolto viene inoltrato come TargetDiscovered,
-// un Host non trovato non tenta alcuna connessione (nessuna porta valida a cui connettersi).
+// Layer trasparente sopra la Target Machine: un Host risolto viene inoltrato come
+// TargetDiscovered, uno non trovato non tenta alcuna connessione.
 
 export type ResolutionState =
   | { readonly _tag: "Searching"; readonly host: Network.Host }
@@ -63,13 +58,8 @@ export type ResolutionEvent =
 
 export type ResolutionIntent = { readonly _tag: "LookupPort"; readonly host: Network.Host };
 
-// -------------------------------------------------------------------------------------
-// Reducer
-// -------------------------------------------------------------------------------------
-
-// Stesso principio della Target Machine (adb-connection/reduce.ts): le combinazioni
-// (stato, evento) non previste sono ignorate (self-loop senza comandi) - un evento fuori
-// sequenza non deve avere effetto.
+// Stesso principio della Target Machine: le combinazioni (stato, evento) non previste sono
+// ignorate (self-loop senza comandi) - un evento fuori sequenza non deve avere effetto.
 
 export const reduce: Machine.Reducer<ResolutionState, ResolutionEvent, ResolutionIntent> = (state, event) =>
   match<[ResolutionState, ResolutionEvent], Machine.Transition<ResolutionState, ResolutionIntent>>([state, event])
@@ -81,11 +71,7 @@ export const reduce: Machine.Reducer<ResolutionState, ResolutionEvent, Resolutio
 
     .otherwise(() => Machine.transition(state));
 
-// -------------------------------------------------------------------------------------
-// Tracing - visibilità automatica sulle transizioni di fase (debugging)
-// -------------------------------------------------------------------------------------
-// Stesso principio della Target Machine (adb-connection/tracing.ts): logga solo quando
-// cambia la "fase" (`_tag`).
+// Stesso principio della Target Machine: logga solo quando cambia la "fase" (`_tag`).
 
 const describeState = (state: ResolutionState): string =>
   match(state)
@@ -113,13 +99,9 @@ const onTransition: Machine.TransitionHook<TargetResolutionMachineEnv, never, Re
           ),
         );
 
-// -------------------------------------------------------------------------------------
-// Interpret
-// -------------------------------------------------------------------------------------
-
-// Come la Target Machine (adb-connection/interpret.ts), l'intento cattura i propri
-// fallimenti (mDNS irraggiungibile, host non - più - pubblicato) e li traduce in eventi:
-// un lookup fallito non deve far fallire l'intero ciclo, il risultato resta NotFound.
+// Come la Target Machine, l'intento cattura i propri fallimenti (mDNS irraggiungibile, host
+// non più pubblicato) e li traduce in eventi: un lookup fallito non deve far fallire l'intero
+// ciclo, il risultato resta NotFound.
 
 export interface TargetResolutionMachineEnv {
   readonly logger: Logger.Tagged;
@@ -150,10 +132,6 @@ export const interpret =
         )
         .exhaustive(),
     );
-
-// -------------------------------------------------------------------------------------
-// API
-// -------------------------------------------------------------------------------------
 
 const machine: Machine.Machine<TargetResolutionMachineEnv, never, ResolutionState, ResolutionEvent, ResolutionIntent> =
   Machine.make(reduce, interpret, onTransition);

@@ -5,12 +5,8 @@ import { match } from "ts-pattern";
 import type { AndroidBridgeMachineEnv } from "../interpret";
 import type { AndroidBridgeEvent, AndroidBridgeState } from "../model";
 
-// -------------------------------------------------------------------------------------
-// Tracing - visibilità automatica sulle transizioni di fase (debugging)
-// -------------------------------------------------------------------------------------
-// Stesso principio di adb-connection/tracing.ts: logga solo quando cambia la "fase" (`_tag`),
-// livello error quando si regredisce a Disconnected da una fase più avanzata.
-// -------------------------------------------------------------------------------------
+// Tracing: logga solo quando cambia la "fase" (`_tag`), livello error quando si regredisce
+// a Disconnected da una fase più avanzata.
 
 const describeState = (state: AndroidBridgeState): string =>
   match(state)

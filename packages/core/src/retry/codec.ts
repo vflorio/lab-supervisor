@@ -4,11 +4,7 @@ import { type DurationString, DurationString as DurationStringCodec, durationToM
 import { type AppError, of } from "../errors";
 import { capDelay, concat, constantDelay, exponentialBackoff, limitRetries, type Policy } from "./retry";
 
-// -------------------------------------------------------------------------------------
-// Model - Formato JSON per policy componibili
-// -------------------------------------------------------------------------------------
-
-// Ogni step e' una tupla [nome_primitiva, ...args]
+// Formato JSON per policy componibili. Ogni step e' una tupla [nome_primitiva, ...args]
 // Gli argomenti numerici possono essere espressi come:
 //   - number: millisecondi diretti (es. 30000)
 //   - DurationString: formato human-readable (es. "30s", "5m", "1h")
@@ -22,10 +18,6 @@ import { capDelay, concat, constantDelay, exponentialBackoff, limitRetries, type
 export type PolicyStepArg = number | DurationString;
 export type PolicyStepJson = readonly [string, ...PolicyStepArg[]];
 export type PolicyJson = readonly PolicyStepJson[];
-
-// -------------------------------------------------------------------------------------
-// Codec
-// -------------------------------------------------------------------------------------
 
 // Codec per un singolo argomento di step: number o DurationString
 const PolicyStepArgCodec = t.union([t.number, DurationStringCodec]);
@@ -62,10 +54,6 @@ const PolicyStepJsonCodec = new t.Type<PolicyStepJson, (string | number)[], unkn
 export const PolicyJsonCodec = t.array(PolicyStepJsonCodec);
 
 export const formatPolicyJson = (json: PolicyJson): string => `[PolicyJson: ${JSON.stringify(json)}]`;
-
-// -------------------------------------------------------------------------------------
-// Decodifica - da JSON a Policy
-// -------------------------------------------------------------------------------------
 
 export interface PolicyDecodeError extends AppError<"PolicyDecodeError"> {}
 

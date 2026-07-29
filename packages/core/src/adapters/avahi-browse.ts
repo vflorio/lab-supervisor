@@ -5,10 +5,6 @@ import type * as Logger from "../logger/logger";
 import * as Network from "../network";
 import * as Shell from "../shell";
 
-// -------------------------------------------------------------------------------------
-// Model
-// -------------------------------------------------------------------------------------
-
 export interface AvahiBrowseEnv {
   readonly logger: Logger.Tagged;
   readonly spawn: Shell.Spawn;
@@ -23,12 +19,8 @@ export type AvahiBrowseError =
 
 type Effect<A> = RTE.ReaderTaskEither<AvahiBrowseEnv, AvahiBrowseError | Shell.ShellSpawnError, A>;
 
-// -------------------------------------------------------------------------------------
-// Parser - avahi-browse -prt output
-// -------------------------------------------------------------------------------------
 // Resolved lines (=) have the format:
 //   =;iface;protocol;name;type;domain;hostname;address;port;txt
-//
 // We extract address (field 7) and port (field 8).
 
 const parse = (stdout: string): Network.Endpoint[] => {
@@ -52,10 +44,6 @@ const parse = (stdout: string): Network.Endpoint[] => {
 
   return endpoints;
 };
-
-// -------------------------------------------------------------------------------------
-// Public API
-// -------------------------------------------------------------------------------------
 
 export const discover =
   (command: string, args: readonly string[]): Effect<Network.Endpoint[]> =>
