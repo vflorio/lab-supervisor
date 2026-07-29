@@ -1,4 +1,5 @@
 import type * as TE from "fp-ts/TaskEither";
+import type * as Activation from "./activation/schedule";
 import type { ActivityFeed } from "./activity/stream";
 import type * as Adb from "./adapters/adb/shell";
 import type * as ConfigModel from "./config";
@@ -8,8 +9,10 @@ import type * as Logger from "./logger/logger";
 import type * as Network from "./network";
 import type { NotifyFeed } from "./notify/stream";
 import type { PredicateFeed } from "./predicates/feed";
+import type * as RecoveryModel from "./recovery/model";
 import type { RecoveryFeed } from "./recovery/status";
 import type * as WorkflowInterpreter from "./workflow/interpreter";
+import type * as Workflow from "./workflow/workflow";
 
 // Funzionalità esposte su tRPC
 
@@ -59,6 +62,21 @@ interface DeviceRegistry {
 interface Settings {
   // Config già redatta (segreti mascherati) - non esporre mai la ServiceConfig raw fuori dal processo
   readonly getConfig: () => ConfigModel.Service;
+
+  // In-memory soltanto: si perde al riavvio del service, non c'è ancora un writer su file.
+  // Non ha effetto sull'activation runner già avviato (costruito una sola volta all'avvio,
+  // vedi apps/service/src/service.ts) - solo su cosa restituisce getConfig da questo momento.
+  readonly updateActivationSchedule: (schedule: Activation.ActivationSchedule) => ConfigModel.Service;
+
+  // Sostituisce l'intero array `workflows` - stessa nota in-memory di updateActivationSchedule:
+  // non ha effetto sui workflow già catturati da un `ActiveLifecycle` in corso (recovery pipeline,
+  // lancio manuale via `runWorkflow`), vedi apps/service/src/service-lifecycle.ts.
+  readonly updateWorkflows: (workflows: readonly Workflow.Workflow[]) => ConfigModel.Service;
+
+  // Sostituisce l'intero array `recovery` - stessa nota in-memory: non ha effetto sull'engine
+  // di recovery già avviato (RecoveryEngine.start viene chiamato una sola volta da
+  // createActiveLifecycle), solo su cosa restituisce getConfig da questo momento.
+  readonly updateRecovery: (policies: readonly RecoveryModel.RecoveryPolicy[]) => ConfigModel.Service;
 }
 
 export interface Services {

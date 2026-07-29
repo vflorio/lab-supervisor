@@ -1,20 +1,19 @@
-import { Add, Delete, ExpandLess, ExpandMore, KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
+import { ExpandLess, ExpandMore } from "@mui/icons-material";
 import { Box, IconButton, Stack, Typography } from "@mui/material";
 import type { NotifyTargetSchema } from "@supervisor/core/notify/codec";
-import type { NotifyRule } from "@supervisor/core/notify/model";
 import type { RecoveryTripwire } from "@supervisor/core/recovery/model";
 import type { PolicyStepSchema } from "@supervisor/core/retry/codec";
 import { useState } from "react";
 import { DurationForm } from "../duration/DurationForm";
-import { NotifyRuleForm } from "../notify/NotifyRuleForm";
+import { NotifyRuleListForm } from "../notify/NotifyRuleListForm";
 import { PipelineForm } from "../pipeline/PipelineForm";
 import { PredicateExpressionForm } from "../predicates/PredicateExpressionForm";
 import { RetryPolicyForm } from "../retry-policy/RetryPolicyForm";
 
 // Form controllata per un RecoveryTripwire: compone i moduli gia' esistenti (duration,
-// predicate expression, pipeline, retry policy) + un editor per l'array di NotifyRule,
-// stessa meccanica add/remove/sposta di RetryPolicyForm/WorkflowForm. Expand/collapse
-// locale segue il pattern gia' usato da EntryCard - stato di presentazione, non dominio.
+// predicate expression, pipeline, retry policy, notify rule list) - stesso set di atomi
+// riusato dal TripwireWizard. Expand/collapse locale segue il pattern gia' usato da
+// EntryCard - stato di presentazione, non dominio.
 export interface RecoveryTripwireFormProps {
   readonly value: RecoveryTripwire;
   readonly onChange: (next: RecoveryTripwire) => void;
@@ -22,34 +21,9 @@ export interface RecoveryTripwireFormProps {
   readonly notifyTargetSchema: readonly NotifyTargetSchema[];
 }
 
-const defaultNotifyRule = (schema: readonly NotifyTargetSchema[]): NotifyRule => {
-  const found = schema[0];
-  const record: Record<string, unknown> = { type: found?.type ?? "slack" };
-  for (const field of found?.fields ?? []) record[field.key] = "";
-
-  return {
-    type: record as unknown as NotifyRule["type"],
-    channel: "",
-    message: { type: "template", message: "" },
-    policy: ["immediate"],
-  };
-};
-
 export function RecoveryTripwireForm({ value, onChange, retrySchema, notifyTargetSchema }: RecoveryTripwireFormProps) {
   const [expanded, setExpanded] = useState(true);
   const notify = value.notify ?? [];
-
-  const updateNotify = (index: number, next: NotifyRule) =>
-    onChange({ ...value, notify: notify.map((rule, i) => (i === index ? next : rule)) });
-  const removeNotify = (index: number) => onChange({ ...value, notify: notify.filter((_, i) => i !== index) });
-  const moveNotify = (index: number, delta: number) => {
-    const target = index + delta;
-    if (target < 0 || target >= notify.length) return;
-    const next = [...notify];
-    [next[index], next[target]] = [next[target]!, next[index]!];
-    onChange({ ...value, notify: next });
-  };
-  const addNotify = () => onChange({ ...value, notify: [...notify, defaultNotifyRule(notifyTargetSchema)] });
 
   return (
     <Box>
@@ -97,28 +71,11 @@ export function RecoveryTripwireForm({ value, onChange, retrySchema, notifyTarge
             <Typography variant="overline" color="text.secondary">
               Notify
             </Typography>
-            {notify.map((rule, index) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: rule controllata via value/onChange, nessun id
-              <Stack key={index} direction="row" sx={{ gap: 1, alignItems: "flex-start" }}>
-                <NotifyRuleForm
-                  value={rule}
-                  onChange={(next) => updateNotify(index, next)}
-                  targetSchema={notifyTargetSchema}
-                />
-                <IconButton size="small" onClick={() => moveNotify(index, -1)} disabled={index === 0}>
-                  <KeyboardArrowUp fontSize="small" />
-                </IconButton>
-                <IconButton size="small" onClick={() => moveNotify(index, 1)} disabled={index === notify.length - 1}>
-                  <KeyboardArrowDown fontSize="small" />
-                </IconButton>
-                <IconButton size="small" onClick={() => removeNotify(index)}>
-                  <Delete fontSize="small" />
-                </IconButton>
-              </Stack>
-            ))}
-            <IconButton size="small" onClick={addNotify} title="Add notify rule" sx={{ alignSelf: "flex-start" }}>
-              <Add fontSize="small" />
-            </IconButton>
+            <NotifyRuleListForm
+              value={notify}
+              onChange={(next) => onChange({ ...value, notify: next })}
+              targetSchema={notifyTargetSchema}
+            />
           </Stack>
         </Stack>
       )}

@@ -1,4 +1,5 @@
-import { Box, CssBaseline, Divider, Stack, ThemeProvider, Typography } from "@mui/material";
+import { CssBaseline, Divider, Stack, ThemeProvider, Typography } from "@mui/material";
+import type { ActivationSchedule } from "@supervisor/core/activation/schedule";
 import type { DurationString } from "@supervisor/core/date-time";
 import { NOTIFY_TARGET_SCHEMA } from "@supervisor/core/notify/codec";
 import type { PredicateExpression } from "@supervisor/core/predicates/expression";
@@ -8,13 +9,14 @@ import * as Schedule from "@supervisor/core/schedule";
 import { COMMAND_SCHEMA } from "@supervisor/core/workflow/codec";
 import type { Pipeline } from "@supervisor/core/workflow/pipeline";
 import type { Workflow } from "@supervisor/core/workflow/workflow";
+import { ActivationScheduleForm, ActivationScheduleView } from "@supervisor/ui/activation-schedule";
 import { DurationForm, DurationView } from "@supervisor/ui/duration";
 import { PipelineForm, PipelineView } from "@supervisor/ui/pipeline";
-import { PredicateExpressionForm, PredicateExpressionView } from "@supervisor/ui/predicates";
-import { RecoveryPolicyForm, RecoveryPolicyList, RecoveryPolicyView } from "@supervisor/ui/recovery";
+import { PredicateExpressionForm, PredicateExpressionView, type PredicateOption } from "@supervisor/ui/predicates";
+import { RecoveryPolicyAccordionList } from "@supervisor/ui/recovery";
 import { RetryPolicyForm, RetryPolicyView } from "@supervisor/ui/retry-policy";
 import * as UISchedule from "@supervisor/ui/schedule";
-import { WorkflowForm, WorkflowList, WorkflowView } from "@supervisor/ui/workflow";
+import { WorkflowAccordionList } from "@supervisor/ui/workflow";
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./retry";
@@ -39,6 +41,24 @@ function DurationDemo() {
     <Stack sx={{ gap: 1.5 }}>
       <DurationForm label="delay" value={value} onChange={setValue} />
       <DurationView value={value} />
+    </Stack>
+  );
+}
+
+const initialActivationSchedule: ActivationSchedule = {
+  days: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+  from: "08:00",
+  to: "20:00",
+};
+
+function ActivationScheduleDemo() {
+  const [value, setValue] = useState<ActivationSchedule>(initialActivationSchedule);
+
+  return (
+    <Stack sx={{ gap: 1.5 }}>
+      <ActivationScheduleForm value={value} onChange={setValue} />
+      <Divider />
+      <ActivationScheduleView value={value} />
     </Stack>
   );
 }
@@ -81,39 +101,25 @@ const initialWorkflows: Workflow[] = [
 
 function WorkflowDemo() {
   const [workflows, setWorkflows] = useState<readonly Workflow[]>(initialWorkflows);
-  const [selectedName, setSelectedName] = useState<string | undefined>(initialWorkflows[0]?.name);
-  const selected = workflows.find((w) => w.name === selectedName);
 
-  const updateSelected = (next: Workflow) =>
-    setWorkflows((prev) => prev.map((w) => (w.name === selectedName ? next : w)));
+  const updateWorkflow = (next: Workflow) => setWorkflows((prev) => prev.map((w) => (w.name === next.name ? next : w)));
 
   const createWorkflow = () => {
     const name = `workflow_${workflows.length + 1}`;
     setWorkflows((prev) => [...prev, { name, commands: [] }]);
-    setSelectedName(name);
   };
 
   return (
-    <Stack direction="row" sx={{ gap: 4 }}>
-      <Box sx={{ width: 260, flexShrink: 0 }}>
-        <WorkflowList
-          workflows={workflows}
-          selectedName={selectedName}
-          onSelect={setSelectedName}
-          onCreate={createWorkflow}
-        />
-      </Box>
-      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-        {selected ? (
-          <Stack sx={{ gap: 2 }}>
-            <WorkflowForm value={selected} onChange={updateSelected} schema={COMMAND_SCHEMA} />
-            <Divider />
-            <WorkflowView value={selected} schema={COMMAND_SCHEMA} />
-          </Stack>
-        ) : (
-          <Typography color="text.secondary">No workflow selected</Typography>
-        )}
-      </Box>
+    <Stack sx={{ gap: 2 }}>
+      <WorkflowAccordionList
+        workflows={workflows}
+        editing
+        schema={COMMAND_SCHEMA}
+        onChange={updateWorkflow}
+        onCreate={createWorkflow}
+      />
+      <Divider />
+      <WorkflowAccordionList workflows={workflows} editing={false} schema={COMMAND_SCHEMA} onChange={() => {}} />
     </Stack>
   );
 }
@@ -197,46 +203,46 @@ const initialRecoveryPolicies: RecoveryPolicy[] = [
   },
 ];
 
+const mockPredicateOptions: PredicateOption[] = [
+  { domain: "suitest-camera", entityId: "tablet", name: "suitest_camera_connected" },
+  { domain: "adb", entityId: "192.168.1.4:5555", name: "adb_device_online" },
+  { domain: "app", entityId: "tablet", name: "device_status" },
+];
+
 function RecoveryDemo() {
   const [policies, setPolicies] = useState<readonly RecoveryPolicy[]>(initialRecoveryPolicies);
-  const [selectedLabel, setSelectedLabel] = useState<string | undefined>(initialRecoveryPolicies[0]?.label);
-  const selected = policies.find((p) => p.label === selectedLabel);
+  const workflowNames = initialWorkflows.map((w) => w.name);
 
-  const updateSelected = (next: RecoveryPolicy) =>
-    setPolicies((prev) => prev.map((p) => (p.label === selectedLabel ? next : p)));
+  const updatePolicy = (next: RecoveryPolicy) =>
+    setPolicies((prev) => prev.map((p) => (p.label === next.label ? next : p)));
 
   const createPolicy = () => {
     const label = `policy_${policies.length + 1}`;
     setPolicies((prev) => [...prev, { label, domain: "", tripwires: [] }]);
-    setSelectedLabel(label);
   };
 
   return (
-    <Stack direction="row" sx={{ gap: 4 }}>
-      <Box sx={{ width: 260, flexShrink: 0 }}>
-        <RecoveryPolicyList
-          policies={policies}
-          selectedLabel={selectedLabel}
-          onSelect={setSelectedLabel}
-          onCreate={createPolicy}
-        />
-      </Box>
-      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-        {selected ? (
-          <Stack sx={{ gap: 2 }}>
-            <RecoveryPolicyForm
-              value={selected}
-              onChange={updateSelected}
-              retrySchema={POLICY_STEP_SCHEMA}
-              notifyTargetSchema={NOTIFY_TARGET_SCHEMA}
-            />
-            <Divider />
-            <RecoveryPolicyView value={selected} />
-          </Stack>
-        ) : (
-          <Typography color="text.secondary">No recovery policy selected</Typography>
-        )}
-      </Box>
+    <Stack sx={{ gap: 2 }}>
+      <RecoveryPolicyAccordionList
+        policies={policies}
+        editing
+        retrySchema={POLICY_STEP_SCHEMA}
+        notifyTargetSchema={NOTIFY_TARGET_SCHEMA}
+        workflowNames={workflowNames}
+        predicateOptions={mockPredicateOptions}
+        onChange={updatePolicy}
+        onCreate={createPolicy}
+      />
+      <Divider />
+      <RecoveryPolicyAccordionList
+        policies={policies}
+        editing={false}
+        retrySchema={POLICY_STEP_SCHEMA}
+        notifyTargetSchema={NOTIFY_TARGET_SCHEMA}
+        workflowNames={workflowNames}
+        predicateOptions={mockPredicateOptions}
+        onChange={() => {}}
+      />
     </Stack>
   );
 }
@@ -247,6 +253,10 @@ function App() {
       <CssBaseline />
 
       <Stack sx={{ gap: 5, p: 4, maxWidth: 900 }}>
+        <Section title="Activation Schedule">
+          <ActivationScheduleDemo />
+        </Section>
+
         <Section title="Duration">
           <DurationDemo />
         </Section>

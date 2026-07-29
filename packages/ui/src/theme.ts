@@ -3,163 +3,103 @@ import { createTheme } from "@mui/material/styles";
 export const theme = createTheme({
   palette: {
     mode: "dark",
-    background: {
-      default: "#1b1b1d",
-      paper: "#242526",
-    },
-    primary: {
-      main: "#25c2a0",
-      light: "#4fddbf",
-      dark: "#1a8870",
-      contrastText: "#f8f8f2",
-    },
-    secondary: {
-      main: "#29d5b0",
-      light: "#99f6e4",
-      dark: "#21af90",
-      contrastText: "#1b1b1d",
-    },
-    error: {
-      main: "#ff5555",
-      contrastText: "#f8f8f2",
-    },
-    warning: {
-      main: "#ffb86c",
-      contrastText: "#1b1b1d",
-    },
-    info: {
-      main: "#bd93f9",
-      contrastText: "#f8f8f2",
-    },
-    success: {
-      main: "#50fa7b",
-      contrastText: "#1b1b1d",
-    },
-    text: {
-      primary: "#f8f8f2",
-      secondary: "#a6a6a6",
-    },
-    divider: "rgba(166, 166, 166, 0.16)",
-  },
-  shape: {
-    borderRadius: 12,
+    background: { default: "#0d0f11", paper: "#141719" },
+    primary: { main: "#4ade80", contrastText: "#0a0c0e" },
+    secondary: { main: "#1c1f22" },
+    warning: { main: "#f59e0b" },
+    info: { main: "#3b82f6" },
+    error: { main: "#ef4444" },
+    text: { primary: "#e2e4e8", secondary: "#6b7280" },
+    divider: "rgba(255,255,255,0.07)",
   },
   typography: {
-    fontFamily: '"Inter", "Segoe UI", Roboto, sans-serif',
-    h5: {
-      fontWeight: 700,
-      letterSpacing: "-0.01em",
-    },
-    overline: {
-      fontWeight: 600,
-      letterSpacing: "0.06em",
-    },
+    fontFamily: "'Inter', sans-serif",
+    fontSize: 13,
+    button: { textTransform: "none", fontFamily: "'JetBrains Mono', monospace" },
   },
+  shape: { borderRadius: 8 },
   components: {
-    MuiCssBaseline: {
+    MuiPaper: {
       styleOverrides: {
-        "*::-webkit-scrollbar": {
-          width: 8,
-          height: 8,
-        },
-        "*::-webkit-scrollbar-track": {
-          backgroundColor: "transparent",
-        },
-        "*::-webkit-scrollbar-thumb": {
-          backgroundColor: "rgba(166, 166, 166, 0.3)",
-          borderRadius: 999,
-        },
-        "*::-webkit-scrollbar-thumb:hover": {
-          backgroundColor: "#21af90",
-        },
+        root: { backgroundImage: "none", border: "1px solid rgba(255,255,255,0.07)" },
       },
     },
-    MuiPaper: {
-      defaultProps: { elevation: 0 },
+    MuiAccordion: {
       styleOverrides: {
         root: {
           backgroundImage: "none",
-          border: "1px solid rgba(166, 166, 166, 0.16)",
+          backgroundColor: "transparent",
+          border: "1px solid rgba(255,255,255,0.07)",
+          "&:before": { display: "none" },
+          "&.Mui-expanded": { margin: 0 },
         },
       },
     },
-    MuiListItemButton: {
+    MuiAccordionSummary: {
       styleOverrides: {
-        root: {
-          borderRadius: 10,
-        },
+        root: { minHeight: 40, "&.Mui-expanded": { minHeight: 40 } },
+        content: { margin: "8px 0", "&.Mui-expanded": { margin: "8px 0" } },
       },
     },
-    MuiButton: {
-      defaultProps: { disableElevation: true },
+    MuiToggleButton: {
       styleOverrides: {
         root: {
-          textTransform: "none",
-          fontWeight: 600,
-        },
-      },
-    },
-    MuiIconButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: 8,
-        },
-      },
-      variants: [
-        {
-          props: { color: "primary" },
-          style: {
-            backgroundColor: "#1a8870",
-            border: "1px solid #4fddbf",
-            color: "#f8f8f2",
-            "&:hover": { backgroundColor: "#21af90" },
+          border: "1px solid rgba(255,255,255,0.07)",
+          color: "#6b7280",
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 11,
+          padding: "3px 10px",
+          "&.Mui-selected": {
+            color: "#4ade80",
+            backgroundColor: "rgba(74,222,128,0.15)",
+            borderColor: "rgba(74,222,128,0.3)",
           },
-        },
-      ],
-    },
-    MuiCheckbox: {
-      styleOverrides: {
-        root: {
-          color: "rgba(166, 166, 166, 0.4)",
-          "&.Mui-checked": {
-            color: "#4fddbf",
-          },
+          "&.Mui-selected:hover": { backgroundColor: "rgba(74,222,128,0.2)" },
         },
       },
     },
     MuiChip: {
       styleOverrides: {
-        root: {
-          fontWeight: 600,
-          borderRadius: 999,
-        },
-        outlined: {
-          borderColor: "rgba(166, 166, 166, 0.24)",
-        },
+        root: { fontFamily: "'JetBrains Mono', monospace", fontSize: 10, height: 20, borderRadius: 4 },
       },
-      variants: [
-        {
-          props: { variant: "filled", color: "default" },
-          style: {
-            backgroundColor: "#2d3748",
-            border: "1px solid rgba(166, 166, 166, 0.24)",
-          },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 12,
+          "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.07)" },
+          "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.15)" },
+          "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(74,222,128,0.5)" },
         },
-        {
-          props: { variant: "filled", color: "primary" },
-          style: {
-            backgroundColor: "#1a8870",
-            border: "1px solid #4fddbf",
-          },
-        },
-        {
-          props: { variant: "filled", color: "secondary" },
-          style: {
-            backgroundColor: "#21af90",
-            border: "1px solid #29d5b0",
-          },
-        },
-      ],
+        input: { padding: "6px 10px" },
+      },
+    },
+    MuiInputLabel: {
+      styleOverrides: {
+        root: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11 },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11 },
+        sizeSmall: { padding: "3px 10px" },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: { fontFamily: "'JetBrains Mono', monospace", fontSize: 12 },
+      },
+    },
+    MuiStepLabel: {
+      styleOverrides: {
+        label: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11 },
+      },
+    },
+    MuiDrawer: {
+      styleOverrides: {
+        paper: { backgroundColor: "#141719", backgroundImage: "none", borderLeft: "1px solid rgba(255,255,255,0.07)" },
+      },
     },
   },
 });

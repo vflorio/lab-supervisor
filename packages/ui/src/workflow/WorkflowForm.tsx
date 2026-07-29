@@ -1,5 +1,5 @@
 import { Add, Delete, KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
-import { IconButton, Stack, TextField } from "@mui/material";
+import { Button, IconButton, Stack, TextField } from "@mui/material";
 import type { DurationString } from "@supervisor/core/date-time";
 import type { CommandSchema } from "@supervisor/core/workflow/codec";
 import type { Command, Workflow } from "@supervisor/core/workflow/workflow";
@@ -28,8 +28,10 @@ const defaultCommand = (schema: readonly CommandSchema[]): Command => {
 export function WorkflowForm({ value, onChange, schema }: WorkflowFormProps) {
   const updateCommand = (index: number, command: Command) =>
     onChange({ ...value, commands: value.commands.map((c, i) => (i === index ? command : c)) });
+
   const removeCommand = (index: number) =>
     onChange({ ...value, commands: value.commands.filter((_, i) => i !== index) });
+
   const moveCommand = (index: number, delta: number) => {
     const target = index + delta;
     if (target < 0 || target >= value.commands.length) return;
@@ -37,6 +39,7 @@ export function WorkflowForm({ value, onChange, schema }: WorkflowFormProps) {
     [next[index], next[target]] = [next[target]!, next[index]!];
     onChange({ ...value, commands: next });
   };
+
   const addCommand = () => onChange({ ...value, commands: [...value.commands, defaultCommand(schema)] });
 
   return (
@@ -50,8 +53,21 @@ export function WorkflowForm({ value, onChange, schema }: WorkflowFormProps) {
       />
       <Stack sx={{ gap: 1 }}>
         {value.commands.map((command, index) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: comando controllato via value/onChange, nessun id
-          <Stack key={index} direction="row" sx={{ gap: 1, alignItems: "center" }}>
+          <Stack
+            // biome-ignore lint/suspicious/noArrayIndexKey: comando controllato via value/onChange, nessun id
+            key={index}
+            direction="row"
+            sx={{
+              gap: 1,
+              alignItems: "center",
+              bgcolor: "#0a0c0e",
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: 1,
+              px: 1,
+              py: 0.5,
+            }}
+          >
             <CommandForm value={command} schema={schema} onChange={(next) => updateCommand(index, next)} />
             <IconButton size="small" onClick={() => moveCommand(index, -1)} disabled={index === 0}>
               <KeyboardArrowUp fontSize="small" />
@@ -69,9 +85,15 @@ export function WorkflowForm({ value, onChange, schema }: WorkflowFormProps) {
           </Stack>
         ))}
       </Stack>
-      <IconButton size="small" onClick={addCommand} title="Add command" sx={{ alignSelf: "flex-start" }}>
-        <Add fontSize="small" />
-      </IconButton>
+      <Button
+        size="small"
+        variant="outlined"
+        startIcon={<Add fontSize="small" />}
+        onClick={addCommand}
+        sx={{ alignSelf: "flex-start", fontFamily: "'JetBrains Mono', monospace", fontSize: 11 }}
+      >
+        Aggiungi step
+      </Button>
     </Stack>
   );
 }

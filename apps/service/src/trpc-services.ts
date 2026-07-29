@@ -52,24 +52,44 @@ export const create = ({
   activityStream,
   resetRecovery,
   runManualWorkflow,
-}: Deps): Trpc.Services => ({
-  logger: trpcLog.child("web"),
-  android: android(trpcLog, adbDeviceStream),
-  notifications: notifyStream,
-  activity: activityStream,
-  registry: registry(config.registry.dbPath),
+}: Deps): Trpc.Services => {
+  // In-memory soltanto: nessun writer su file ancora, si perde al riavvio (vedi commento su
+  // Trpc.Services["settings"]["updateActivationSchedule"])
+  let currentConfig = config;
 
-  // Già redatta - mai esporre credenziali raw
-  settings: {
-    getConfig: () => Config.redact(config),
-  },
+  return {
+    logger: trpcLog.child("web"),
+    android: android(trpcLog, adbDeviceStream),
+    notifications: notifyStream,
+    activity: activityStream,
+    registry: registry(config.registry.dbPath),
 
-  logs: logStream,
-  tracking: predicateStream,
-  recovery: recoveryStream,
-  recoveryReset: resetRecovery,
-  runWorkflow: runManualWorkflow,
-});
+    // Già redatta - mai esporre credenziali raw
+    settings: {
+      getConfig: () => Config.redact(currentConfig),
+      updateActivationSchedule: (activationSchedule) => {
+        currentConfig = { ...currentConfig, activationSchedule };
+        return Config.redact(currentConfig);
+      },
+      updateWorkflows: (workflows) => {
+        currentConfig = { ...currentConfig, workflows: [...workflows] };
+        return Config.redact(currentConfig);
+      },
+      // Il cast rispecchia solo la variance readonly->mutable dell'array in input: la forma è
+      // già garantita da RecoveryPolicyCodec al bordo del router, non serve riclonare ogni livello.
+      updateRecovery: (recovery) => {
+        currentConfig = { ...currentConfig, recovery: recovery as Config.Service["recovery"] };
+        return Config.redact(currentConfig);
+      },
+    },
+
+    logs: logStream,
+    tracking: predicateStream,
+    recovery: recoveryStream,
+    recoveryReset: resetRecovery,
+    runWorkflow: runManualWorkflow,
+  };
+};
 
 const android = (trpcLog: Logger.Tagged, stream: AdbStream.AdbDeviceStream): Trpc.Services["android"] => ({
   devices: () => pipe(Adb.devices({ logger: trpcLog, spawn: Node.spawn }), TE.map(toDeviceSnapshot)),
