@@ -27,11 +27,27 @@ export interface PredicateStatProps {
   readonly detail?: string | ((value: PredicateValue | undefined) => string);
 }
 
-export function PredicateStat({ domain, entityId, name, label, colorFor, detail }: PredicateStatProps) {
+export interface UsePredicateStatArgs {
+  readonly domain: string;
+  readonly entityId: string;
+  readonly name: string;
+  readonly colorFor: (value: PredicateValue | undefined) => StatColor;
+  readonly detail?: string | ((value: PredicateValue | undefined) => string);
+}
+
+// Stessa lookup di PredicateStat, esposta come hook cosi' i chiamanti che non vogliono il
+// rendering ListItemText (es. le nuove card espandibili, vedi packages/ui/device-card)
+// possono comunque riusare la logica invece di duplicarla.
+export function usePredicateStat({ domain, entityId, name, colorFor, detail }: UsePredicateStatArgs) {
   const { table } = usePredicates();
   const entry = table.get(factKey({ domain, entityId, name }));
   const detailText =
     typeof detail === "function" ? detail(entry?.value) : (detail ?? String(entry?.value ?? "unknown"));
+  return { detailText, tone: colorFor(entry?.value) };
+}
+
+export function PredicateStat({ domain, entityId, name, label, colorFor, detail }: PredicateStatProps) {
+  const { detailText, tone } = usePredicateStat({ domain, entityId, name, colorFor, detail });
 
   return (
     <ListItemText
@@ -57,7 +73,7 @@ export function PredicateStat({ domain, entityId, name, label, colorFor, detail 
             fontWeight: 700,
             textTransform: "uppercase",
             letterSpacing: "0.02em",
-            color: STATE_TEXT_COLOR[colorFor(entry?.value)],
+            color: STATE_TEXT_COLOR[tone],
           },
         },
       }}

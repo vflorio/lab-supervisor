@@ -1,0 +1,116 @@
+import { MenuItem, Select, type SelectChangeEvent, Stack, TextField } from "@mui/material";
+import type { PredicateValue } from "@supervisor/core/predicates/model";
+import type { PredicateLeaf } from "./ops";
+
+// Editor per un leaf di PredicateExpression: ref/equals/includes e' un'unione chiusa
+// definita una volta in expression.ts, niente schema iniettato (a differenza di
+// Command/PolicyStep, che duplicano un registro esterno che potrebbe crescere).
+export interface PredicateLeafFormProps {
+  readonly value: PredicateLeaf;
+  readonly onChange: (next: PredicateLeaf) => void;
+}
+
+type ValueKind = "boolean" | "string" | "number";
+
+const valueKindOf = (value: PredicateValue): ValueKind =>
+  typeof value === "boolean" ? "boolean" : typeof value === "number" ? "number" : "string";
+
+const defaultForKind = (kind: ValueKind): PredicateValue => (kind === "boolean" ? false : kind === "number" ? 0 : "");
+
+function ValueEditor({ value, onChange }: { value: PredicateValue; onChange: (next: PredicateValue) => void }) {
+  const kind = valueKindOf(value);
+
+  return (
+    <Stack direction="row" sx={{ gap: 1, alignItems: "center" }}>
+      <Select
+        size="small"
+        value={kind}
+        onChange={(event: SelectChangeEvent) => onChange(defaultForKind(event.target.value as ValueKind))}
+        sx={{ minWidth: 90 }}
+      >
+        <MenuItem value="boolean">boolean</MenuItem>
+        <MenuItem value="string">string</MenuItem>
+        <MenuItem value="number">number</MenuItem>
+      </Select>
+      {kind === "boolean" && (
+        <Select
+          size="small"
+          value={String(value)}
+          onChange={(event: SelectChangeEvent) => onChange(event.target.value === "true")}
+          sx={{ minWidth: 90 }}
+        >
+          <MenuItem value="true">true</MenuItem>
+          <MenuItem value="false">false</MenuItem>
+        </Select>
+      )}
+      {kind === "number" && (
+        <TextField
+          size="small"
+          type="number"
+          label="value"
+          value={typeof value === "number" ? value : 0}
+          onChange={(event) => onChange(Number(event.target.value))}
+          sx={{ width: 100 }}
+        />
+      )}
+      {kind === "string" && (
+        <TextField
+          size="small"
+          label="value"
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
+          sx={{ width: 160 }}
+        />
+      )}
+    </Stack>
+  );
+}
+
+const KINDS = ["ref", "equals", "includes"] as const;
+
+const leafFor = (kind: (typeof KINDS)[number], name: string): PredicateLeaf =>
+  kind === "ref"
+    ? { type: "ref", name }
+    : kind === "equals"
+      ? { type: "equals", name, value: false }
+      : { type: "includes", name, value: "" };
+
+export function PredicateLeafForm({ value, onChange }: PredicateLeafFormProps) {
+  return (
+    <Stack direction="row" sx={{ gap: 1, alignItems: "center", flexWrap: "wrap" }}>
+      <Select
+        size="small"
+        value={value.type}
+        onChange={(event: SelectChangeEvent) =>
+          onChange(leafFor(event.target.value as (typeof KINDS)[number], value.name))
+        }
+        sx={{ minWidth: 110 }}
+      >
+        {KINDS.map((kind) => (
+          <MenuItem key={kind} value={kind}>
+            {kind}
+          </MenuItem>
+        ))}
+      </Select>
+      <TextField
+        size="small"
+        label="name"
+        value={value.name}
+        onChange={(event) => onChange({ ...value, name: event.target.value })}
+        sx={{ width: 180 }}
+      />
+      {value.type === "equals" && (
+        <ValueEditor value={value.value} onChange={(next) => onChange({ ...value, value: next })} />
+      )}
+      {value.type === "includes" && (
+        <TextField
+          size="small"
+          label="substring"
+          value={value.value}
+          onChange={(event) => onChange({ ...value, value: event.target.value })}
+          sx={{ width: 160 }}
+        />
+      )}
+    </Stack>
+  );
+}

@@ -57,6 +57,22 @@ export const formatPolicyJson = (json: PolicyJson): string => `[PolicyJson: ${JS
 
 export interface PolicyDecodeError extends AppError<"PolicyDecodeError"> {}
 
+// Metadata per la UI: quali step esistono e che argomenti prendono, senza duplicare i
+// registri runtime sotto.
+export type PolicyStepArgKind = "duration" | "number";
+
+export interface PolicyStepSchema {
+  readonly name: string;
+  readonly args: readonly { label: string; kind: PolicyStepArgKind }[];
+}
+
+export const POLICY_STEP_SCHEMA: readonly PolicyStepSchema[] = [
+  { name: "constantDelay", args: [{ label: "delay", kind: "duration" }] },
+  { name: "limitRetries", args: [{ label: "count", kind: "number" }] },
+  { name: "exponentialBackoff", args: [{ label: "delay", kind: "duration" }] },
+  { name: "capDelay", args: [{ label: "max", kind: "duration" }] },
+];
+
 // Registro delle primitive supportate
 const PRIMITIVES: Record<string, ((...args: number[]) => Policy) | undefined> = {
   constantDelay: (delay: number) => constantDelay(delay),

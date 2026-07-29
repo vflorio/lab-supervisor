@@ -16,7 +16,15 @@
   },
   "exports": {
     "./*": "./src/*.tsx",
-    "./schedule": "./src/schedule/index.tsx"
+    "./theme": "./src/theme.ts",
+    "./schedule": "./src/schedule/index.tsx",
+    "./duration": "./src/duration/index.tsx",
+    "./retry-policy": "./src/retry-policy/index.tsx",
+    "./workflow": "./src/workflow/index.tsx",
+    "./predicates": "./src/predicates/index.tsx",
+    "./pipeline": "./src/pipeline/index.tsx",
+    "./notify": "./src/notify/index.tsx",
+    "./recovery": "./src/recovery/index.tsx"
   },
   "peerDependencies": {
     "@emotion/react": "11.14.0",

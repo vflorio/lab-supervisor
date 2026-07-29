@@ -6,6 +6,40 @@ import type { Command, Workflow } from "./workflow";
 
 const TapCoordsCodec = t.type({ x: t.number, y: t.number });
 
+// Metadata per la UI: quali comandi esistono e che campi hanno, senza duplicare l'union.
+export type CommandFieldKind = "string" | "duration" | "coords";
+
+export interface CommandFieldSchema {
+  readonly key: string;
+  readonly label: string;
+  readonly kind: CommandFieldKind;
+}
+
+export interface CommandSchema {
+  readonly type: Command["type"];
+  readonly fields: readonly CommandFieldSchema[];
+}
+
+export const COMMAND_SCHEMA: readonly CommandSchema[] = [
+  { type: "restartApp", fields: [{ key: "packageId", label: "package id", kind: "string" }] },
+  {
+    type: "ensureActivity",
+    fields: [
+      { key: "packageId", label: "package id", kind: "string" },
+      { key: "activity", label: "activity", kind: "string" },
+    ],
+  },
+  { type: "openUrl", fields: [{ key: "url", label: "url", kind: "string" }] },
+  { type: "openDeveloperSettings", fields: [] },
+  { type: "reboot", fields: [] },
+  { type: "wakeUp", fields: [] },
+  { type: "inputTap", fields: [{ key: "coords", label: "coords", kind: "coords" }] },
+  { type: "waitForDevice", fields: [] },
+  { type: "waitForActivity", fields: [{ key: "activity", label: "activity", kind: "string" }] },
+  { type: "run", fields: [{ key: "workflowName", label: "workflow name", kind: "string" }] },
+  { type: "sleep", fields: [{ key: "duration", label: "duration", kind: "duration" }] },
+];
+
 const isCommand = (u: unknown): u is Command => typeof u === "object" && u !== null && "type" in u;
 
 const validateCommand = (u: unknown, c: t.Context): t.Validation<Command> => {

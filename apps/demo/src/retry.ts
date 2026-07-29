@@ -1,4 +1,4 @@
-import * as Retry from "@supervisor/core/retry";
+import * as Retry from "@supervisor/core/retry/retry";
 import { pipe } from "fp-ts/lib/function";
 
 const testPolicy = pipe(

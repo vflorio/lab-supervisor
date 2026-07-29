@@ -30,6 +30,17 @@ export const NotifyTargetCodec = new t.Type<NotifyTarget, unknown[], unknown>(
   encodeNotifyTarget,
 );
 
+// Metadata per la UI: quali notify target esistono e che campi hanno (vedi commento
+// sopra su un futuro "webhook"), senza duplicare l'union.
+export type NotifyTargetFieldKind = "string";
+
+export interface NotifyTargetSchema {
+  readonly type: NotifyTarget["type"];
+  readonly fields: readonly { key: string; label: string; kind: NotifyTargetFieldKind }[];
+}
+
+export const NOTIFY_TARGET_SCHEMA: readonly NotifyTargetSchema[] = [{ type: "slack", fields: [] }];
+
 export const NotifyLifecycleCodec = t.union([t.literal("immediate"), t.literal("exhausted")]);
 
 // Wrap/unwrap: nessuna validazione di struttura da hardcodare, il JSON resta una stringa

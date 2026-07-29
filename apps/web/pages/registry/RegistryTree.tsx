@@ -9,41 +9,36 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  Paper,
-  Stack,
   TextField,
   Typography,
 } from "@mui/material";
-import { entryRowGridSx } from "@supervisor/ui/EntryRow";
+import { DeviceCardList, PageHeader } from "@supervisor/ui/registry/index";
 import { match } from "ts-pattern";
 import { useData } from "vike-react/useData";
-import { Section } from "../../components/Section";
 import { type AdbDevice, useAdbDevices } from "../../hooks/useAdbDevices";
 import type { Data } from "../index/+data";
 import { AddDeviceDialog } from "./AddDeviceDialog";
 import { AssignCameraDialog } from "./AssignCameraDialog";
-import { CameraRow } from "./CameraRow";
-import { ControlUnitCard } from "./ControlUnitCard";
+import { CameraEntry } from "./CameraEntry";
+import { ControlUnitEntry } from "./ControlUnitEntry";
 import { LinkSuitestDialog } from "./LinkSuitestDialog";
-import { TvRow } from "./TvRow";
+import { TvEntry } from "./TvEntry";
 import type { Database } from "./types";
 import { useRegistryController } from "./useRegistryController";
 
-// -------------------------------------------------------------------------------------
-// Component
-// -------------------------------------------------------------------------------------
-
-export function RegistryView() {
+// Stessa business logic di Registry.tsx (useRegistryController), rendering a card
+// espandibili invece delle righe EntryRow. Route separata (/registry-v2).
+export function RegistryTreeView() {
   const { registry, adbDevices, workflows } = useData<Data>();
   const liveAdbDevices = useAdbDevices(adbDevices.ok ? adbDevices.data : []);
 
   return match(registry)
-    .with({ ok: true }, ({ data }) => <HierarchyView db={data} adbDevices={liveAdbDevices} workflows={workflows} />)
+    .with({ ok: true }, ({ data }) => <HierarchyTree db={data} adbDevices={liveAdbDevices} workflows={workflows} />)
     .with({ ok: false }, ({ error }) => <Alert severity="error">Registry error: {error.message}</Alert>)
     .exhaustive();
 }
 
-function HierarchyView({
+function HierarchyTree({
   db,
   adbDevices,
   workflows,
@@ -88,28 +83,30 @@ function HierarchyView({
   } = useRegistryController(db, adbDevices, workflows);
 
   return (
-    <Section
-      title="Device Registry"
-      actions={
-        <>
-          <Chip label={`${totalDevices} devices`} size="small" />
-          <Chip label={`${totalControlled} controlled`} size="small" color="primary" />
-          <IconButton onClick={() => setAddOpen(true)} color="primary" title="Add ADB Target">
-            <Add />
-          </IconButton>
-        </>
-      }
-    >
+    <Box sx={{ maxHeight: "calc(100vh - 64px)", overflowY: "auto" }}>
+      <PageHeader
+        eyebrow="Lab Supervisor / Registry"
+        title="Device Registry"
+        actions={
+          <>
+            <Chip label={`${totalDevices} devices`} size="small" />
+            <Chip label={`${totalControlled} controlled`} size="small" color="primary" />
+            <IconButton onClick={() => setAddOpen(true)} color="primary" title="Add ADB Target">
+              <Add />
+            </IconButton>
+          </>
+        }
+      />
+
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
-      <Stack spacing={2}>
-        {cuGroups.map((group) => (
-          <ControlUnitCard
-            key={group.cu.id}
+      <DeviceCardList items={cuGroups} getKey={(group) => group.cu.id}>
+        {(group) => (
+          <ControlUnitEntry
             group={group}
             adbDevices={adbDevices}
             onToggle={handleToggle}
@@ -121,62 +118,56 @@ function HierarchyView({
             workflows={workflows}
             onRunWorkflow={handleRunWorkflow}
           />
-        ))}
-
-        <Typography variant="subtitle2" sx={{ color: "text.secondary", display: "block", mb: 1 }}>
-          Unlinked
-        </Typography>
-
-        {unallocatedTvs.length > 0 && (
-          <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="overline" sx={{ color: "text.secondary", display: "block", mb: 1 }}>
-              TVs
-            </Typography>
-            <Box sx={{ ...entryRowGridSx, rowGap: 1 }}>
-              {unallocatedTvs.map((tvGroup) => (
-                <TvRow
-                  key={tvGroup.tv.deviceId}
-                  group={tvGroup}
-                  adbDevices={adbDevices}
-                  onToggle={handleToggle}
-                  onEdit={startEdit}
-                  onDelete={handleDelete}
-                  onAssignCamera={setAssigningCamera}
-                  onLinkCamera={handleLinkCamera}
-                  onResetRecovery={handleResetRecovery}
-                  workflows={workflows}
-                  onRunWorkflow={handleRunWorkflow}
-                />
-              ))}
-            </Box>
-          </Paper>
         )}
+      </DeviceCardList>
 
-        {orphanCameras.length > 0 && (
-          <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="overline" sx={{ color: "text.secondary", display: "block", mb: 1 }}>
-              Cameras
-            </Typography>
-            <Box sx={{ ...entryRowGridSx, rowGap: 1 }}>
-              {orphanCameras.map((camera) => (
-                <CameraRow
-                  key={camera.id}
-                  camera={camera}
-                  adbStatus={adbStatusFor(camera.adb?.target)}
-                  onToggle={handleToggle}
-                  onEdit={startEdit}
-                  onDelete={handleDelete}
-                  onAssign={() => setAssigningCamera(camera)}
-                  onLink={() => handleLinkCamera(camera)}
-                  onResetRecovery={handleResetRecovery}
-                  workflows={workflows}
-                  onRunWorkflow={handleRunWorkflow}
-                />
-              ))}
-            </Box>
-          </Paper>
-        )}
-      </Stack>
+      {unallocatedTvs.length > 0 && (
+        <Box sx={{ mt: 3 }}>
+          <Typography variant="overline" sx={{ color: "text.secondary", display: "block", mb: 1 }}>
+            TVs
+          </Typography>
+          <DeviceCardList items={unallocatedTvs} getKey={(tvGroup) => tvGroup.tv.deviceId}>
+            {(tvGroup) => (
+              <TvEntry
+                group={tvGroup}
+                adbDevices={adbDevices}
+                onToggle={handleToggle}
+                onEdit={startEdit}
+                onDelete={handleDelete}
+                onAssignCamera={setAssigningCamera}
+                onLinkCamera={handleLinkCamera}
+                onResetRecovery={handleResetRecovery}
+                workflows={workflows}
+                onRunWorkflow={handleRunWorkflow}
+              />
+            )}
+          </DeviceCardList>
+        </Box>
+      )}
+
+      {orphanCameras.length > 0 && (
+        <Box sx={{ mt: 3 }}>
+          <Typography variant="overline" sx={{ color: "text.secondary", display: "block", mb: 1 }}>
+            Cameras
+          </Typography>
+          <DeviceCardList items={orphanCameras} getKey={(camera) => camera.id}>
+            {(camera) => (
+              <CameraEntry
+                camera={camera}
+                adbStatus={adbStatusFor(camera.adb?.target)}
+                onToggle={handleToggle}
+                onEdit={startEdit}
+                onDelete={handleDelete}
+                onAssign={() => setAssigningCamera(camera)}
+                onLink={() => handleLinkCamera(camera)}
+                onResetRecovery={handleResetRecovery}
+                workflows={workflows}
+                onRunWorkflow={handleRunWorkflow}
+              />
+            )}
+          </DeviceCardList>
+        </Box>
+      )}
 
       {/* Edit label dialog */}
       <Dialog open={editing !== null} onClose={cancelEdit}>
@@ -224,6 +215,6 @@ function HierarchyView({
         onLink={handleLinkSuitest}
         onClose={() => setLinking(null)}
       />
-    </Section>
+    </Box>
   );
 }

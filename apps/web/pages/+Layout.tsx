@@ -23,8 +23,8 @@ import { NotifyToaster } from "../hooks/useNotify";
 import { PredicatesProvider } from "../hooks/usePredicates";
 import { RecoveryProvider } from "../hooks/useRecovery";
 import "./Layout.css";
+import { theme } from "@supervisor/ui/theme";
 import { closeSnackbar } from "notistack";
-import { theme } from "../theme";
 
 const NAV_ITEMS = [
   { href: "/", label: "Home", icon: <Home fontSize="small" /> },

@@ -2,6 +2,7 @@
   "name": "@supervisor/demo",
   "version": "0.1.0",
   "dependencies": {
+    "@mui/icons-material": "9.2.0",
     "@mui/material": "9.2.0",
     "@supervisor/core": "workspace:*",
     "@supervisor/ui": "workspace:*",

@@ -26,10 +26,25 @@ export interface ActivityStatProps {
   readonly detail?: string | ((status: string | undefined) => string);
 }
 
-export function ActivityStat({ source, entityId, label, colorFor, detail }: ActivityStatProps) {
+export interface UseActivityStatArgs {
+  readonly source: ActivitySource;
+  readonly entityId: string;
+  readonly colorFor: (status: string | undefined) => ActivityColor;
+  readonly detail?: string | ((status: string | undefined) => string);
+}
+
+// Stessa lookup di ActivityStat, esposta come hook cosi' i chiamanti che non vogliono il
+// rendering ListItemText (es. le nuove card espandibili, vedi packages/ui/device-card)
+// possono comunque riusare la logica invece di duplicarla.
+export function useActivityStat({ source, entityId, colorFor, detail }: UseActivityStatArgs) {
   const { table } = useActivity();
   const entry = table.get(activityKey({ source, entityId }));
   const detailText = typeof detail === "function" ? detail(entry?.status) : (detail ?? entry?.status ?? "idle");
+  return { detailText, tone: colorFor(entry?.status) };
+}
+
+export function ActivityStat({ source, entityId, label, colorFor, detail }: ActivityStatProps) {
+  const { detailText, tone } = useActivityStat({ source, entityId, colorFor, detail });
 
   return (
     <ListItemText
@@ -55,7 +70,7 @@ export function ActivityStat({ source, entityId, label, colorFor, detail }: Acti
             fontWeight: 700,
             textTransform: "uppercase",
             letterSpacing: "0.02em",
-            color: STATE_TEXT_COLOR[colorFor(entry?.status)],
+            color: STATE_TEXT_COLOR[tone],
           },
         },
       }}
