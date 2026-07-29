@@ -1,0 +1,74 @@
+---
+sidebar_position: 5
+---
+
+# Notifications
+
+The Notification interface exposes a single method - `send(message)` - that the service and the web app use to deliver alerts. The caller does not know or care how the message is actually dispatched.
+
+## Interface
+
+| Method | Description |
+|---|---|
+| `send(message)` | Deliver a notification with the given payload |
+
+### Message Model
+
+| Field | Type | Description |
+|---|---|---|
+| `channel` | `string` | Destination channel |
+| `text` | `string` | Plain-text content |
+| `blocks` | `Block[]` | Optional rich-content blocks (`section` with `mrkdwn` or `plain_text`) |
+
+## Notification Policy
+
+Notifications are sent only in specific scenarios:
+
+```mermaid
+---
+config:
+  flowchart:
+    nodeSpacing: 30
+    rankSpacing: 60
+---
+graph TD
+    Failure["Recovery failure detected"]
+    Failure --> Check{"All retries exhausted?"}
+    Check -- yes --> Notify["send(message)"]
+    Check -- no --> Retry["Retry recovery"]
+
+    Critical["Critical failure"] --> Notify
+
+    style Failure fill:#e74c3c,color:#fff
+    style Check fill:#f5a623,color:#fff
+    style Notify fill:#4a90d9,color:#fff
+    style Retry fill:#7b8a8b,color:#fff
+    style Critical fill:#e74c3c,color:#fff
+```
+
+| Trigger | Description |
+|---|---|
+| **Retries exhausted** | Recovery workflow failed after all configured retry attempts |
+| **Critical failure** | An immediately critical failure (configurable per device type) |
+
+## Implementation: Slack
+
+The current implementation wires `send(message)` to the **Slack Web API** (`chat.postMessage`). The tRPC server injects the Slack SDK as the concrete runner - the interface remains decoupled from any specific provider.
+
+```mermaid
+---
+config:
+  flowchart:
+    nodeSpacing: 30
+    rankSpacing: 50
+---
+graph LR
+    Interface["send(message)"] --> Runner["Slack Runner"]
+    Runner --> SDK["Slack SDK <br/> chat.postMessage"]
+
+    style Interface fill:#f5a623,color:#fff
+    style Runner fill:#9b59b6,color:#fff
+    style SDK fill:#7b8a8b,color:#fff
+```
+
+The runner authenticates with a **bot token** and posts to the configured Slack workspace. Response validation ensures that only `{ ok: true }` responses are accepted - any API-level error is surfaced as a typed `SlackAPIError`.

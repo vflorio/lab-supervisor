@@ -1,0 +1,164 @@
+---
+sidebar_position: 2
+---
+
+# Android Bridge
+
+The Android Bridge communicates with Android devices over ADB (TCP). Each device is uniquely identified by its **IP address** - if two targets share the same IP, the bridge raises a `DuplicateTargetError` and attempts automatic resolution (see [Target Uniqueness](#target-uniqueness)).
+
+:::note[Pre-registration required]
+The Android Bridge only operates on devices whose IP is registered in the [Device Registry](device-registry) as an `android-camera`. Unregistered IPs discovered via mDNS are ignored. Device pairing is handled separately by the [mDNS Discovery pairing flow](mdns-discovery#pairing-mode).
+:::
+
+## State Machines
+
+The Android Bridge manages **three state machines per device**.
+
+### Target Machine
+
+Tracks how the bridge knows a device's network address. Every state transition implies an ADB disconnect from the previous port before connecting to the new one.
+
+```mermaid
+---
+config:
+  stateDiagram:
+    nodeSpacing: 40
+    rankSpacing: 60
+---
+stateDiagram-v2
+    [*] --> Unknown
+
+    Unknown --> Temporary : mDNS discovery <br/> (random port)
+    Temporary --> Persistent : tcpip configured port <br/> + reconnect
+    Temporary --> Unknown : connection lost
+
+    Persistent --> Unknown : connection lost
+    Persistent --> Temporary : port changed <br/> re-handshake needed
+```
+
+| State | Representation | Description |
+|---|---|---|
+| **Unknown** | `ip` | IP known (e.g. from registry), no ADB connection |
+| **Temporary** | `ip:anyPort` | Connected on a random mDNS-discovered port |
+| **Persistent** | `ip:configuredPort` | Connected on the configured persistent port (e.g. `5555`) |
+
+### Connection Machine
+
+One instance per controlled camera, driven by three independent inputs: a periodic reconcile
+tick (re-resolves the target and retries any `Disconnected` instance), a real-time subscription
+that detects an `Idle` device going unreachable, and workflow command outcomes (a dispatched
+reboot, or a command that timed out).
+
+```mermaid
+---
+config:
+  stateDiagram:
+    nodeSpacing: 40
+    rankSpacing: 60
+---
+stateDiagram-v2
+    [*] --> Disconnected
+
+    Disconnected --> Connecting : ReconnectRequested
+    Connecting --> Connecting : ReconnectRequested
+    Connecting --> Idle : ADB handshake OK
+    Connecting --> Disconnected : handshake failed
+
+    Idle --> Disconnected : connection lost
+    Idle --> Disconnected : RebootDispatched
+    Idle --> Disconnecting : TransportSuspect
+    Disconnecting --> Disconnected : disconnect done
+```
+
+| State | Condition |
+|---|---|
+| **Disconnected** | No active ADB session |
+| **Connecting** | Target resolution (mDNS) + ADB handshake in progress |
+| **Idle** | ADB session active, device responsive - accepts commands |
+| **Disconnecting** | Explicit `adb disconnect` in flight - does not accept commands, and is not retried by reconcile |
+
+Two intents: `Connect` delegates to the Target Machine above (resolution + handshake), and
+`Disconnect` clears a stale entry from adb's local transport table. This machine only translates
+the outcome into "can this camera accept commands right now?".
+
+Two of the events come from *outside* the connection layer, because they describe situations the
+liveness subscription cannot observe on its own:
+
+| Event | Meaning |
+|---|---|
+| **RebootDispatched** | Expected outage - a reboot was just sent, so the device is about to vanish. Invalidates `Idle` immediately, rather than waiting for the ADB poll to notice; without it a wait-for-reconnect started right after would read the stale `Idle` and return at once. |
+| **TransportSuspect** | Suspected outage - a command timed out while `adb devices` still reports the device as reachable ("stuck transport"). Needs an explicit `adb disconnect`: reconnecting alone does not clear a stale transport entry. |
+
+Every state change goes through a single serialized dispatch per camera, and the reducer is the
+only authority on which events apply to which state - an event that does not apply is a no-op, so
+callers never inspect the state before dispatching.
+
+### Workflow Activity
+
+There is no command queue/serialization machine - nothing today dispatches concurrent commands
+against the same device, so it isn't built. What *is* tracked is the live status of a command
+that depends on connectivity (`waitForDevice`, used by recovery pipelines after a `reboot`):
+instead of shelling out on a possibly stale ADB port, it polls the Connection Machine above until
+the device reaches **Idle** again, bounded by an intrinsic timeout.
+
+This status is published on the Activity feed (`source: "workflow"`), so a stalled recovery
+attempt is observable per-device instead of just "still running":
+
+| Status | Meaning |
+|---|---|
+| **suspended** | A command is blocked waiting for the device to reach Idle (e.g. after a reboot) |
+| **resumed** | The device reached Idle again; the command continues |
+
+If the device never comes back within the timeout, the command fails and the outcome surfaces
+through the recovery tripwire's own state (`exhausted`/`fatalError`), not as a separate status
+here.
+
+## Target Uniqueness
+
+Targets are unique by IP. If two targets with the same IP are detected (e.g. a temporary and a persistent entry coexisting), the bridge:
+
+1. Pings both targets
+2. Disconnects whichever does not respond
+3. If both respond, disconnects the **temporary** one
+4. If neither responds, transitions to **Unknown**
+
+This avoids ghost connections and ensures a single active session per device.
+
+## API
+
+### Device Control
+
+| Procedure | Description |
+|---|---|
+| `reboot(ip)` | Reboot the device |
+| `wakeUp(ip)` | Wake the screen |
+| `dismissKeyguard(ip)` | Dismiss the lockscreen |
+| `inputTap(ip, x, y)` | Tap at screen coordinates |
+| `openUrl(ip, url)` | Open a URL via intent |
+
+### App Management
+
+| Procedure | Description |
+|---|---|
+| `launchApp(ip, packageId)` | Launch an app |
+| `restartApp(ip, packageId)` | Force-stop and relaunch an app |
+| `getForegroundActivity(ip)` | Get the currently focused activity |
+| `isActivityInForeground(ip, activity)` | Check if a specific activity is active |
+
+### Wait
+
+| Procedure | Description |
+|---|---|
+| `waitForDevice(ip)` | Wait until the device is online |
+| `waitForDisconnect(ip)` | Wait until the device disconnects |
+
+## Implementation: adb
+
+The bridge spawns `adb` as a child process for every operation. The interface's device states are derived from ADB's raw states via pattern matching:
+
+| Interface State | ADB States |
+|---|---|
+| **Connected** | `device` |
+| **Offline** | `offline` - `recovery` - `rescue` - `sideload` - `bootloader` |
+| **Disconnected** | `disconnect` - absent from `adb devices` |
+| **Unknown** | any unrecognized value |

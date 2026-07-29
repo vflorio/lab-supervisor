@@ -1,0 +1,125 @@
+# TODO
+
+## v0.1.0
+
+### Core
+
+- [x] Schedule model: TimeSlot, Schedule type, primitives, combinators, instanze monoidi
+    - [X] Aggiungere unit testing
+- [X] Device model: tipi per TV, Candybox, AndroidCamera (id, name, owner relations, ecc.)
+- [X] Target model: divisione esplicita PersistentTarget (porta persistente = connected) & ConnectingTarget (porta random = connecting)
+- [X] Recovery policy model: offline threshold, grace period, retry count, delay tra tentativi
+    - [X] Model/FSM/ADT: Recovery State = healthy / pending / recovering / exhausted / fatalError
+    - [X] Notifications: associazione a via config ad ogni tripwire, wiring= (UI: notistack, service: Slack (se configurato))
+- [X] Notification policy model: immediate vs. exhausted (after-all-retries)
+- [X] Config model: configurazione completa supervisor (devices, policies, schedule, Slack)
+- [X] Predicates model: sistema per dichiare info di interesse generale (quindi esposti a tRPC e tramite api event-driven) estratte da servizi specifici 
+
+### Monitoring
+
+- [X] Candybox reachability check
+- [X] Suitest Availability check: polling raggiungibilità per device type (Candybox, Android camera), con intervallo configurabile
+- [X] Activation gate: saltare il polling fuori dallo schedule di lavoro configurato
+- [X] Offline state tracker: tracciamento centralizzato stato device (online/offline/recovering), durata irraggiungibilità, integrato con availability check
+
+### Candybox
+- [X] Suitest Public API client (auth, reboot, power on/off)
+- [ ] Candybox recovery workflow: detect -> wait grace period -> reboot (smartplug) -> verify reachability
+
+### Android Camera
+- [X] ADB over TCP client
+    - [X] Connection, Devices, Tap, Apps Management, Reboot, etc
+- [X] Android recovery workflow - livello 1: restart Suitest/Automation app via ADB
+- [X] Android recovery workflow - livello 2: reboot device via ADB, attesa boot, avvio app
+- [X] Post-boot startup sequence: avvio Suitest app + esposizione ADB-TCP
+    - [X] ADB over wifi automation
+    - [X] Avvia suitest-camera, imposta profilo experimental-wide, e premi tasto connect (le coordinate considerare orientamento schermo)
+- [X] Verifica camera stream dopo recovery (gestito tramite predicati)
+- [X] Fix waitForDevice: gestire il caso in cui mDNS non rileva un device tornato online durante l'esecuzione del workflow
+- [X] Gating dei comandi workflow su AndroidBridge.acceptsCommands(cameraId) - oggi definito ma mai interrogato prima di eseguire un comando
+- [X] Disconnect+reconnect esplicito su comando fallito, per i transport ADB "incastrati" che adb devices continua a riportare come device pur non rispondendo più (non rilevabile da ConnectionLost)
+
+### Retry Engine
+- [X] Retry model (constant, exponential, limit, cap)
+- [X] Generic retry runner: tentativi configurabili, delay, strategia per device type
+- [X] Backoff strategy (fixed / exponential)
+- [X] Marcare device come "intervento manuale necessario" dopo esaurimento retry
+
+### Notifications
+
+- [X] Slack client
+- [X] Notification payload builder: info device, motivo failure, riepilogo tentativi recovery
+- [X] Invio notifica al termine dei retry senza successo
+- [X] Invio notifica immediata per failure critici (configurabile per policy)
+
+### Operational Safety
+
+- [X] Flag maintenance mode manuale: impedire recovery automatico per device spento manualmente (gestito tramite db .controlled)
+- [X] State machine centralizzata per gestione policy: il servizio opera in base a stati finiti (active, paused, recovering) - es. pausa automatica su perdita connettività (connection tracker)
+
+### Service
+
+- [X] Caricamento config (JSON) con validazione (io-ts)
+- [X] Logging (strutturato, con contesto device)
+- [X] Gestione graceful shutdown/restart
+- [X] Device registry stabile: database locale [device-name, ip-statico] al posto di discovery puramente mDNS
+- [X] Integrazione invio notifiche Slack
+
+## v0.2.0
+
+### Service
+- [ ] Docker/PM2 per ambiente production
+
+### Candybox
+- [ ] Shared-host failure detection: se tutti i device appartenenti allo stesso Candybox risultano OFFLINE, riavvia del Candybox
+
+### Android Camera
+
+- [ ] Workflow / scripting engine
+  - [ ] Coordinate relative per inputTap: supportare coordinate normalizzate (`0.0–1.0`) oltre a quelle assolute
+  - [ ] Sistema di predicati/guard per l'esecuzione condizionale dei comandi in un workflow
+- [ ] Comando ensureOrientation: forza uno specifico orientamento (es. ensureOrientation(Landscape))
+- [X] Comando wait/sleep nella config workflow (per tap-scripting e timing)
+- [ ] Comando wakeUp dovrebbe controllare lo schermo prima di mandare lo swipe
+
+## v0.3.0
+
+### Scheduling
+
+- [ ] Scheduling core
+  - [ ] Esporre il concetto di stato controlled per ogni entity (es. utilizzo TV0 dalle 14:00 alle 18:00)
+  - [ ] Riutilizzare il modello di stato controlled come base per altre feature di scheduling e prenotazione
+
+### TV Device
+
+- [ ] TV power and recovery workflows
+  - [ ] Power-on workflow: verificare che il device sia acceso; se OFF / OFFLINE, accendere via Suitest API
+  - [ ] Pre-recording readiness check: assicurare stato READY / CONTROLLABLE prima di una registrazione schedulata
+  - [ ] Recovery workflow: detect -> power on -> verify status -> retry / notify
+  
+### Service
+
+- [ ] Service connectivity recovery
+  - [ ] Monitorare la connettività di rete del servizio
+  - [ ] Eseguire recovery automatico in caso di perdita o ricaduta della connessione
+
+### Scheduled TV Recording Sessions
+
+- [ ] Recording session model
+  - [ ] Definire `start time`, `end time`, `target device`, `input/channel`
+  - [ ] Definire strategia di storage delle registrazioni (path locale e naming convention)
+- [ ] Scheduling UI
+  - [ ] Interfaccia per creare e modificare recording sessions
+- [ ] Session runner
+  - [ ] Eseguire workflow: power on -> selezione input -> avvio registrazione -> stop -> salvataggio -> power off opzionale
+
+### Misc
+
+- [ ] Modalità prenotata TV
+  - [ ] Iniettare nella TV un overlay con: "Prenotato da: {utente} per {ragione}"
+  - [ ] Durante la prenotazione, catturare logs, chiamate di rete e screenshot ciclici / registrazione schermo
+- [ ] Modalità batch TV commander
+  - [ ] Selezionare N TV e mostrare screenshot in una matrice auto-adattante
+  - [ ] Inviare input del telecomando a più TV contemporaneamente
+  - [ ] Raggruppare le TV per `os-type` per supportare comandi specifici per UI / piattaforma
+  

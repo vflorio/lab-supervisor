@@ -1,0 +1,108 @@
+{
+  "suitest": {
+    "baseUrl": "http://localhost:3002/v1/suitest",
+    "tokenId": "dev-suitest-token-id",
+    "tokenPassword": "dev-suitest-token-password"
+  },
+  "slack": {
+    "active": false,
+    "botToken": "dev-slack-token"
+  },
+  "trpc": {
+    "port": 3001,
+    "hostname": "127.0.0.1"
+  },
+  "log": {
+    "level": "debug", // "error" | "warn" | "info" | "debug"
+    "path": "data/logs.jsonl", // JSON Lines files
+    "network": false // stampa le risposte HTTP (get/post, singole o paginate) indipendentemente da "tripwire"
+  },
+  "adb": {
+    "port": 5555,
+    // Se un workflow manda in reboot un device, questo timeout è il tempo massimo che aspettiamo il device per tornare online
+    "waitForDeviceTimeout": "2m"
+  },
+  "tracking": {
+    "adb": { "policy": [["constantDelay", "10s"]] },
+    "suitestCamera": { "policy": [["constantDelay", "30s"]] },
+    "suitestControlUnit": { "policy": [["constantDelay", "60s"]] },
+    "suitestDevice": { "policy": [["constantDelay", "60s"]] }
+  },
+
+  // Applicative
+
+  // Periodo di attivazione del servizio
+  "activationSchedule": {
+    "days": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
+    "from": "00:00",
+    "to": "23:59"
+  },
+
+  // Workflows lanciabili dalle pipelines
+  "workflows": [
+    [
+      "open-chrome",
+      [
+        // TODO: Questa dovrebbe controllare perché altrimenti manda uno scroll
+        ["wakeUp"],
+        ["ensureActivity", "com.android.chrome", "com.google.android.apps.chrome.Main"]
+      ]
+    ],
+    [
+      "open-chrome-reboot",
+      [
+        ["reboot"],
+        ["waitForDevice"],
+        ["sleep", "5s"],
+        ["ensureActivity", "com.android.chrome", "com.google.android.apps.chrome.Main"]
+      ]
+    ],
+    ["open-developer-settings", [["wakeUp"], ["openDeveloperSettings"]]]
+  ],
+
+  "recovery": [
+    {
+      "domain": "suitest-camera",
+      "label": "camera-recovery-demo",
+      "tripwires": [
+        {
+          // Quanto tempo il predicate deve rimanere falso prima di scattare la pipeline
+          "grace": "10s",
+          // Cosa osservare
+          "predicate": ["ref", "suitest_camera_connected"],
+          // Cosa fare quando il predicate resta falso per >= grace
+          //"pipeline": ["workflow", "open-chrome-reboot"],
+          "pipeline": ["or", ["workflow", "open-chrome"], ["workflow", "open-chrome-reboot"]],
+          // Cosa fare se la pipeline fallisce (es. crash, timeout, ecc.) il delay deve superare:
+          // - adb.waitForDeviceTimeout (attesa massima di reboot)
+          // - tracking.suitestCamera.polling (polling di aggiornamento dei predicati)
+          "retry": [["constantDelay", "3m"], ["limitRetries", 3]],
+          "notify": [
+            {
+              "type": ["slack"],
+              "channel": "#lab-supervisor",
+              "message": "{{label}} ({{ip}}) suitest connection failed, manual intervention required",
+              "policy": ["exhausted"]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "registry": {
+    "dbPath": "data/device-registry.json",
+    "devices": {
+      "cameras": [
+        {
+          "id": "tablet",
+          "label": "Lenovo Tab M10",
+          "controlled": true,
+          "videoCaptureDeviceId": null,
+          "adbId": "192.168.1.4:5555"
+        }
+      ],
+      "tvs": [{ "deviceId": "tv-001", "label": "TV_1", "controlled": false, "ip": "192.168.2.1" }],
+      "adb": [{ "id": "192.168.1.4:5555", "label": "Lenovo Tab M10", "target": "192.168.1.4:5555" }]
+    }
+  }
+}

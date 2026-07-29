@@ -1,22 +1,25 @@
 {
-  "name": "@scheduler-fp/core",
-  "version": "1.0.0",
+  "name": "@supervisor/core",
+  "version": "0.1.0",
   "devDependencies": {
     "fp-ts": "2.16.11",
     "io-ts": "2.2.22",
     "ts-pattern": "5.9.0",
-    "typescript": "5.9.3"
+    "typescript": "7.0.2"
   },
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
+    "./*": "./src/*.ts"
   },
   "files": [
     "dist"
   ],
   "main": "./dist/index.js",
+  "peerDependencies": {
+    "fp-ts": "2.16.11",
+    "io-ts": "2.2.22",
+    "ts-pattern": "5.9.0",
+    "typescript": "7.0.2"
+  },
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",

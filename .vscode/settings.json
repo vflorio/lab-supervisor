@@ -25,5 +25,7 @@
   },
   "files.watcherExclude": {
     "**/target": true
-  }
+  },
+  "npm.packageManager": "bun",
+  "npm.scriptRunner": "bun"
 }

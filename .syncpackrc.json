@@ -2,7 +2,7 @@
   "versionGroups": [
     {
       "label": "Use workspace protocol when developing local packages",
-      "dependencies": ["@scheduler-fp/**"],
+      "dependencies": ["@supervisor/**"],
       "dependencyTypes": ["dev", "peer", "prod"],
       "pinVersion": "workspace:*"
     },
@@ -31,8 +31,8 @@
       "policy": "sameRange"
     },
     {
-      "label": "Sync @types/node versions across workspace",
-      "dependencies": ["@types/node"],
+      "label": "Sync @types/bun versions across workspace",
+      "dependencies": ["@types/bun"],
       "dependencyTypes": ["dev"],
       "policy": "sameRange"
     },
@@ -41,12 +41,18 @@
       "dependencies": ["fp-ts"],
       "dependencyTypes": ["dev"],
       "policy": "sameRange"
+    },
+    {
+      "label": "Sync ts-pattern versions across workspace",
+      "dependencies": ["ts-pattern"],
+      "dependencyTypes": ["dev"],
+      "policy": "sameRange"
     }
   ],
   "semverGroups": [
     {
       "label": "Keep all package versions in sync",
-      "packages": ["@scheduler-fp/**"],
+      "packages": ["@supervisor/**"],
       "range": ""
     }
   ]
