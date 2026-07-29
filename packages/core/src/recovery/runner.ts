@@ -1,11 +1,11 @@
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import { format } from "../errors";
-import * as IntervalLoop from "../interval-loop";
 import * as Logger from "../logger/logger";
 import type { PredicateEntry, PredicateFeed, PredicateValue } from "../predicates/index";
 import type { PolicyDecodeError } from "../retry/codec";
 import type { Policy } from "../retry/retry";
+import * as TaskRunner from "../task-runner";
 import type { CommandCapabilities } from "../workflow/interpreter";
 import type { Workflow } from "../workflow/workflow";
 import { type CompiledTripwire, compileTripwires } from "./compile";
@@ -90,7 +90,7 @@ export const start = (
         );
       });
 
-      const tickLoop = IntervalLoop.create(
+      const tickLoop = TaskRunner.create(
         Logger.muted(env.logger.child(`RecoveryRunner:${policy.label}`)),
         env.tickPolicy,
         async () => {
@@ -99,7 +99,7 @@ export const start = (
       );
 
       // Avvia il loop in background
-      pipe(tickLoop.start, IntervalLoop.detach)();
+      pipe(tickLoop.start, TaskRunner.detach)();
 
       return {
         stop: () => {

@@ -1,10 +1,10 @@
 import * as Adb from "@supervisor/core/adapters/adb/shell";
 import * as Errors from "@supervisor/core/errors";
-import * as IntervalLoop from "@supervisor/core/interval-loop";
 import type * as Logger from "@supervisor/core/logger/logger";
 import * as Network from "@supervisor/core/network";
 import * as Predicates from "@supervisor/core/predicates/index";
 import type * as Retry from "@supervisor/core/retry/retry";
+import * as TaskRunner from "@supervisor/core/task-runner";
 import * as E from "fp-ts/Either";
 import type { AdbDeviceStream } from "./adb-stream";
 
@@ -36,7 +36,7 @@ const retractVanished = (
     .filter((target) => !seenTargets.has(target))
     .map((target) => ({ domain: DOMAIN, entityId: target, name: "adb_device_reachable", value: false }));
 
-export const create = ({ logger, predicateStream, policy, adbEnv, adbDeviceStream }: Deps): IntervalLoop.Handle => {
+export const create = ({ logger, predicateStream, policy, adbEnv, adbDeviceStream }: Deps): TaskRunner.Handle => {
   const diffFor = Predicates.diff<Adb.Device>(DOMAIN, keyOf, toFacts);
 
   let snapshot: ReadonlyMap<string, Predicates.PredicateValue> = new Map();
@@ -70,5 +70,5 @@ export const create = ({ logger, predicateStream, policy, adbEnv, adbDeviceStrea
     for (const fact of [...changed, ...retracted]) predicateStream.emit(fact);
   };
 
-  return IntervalLoop.create(domainLogger, policy, tick, `(Tracker) ${DOMAIN}`);
+  return TaskRunner.create(domainLogger, policy, tick, `(Tracker) ${DOMAIN}`);
 };

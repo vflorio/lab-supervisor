@@ -27,7 +27,7 @@ export const create = (
 ): Handle => {
   const controller = new AbortController();
 
-  const pilLogger = logger.child("Module name");
+  const pilLogger = logger.child("TaskRunner");
 
   let status: Retry.Status = Retry.initialStatus;
 

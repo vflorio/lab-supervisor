@@ -1,8 +1,8 @@
 import type * as Config from "@supervisor/core/config";
-import * as IntervalLoop from "@supervisor/core/interval-loop";
 import type * as Logger from "@supervisor/core/logger/logger";
 import * as Predicates from "@supervisor/core/predicates/index";
 import type * as Retry from "@supervisor/core/retry/retry";
+import * as TaskRunner from "@supervisor/core/task-runner";
 import { flow, pipe } from "fp-ts/function";
 import * as IO from "fp-ts/IO";
 import * as TE from "fp-ts/TaskEither";
@@ -48,7 +48,7 @@ export const create = ({ logger, stream, policies, suitestConfig }: Deps) => {
   return {
     start: pipe(
       [camera.start, controlUnit.start, device.start],
-      TE.traverseArray(flow(IntervalLoop.detach, TE.fromIO)),
+      TE.traverseArray(flow(TaskRunner.detach, TE.fromIO)),
       TE.asUnit,
     ),
     stop: pipe(
@@ -57,5 +57,5 @@ export const create = ({ logger, stream, policies, suitestConfig }: Deps) => {
       IO.flatMap(() => controlUnit.stop),
       IO.flatMap(() => device.stop),
     ),
-  } satisfies IntervalLoop.Handle;
+  } satisfies TaskRunner.Handle;
 };

@@ -1,9 +1,9 @@
 import * as E from "fp-ts/Either";
 import type * as RTE from "fp-ts/ReaderTaskEither";
 import * as Errors from "../errors";
-import * as IntervalLoop from "../interval-loop";
 import * as Logger from "../logger/logger";
 import type * as Retry from "../retry/retry";
+import * as TaskRunner from "../task-runner";
 import type { PredicateStream } from "./feed";
 import { factKey, type PredicateFact, type PredicateValue } from "./model";
 
@@ -52,7 +52,7 @@ export const diff =
     return { changed, next };
   };
 
-// Effettivo: fetch -> diff contro lo snapshot in closure -> emette i fatti cambiati -> ripete sull'IntervalLoop.
+// Effettivo: fetch -> diff contro lo snapshot in closure -> emette i fatti cambiati -> ripete sull'TaskRunner.
 // Un fallimento del fetch viene loggato e ignorato (nessuna emissione),
 // il tracker riprova al prossimo tick
 export const create =
@@ -62,7 +62,7 @@ export const create =
     policy: Retry.Policy,
     config: TrackerConfig<Env, Error, RawItem>,
   ) =>
-  (env: Env): IntervalLoop.Handle => {
+  (env: Env): TaskRunner.Handle => {
     const diffFor = diff<RawItem>(config.domain, config.keyOf, config.toFacts);
     let snapshot: ReadonlyMap<string, PredicateValue> = new Map();
 
@@ -85,5 +85,5 @@ export const create =
       for (const fact of changed) stream.emit(fact);
     };
 
-    return IntervalLoop.create(trackerLogger, policy, tick, `(Tracker) ${config.domain}`);
+    return TaskRunner.create(trackerLogger, policy, tick, `(Tracker) ${config.domain}`);
   };

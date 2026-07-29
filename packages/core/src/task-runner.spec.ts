@@ -1,7 +1,7 @@
 import * as E from "fp-ts/Either";
 import { describe, expect, it } from "vitest";
-import * as IntervalLoop from "./interval-loop";
 import * as Retry from "./retry/retry";
+import * as TaskRunner from "./task-runner";
 
 const noopLogger = {
   debug: () => () => {},
@@ -14,10 +14,10 @@ const noopLogger = {
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-describe("interval-loop", () => {
+describe("task-runner", () => {
   it("ticks repeatedly, respecting the delay produced by the policy", async () => {
     let ticks = 0;
-    const loop = IntervalLoop.create(noopLogger, Retry.constantDelay(10), () => {
+    const loop = TaskRunner.create(noopLogger, Retry.constantDelay(10), () => {
       ticks++;
     });
 
@@ -32,7 +32,7 @@ describe("interval-loop", () => {
 
   it("stops on its own once the policy is exhausted (returns null)", async () => {
     let ticks = 0;
-    const loop = IntervalLoop.create(noopLogger, Retry.limitRetries(2), () => {
+    const loop = TaskRunner.create(noopLogger, Retry.limitRetries(2), () => {
       ticks++;
     });
 
@@ -44,7 +44,7 @@ describe("interval-loop", () => {
 
   it("stop() aborts the loop before the next tick fires", async () => {
     let ticks = 0;
-    const loop = IntervalLoop.create(noopLogger, Retry.constantDelay(10), () => {
+    const loop = TaskRunner.create(noopLogger, Retry.constantDelay(10), () => {
       ticks++;
     });
 

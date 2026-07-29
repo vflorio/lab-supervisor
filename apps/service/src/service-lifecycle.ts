@@ -1,13 +1,13 @@
 import type * as Activity from "@supervisor/core/activity/stream";
 import type * as ConfigModel from "@supervisor/core/config";
 import * as Errors from "@supervisor/core/errors";
-import * as IntervalLoop from "@supervisor/core/interval-loop";
 import type * as Logger from "@supervisor/core/logger/logger";
 import type * as Notify from "@supervisor/core/notify/stream";
 import type * as Predicates from "@supervisor/core/predicates/index";
 import type * as Recovery from "@supervisor/core/recovery/index";
 import type * as RetryPolicy from "@supervisor/core/retry/retry";
 import * as Retry from "@supervisor/core/retry/retry";
+import * as TaskRunner from "@supervisor/core/task-runner";
 import type * as WorkflowInterpreter from "@supervisor/core/workflow/interpreter";
 import { constVoid, flow, pipe } from "fp-ts/function";
 import * as IO from "fp-ts/IO";
@@ -46,10 +46,10 @@ export interface Env {
 }
 
 export interface ActiveLifecycle {
-  readonly adbTracking: IntervalLoop.Handle;
-  readonly suitestTracking: IntervalLoop.Handle;
+  readonly adbTracking: TaskRunner.Handle;
+  readonly suitestTracking: TaskRunner.Handle;
   readonly androidBridge: AndroidBridgeOrchestrator.Handle;
-  readonly adbReconciler: IntervalLoop.Handle;
+  readonly adbReconciler: TaskRunner.Handle;
   readonly recovery: RecoveryEngine.Handle;
   // Lancio manuale di un workflow (operatore, via tRPC) - vedi ./manual-workflow.ts
   readonly runWorkflow: (
@@ -74,7 +74,7 @@ const readRegistry = (env: Env) =>
     fsEnv: Node.fsEnv,
   });
 
-const createAdbReconciler = (env: Env, androidBridge: AndroidBridgeOrchestrator.Handle): IntervalLoop.Handle => {
+const createAdbReconciler = (env: Env, androidBridge: AndroidBridgeOrchestrator.Handle): TaskRunner.Handle => {
   const reconcileLog = env.logger.child("AndroidBridge");
 
   const tick = pipe(
@@ -89,12 +89,7 @@ const createAdbReconciler = (env: Env, androidBridge: AndroidBridgeOrchestrator.
     TE.match(constVoid, constVoid),
   );
 
-  return IntervalLoop.create(
-    reconcileLog,
-    Retry.constantDelay(ADB_RECONCILE_TICK_MS),
-    tick,
-    "(AndroidBridge) reconcile",
-  );
+  return TaskRunner.create(reconcileLog, Retry.constantDelay(ADB_RECONCILE_TICK_MS), tick, "(AndroidBridge) reconcile");
 };
 
 const createRecovery = (
@@ -166,10 +161,10 @@ const createResources =
   };
 
 const startBackgroundLoops = ({ adbTracking, suitestTracking, adbReconciler }: ActiveLifecycle): IO.IO<void> =>
-  IntervalLoop.detach(
+  TaskRunner.detach(
     pipe(
       [suitestTracking.start, adbTracking.start, adbReconciler.start],
-      TE.traverseArray(flow(IntervalLoop.detach, TE.fromIO)),
+      TE.traverseArray(flow(TaskRunner.detach, TE.fromIO)),
     ),
   );
 
