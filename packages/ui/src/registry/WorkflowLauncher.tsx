@@ -1,22 +1,17 @@
 import { PlayArrow } from "@mui/icons-material";
 import { Box, Button, Popover } from "@mui/material";
-import { Picker } from "@supervisor/ui/picker";
 import { useState } from "react";
-
-// -------------------------------------------------------------------------------------
-// Bottone + popover con ricerca per lanciare manualmente uno dei workflow configurati
-// (config `workflows`) contro l'entità della row corrente - vedi CameraRow.tsx. Popover
-// (non Menu) perché Autocomplete dentro un MenuList genera conflitti di focus/keyboard nav.
-// -------------------------------------------------------------------------------------
+import { Picker } from "../picker/Picker";
 
 export interface WorkflowLauncherProps {
-  readonly workflows: readonly { name: string }[];
+  readonly workflows: readonly string[];
   readonly onLaunch: (workflowName: string) => void;
 }
 
+// Bottone + popover con ricerca per lanciare manualmente uno dei workflow configurati contro
+// l'entità della riga corrente (§6.3). Nessun workflow configurato -> nulla da lanciare.
 export function WorkflowLauncher({ workflows, onLaunch }: WorkflowLauncherProps) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-
   if (workflows.length === 0) return null;
 
   return (
@@ -27,7 +22,7 @@ export function WorkflowLauncher({ workflows, onLaunch }: WorkflowLauncherProps)
         startIcon={<PlayArrow fontSize="small" />}
         onClick={(event) => setAnchorEl(event.currentTarget)}
       >
-        Launch workflow
+        Workflow
       </Button>
       <Popover
         anchorEl={anchorEl}
@@ -37,7 +32,7 @@ export function WorkflowLauncher({ workflows, onLaunch }: WorkflowLauncherProps)
       >
         <Box sx={{ p: 1, width: 260 }}>
           <Picker
-            options={workflows.map((workflow) => ({ id: workflow.name, primary: workflow.name }))}
+            options={workflows.map((name) => ({ id: name, primary: name }))}
             value={null}
             onChange={(name) => {
               if (name) {
@@ -45,7 +40,7 @@ export function WorkflowLauncher({ workflows, onLaunch }: WorkflowLauncherProps)
                 onLaunch(name);
               }
             }}
-            placeholder="Cerca workflow..."
+            placeholder="Search workflow..."
             autoFocus
           />
         </Box>

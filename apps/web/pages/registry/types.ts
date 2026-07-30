@@ -1,6 +1,5 @@
 import type { InUseBy } from "@supervisor/core/adapters/suitest";
 import type { AdbEntry, CameraEntry, CandyboxEntry, Database, TvEntry } from "@supervisor/core/db";
-import type { AdbDevice } from "../../hooks/useAdbDevices";
 
 export type { AdbEntry, Database };
 
@@ -54,18 +53,4 @@ export interface NewAdbTargetForm {
 export interface LinkingTarget {
   id: string; // id camera
   currentVideoCaptureDeviceId?: string;
-}
-
-// Props condivise dalle righe della gerarchia (control unit / tv / camera)
-export interface RowActions {
-  adbDevices: readonly AdbDevice[];
-  onToggle: (kind: DeviceKind, id: string, controlled: boolean) => void;
-  onEdit: (kind: DeviceKind, id: string, label: string) => void;
-  onDelete: (kind: DeviceKind, id: string) => void;
-  onAssignCamera: (camera: CameraView) => void;
-  onLinkCamera: (camera: CameraView) => void;
-  onResetRecovery: (policy: string, entityId: string, tripwireIndex: number) => void;
-  // Nomi dei workflow configurati (config `workflows`), per il menu di lancio manuale
-  workflows: readonly { name: string }[];
-  onRunWorkflow: (cameraId: string, workflowName: string) => void;
 }

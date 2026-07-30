@@ -29,10 +29,7 @@ export function DetailGrid({ items }: DetailGridProps) {
           <Typography variant="overline" color="textSecondary">
             {item.label}
           </Typography>
-          <Typography
-            variant="emphasizedValue"
-            sx={{ color: item.tone ? TONE_TEXT_COLOR[item.tone] : "text.primary" }}
-          >
+          <Typography variant="emphasizedValue" sx={{ color: item.tone ? TONE_TEXT_COLOR[item.tone] : "text.primary" }}>
             {item.value}
           </Typography>
         </Box>

@@ -149,8 +149,10 @@ export function useRegistryController(
 
   const { cuGroups, unallocatedTvs, orphanCameras } = buildHierarchy(db);
 
-  const totalDevices =
-    Object.keys(db.lab.candyboxes).length + Object.keys(db.lab.cameras).length + Object.keys(db.lab.tvs).length;
+  const controlUnitCount = Object.keys(db.lab.candyboxes).length;
+  const tvCount = Object.keys(db.lab.tvs).length;
+  const cameraCount = Object.keys(db.lab.cameras).length;
+  const totalDevices = controlUnitCount + cameraCount + tvCount;
 
   const totalControlled =
     Object.values(db.lab.candyboxes).filter((d) => d.controlled).length +
@@ -200,6 +202,9 @@ export function useRegistryController(
     cuGroups,
     unallocatedTvs,
     orphanCameras,
+    controlUnitCount,
+    tvCount,
+    cameraCount,
     totalDevices,
     totalControlled,
     usedAdbTargets,
@@ -209,3 +214,5 @@ export function useRegistryController(
     adbStatusFor: (target: Parameters<typeof adbStatusFor>[1]) => adbStatusFor(adbDevices, target),
   };
 }
+
+export type RegistryController = ReturnType<typeof useRegistryController>;

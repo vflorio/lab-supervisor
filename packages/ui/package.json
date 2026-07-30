@@ -23,6 +23,7 @@
   "exports": {
     "./*": "./src/*.tsx",
     "./theme": "./src/theme.ts",
+    "./domain/types": "./src/domain/types.ts",
     "./schedule": "./src/schedule/index.tsx",
     "./activation-schedule": "./src/activation-schedule/index.tsx",
     "./duration": "./src/duration/index.tsx",
