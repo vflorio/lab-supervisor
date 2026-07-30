@@ -7,9 +7,9 @@ import { match } from "ts-pattern";
 import type { AdbDevice } from "../../hooks/useAdbDevices";
 import { useServiceLogger } from "../../hooks/useServiceLogger";
 import { trpc } from "../../trpc/client";
-import { adbStatusFor, buildHierarchy, cameraSuitestCandidates } from "./hierarchy";
+import { adbStatusFor, buildHierarchy, cameraSuitestCandidates, suitestVideoCaptureDeviceForTv } from "./hierarchy";
 import { mutate, mutations } from "./mutations";
-import type { CameraView, Database, DeviceKind, LinkingTarget, NewAdbTargetForm } from "./types";
+import type { CameraView, Database, DeviceKind, LinkingTarget, NewAdbTargetForm, TvView } from "./types";
 
 // Estratto da Registry.tsx: cosi' Registry.tsx e RegistryTree.tsx riusano la stessa
 // business logic e differiscono solo nel rendering.
@@ -27,6 +27,7 @@ export function useRegistryController(
   const [newAdbTarget, setNewAdbTarget] = useState<NewAdbTargetForm>(emptyNewAdbTarget);
   const [assigningCamera, setAssigningCamera] = useState<CameraView | null>(null);
   const [linking, setLinking] = useState<LinkingTarget | null>(null);
+  const [linkingTv, setLinkingTv] = useState<TvView | null>(null);
   const log = useServiceLogger();
 
   const handleToggle = (kind: DeviceKind, id: string, controlled: boolean) => {
@@ -147,6 +148,28 @@ export function useRegistryController(
   const handleLinkCamera = (camera: CameraView) =>
     setLinking({ id: camera.id, currentVideoCaptureDeviceId: O.toUndefined(camera.videoCaptureDeviceId) });
 
+  // Assegna una camera locale orfana a una TV: parte dal video-capture-device che Suitest ha
+  // già assegnato a questa TV (non scrivibile da noi), poi collega la camera scelta con la
+  // stessa mutation di sempre (`camera.update({ videoCaptureDeviceId })`).
+  const handleLinkCameraToTv = (cameraId: string) =>
+    mutate(async () => {
+      if (!linkingTv) return { ok: false as const, error: { type: "ValidationError", message: "Nothing to link" } };
+
+      const videoCaptureDeviceId = suitestVideoCaptureDeviceForTv(db, linkingTv.deviceId);
+      if (!videoCaptureDeviceId)
+        return {
+          ok: false as const,
+          error: { type: "ValidationError", message: "No Suitest video-capture-device assigned to this TV" },
+        };
+
+      log(
+        `User linked camera ${cameraId} to TV ${linkingTv.deviceId} via video-capture-device ${videoCaptureDeviceId}`,
+      );
+      const result = await mutations.camera.update.mutate({ id: cameraId, videoCaptureDeviceId });
+      if (result.ok) setLinkingTv(null);
+      return result;
+    }, setError);
+
   const { cuGroups, unallocatedTvs, orphanCameras } = buildHierarchy(db);
 
   const controlUnitCount = Object.keys(db.lab.candyboxes).length;
@@ -174,6 +197,14 @@ export function useRegistryController(
 
   const linkCandidates = linking ? cameraSuitestCandidates(db, linking.currentVideoCaptureDeviceId) : [];
 
+  // Candidati per "Link camera" sulla TV: camere locali orfane, mostrate solo se Suitest ha
+  // effettivamente assegnato un video-capture-device a questa TV (altrimenti non c'è nulla da
+  // collegare, vedi `suitestVideoCaptureDeviceForTv`).
+  const linkTvCandidates =
+    linkingTv && suitestVideoCaptureDeviceForTv(db, linkingTv.deviceId)
+      ? orphanCameras.map((c) => ({ id: c.id, primary: c.label, secondary: O.toUndefined(c.adbId) }))
+      : [];
+
   return {
     error,
     setError,
@@ -195,6 +226,10 @@ export function useRegistryController(
     setLinking,
     handleLinkSuitest,
     handleLinkCamera,
+    linkingTv,
+    setLinkingTv,
+    handleLinkCameraToTv,
+    linkTvCandidates,
     handleToggle,
     handleDelete,
     handleResetRecovery,

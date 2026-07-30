@@ -31,7 +31,20 @@ export function ControlUnitCard({ children, ...rowProps }: ControlUnitCardProps)
           borderColor: "divider",
         }}
       >
-        <Dns sx={{ fontSize: 14, color: "primary.main" }} />
+        <Box
+          sx={{
+            width: 16,
+            height: 16,
+            borderRadius: 0.75,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            bgcolor: "rgba(74,222,128,0.1)",
+            color: "primary.main",
+          }}
+        >
+          <Dns sx={{ fontSize: 11 }} />
+        </Box>
         <Typography variant="monoEyebrow" sx={{ color: "textSecondary" }}>
           Control unit
         </Typography>

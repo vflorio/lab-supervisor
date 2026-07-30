@@ -59,14 +59,16 @@ export function PanelHeader({ title, icon, actions, sticky = true, px = { xs: 2,
         borderColor: "divider",
       }}
     >
-      <Stack direction="row" sx={{ gap: 1.5, alignItems: "center", minWidth: 0 }}>
-        {icon && <Box sx={panelHeaderIconSx}>{icon}</Box>}
-        {title && (
-          <Typography noWrap sx={{ ...mono, fontSize: 14, fontWeight: 600, color: "text.primary" }}>
-            {title}
-          </Typography>
-        )}
-      </Stack>
+      {title || icon ? (
+        <Stack direction="row" sx={{ gap: 1.5, alignItems: "center", minWidth: 0 }}>
+          {icon && <Box sx={panelHeaderIconSx}>{icon}</Box>}
+          {title && (
+            <Typography noWrap sx={{ ...mono, fontSize: 14, fontWeight: 600, color: "text.primary" }}>
+              {title}
+            </Typography>
+          )}
+        </Stack>
+      ) : null}
       {actions && (
         <Stack direction="row" sx={{ gap: 1, alignItems: "center", flexShrink: 0 }}>
           {actions}

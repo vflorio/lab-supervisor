@@ -1,4 +1,14 @@
-import { ClearAll, DoneAll, FilterAlt, KeyboardArrowDown, RemoveDone, Search, Terminal } from "@mui/icons-material";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ClearAll,
+  DoneAll,
+  FilterAlt,
+  KeyboardArrowDown,
+  RemoveDone,
+  Search,
+  Terminal,
+} from "@mui/icons-material";
 import {
   alpha,
   Box,
@@ -20,7 +30,7 @@ import { LEVEL_PALETTE, TAG_PALETTE } from "@supervisor/core/logger/log-palette"
 import type { LogEntry } from "@supervisor/core/logger/log-stream";
 import { isLevelEnabled, type LogLevel, padContinuationLines } from "@supervisor/core/logger/logger";
 import { ResizablePanel } from "@supervisor/ui/misc/ResizablePanel";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { List, type RowComponentProps, useDynamicRowHeight, useListRef } from "react-window";
 import { useLogFeed } from "../hooks/useLogFeed";
 import { PANEL_HEADER_HEIGHT, PanelHeader } from "../layout/PanelHeader";
@@ -36,6 +46,7 @@ const DEFAULT_ROW_HEIGHT = 20;
 const DEFAULT_WIDTH = 340;
 const MIN_WIDTH = 220;
 const WIDTH_STORAGE_KEY = "log-panel:width";
+const COLLAPSED_STORAGE_KEY = "log-panel:collapsed";
 
 interface LogRowProps {
   readonly entries: readonly LogEntry[];
@@ -88,6 +99,21 @@ const shouldStickToBottom = false;
 // trascinando il bordo sinistro - la dimensione scelta dall'utente persiste tra le sessioni
 // (ResizablePanel), quindi nessun limite massimo: il controllo è delegato all'utente.
 export function LogPanel() {
+  const [collapsed, setCollapsedState] = useState(false);
+
+  // Idrata lo stato persistito solo dopo il mount (mai durante l'SSR): il primo render deve
+  // combaciare esattamente con l'HTML del server (default false), altrimenti React segnala un
+  // hydration mismatch - stesso pattern della Sidebar.
+  useLayoutEffect(() => {
+    const raw = window.localStorage.getItem(COLLAPSED_STORAGE_KEY);
+    if (raw !== null) setCollapsedState(raw === "true");
+  }, []);
+
+  const setCollapsed = (next: boolean) => {
+    setCollapsedState(next);
+    window.localStorage.setItem(COLLAPSED_STORAGE_KEY, String(next));
+  };
+
   const [minLevel, setMinLevel] = useState<LogLevel>("debug");
   const { entries, status } = useLogFeed();
   const listRef = useListRef(null);
@@ -211,89 +237,102 @@ export function LogPanel() {
       storageKey={WIDTH_STORAGE_KEY}
       defaultSize={DEFAULT_WIDTH}
       minSize={MIN_WIDTH}
+      collapsed={collapsed}
+      collapsedSize={PANEL_HEADER_HEIGHT}
       sx={{
         borderLeft: "1px solid",
         borderColor: "divider",
         bgcolor: "background.paper",
       }}
     >
-      <Box sx={{ position: "absolute", inset: 0 }}>
-        <Box
-          sx={{
-            height: "100%",
-            bgcolor: VIEWPORT_BG,
-            fontFamily: '"JetBrains Mono", "Fira Code", ui-monospace, Menlo, Consolas, monospace',
-            fontSize: 12,
-            lineHeight: 1.6,
-          }}
-        >
-          {entries.length === 0 && (
-            <Typography variant="body2" color="textSecondary" sx={{ p: 1.5, pt: `${PANEL_HEADER_HEIGHT + 12}px` }}>
-              {status === "online" ? "Waiting for logs…" : "Connecting to service…"}
-            </Typography>
-          )}
-          {entries.length > 0 && visibleEntries.length === 0 && (
-            <Typography variant="body2" color="textSecondary" sx={{ p: 1.5, pt: `${PANEL_HEADER_HEIGHT + 12}px` }}>
-              Cleared - waiting for new logs…
-            </Typography>
-          )}
-          {visibleEntries.length > 0 && filteredEntries.length === 0 && (
-            <Typography variant="body2" color="textSecondary" sx={{ p: 1.5, pt: `${PANEL_HEADER_HEIGHT + 12}px` }}>
-              {hasActiveFilters ? "No logs match the current filters" : `No logs at "${minLevel}" level or above`}
-            </Typography>
-          )}
-          {filteredEntries.length > 0 && (
-            <List
-              listRef={listRef}
-              rowCount={filteredEntries.length}
-              rowHeight={dynamicRowHeight}
-              rowComponent={LogRow}
-              rowProps={{ entries: filteredEntries, showTimestamp, showTag }}
-              rowKey={(index, data) => data.entries[index]!.id}
-              onRowsRendered={handleRowsRendered}
-              style={{ height: "100%", scrollbarGutter: "stable" }}
-            />
+      {!collapsed && (
+        <Box sx={{ position: "absolute", inset: 0 }}>
+          <Box
+            sx={{
+              height: "100%",
+              bgcolor: VIEWPORT_BG,
+              fontFamily: '"JetBrains Mono", "Fira Code", ui-monospace, Menlo, Consolas, monospace',
+              fontSize: 12,
+              lineHeight: 1.6,
+            }}
+          >
+            {entries.length === 0 && (
+              <Typography variant="body2" color="textSecondary" sx={{ p: 1.5, pt: `${PANEL_HEADER_HEIGHT + 12}px` }}>
+                {status === "online" ? "Waiting for logs…" : "Connecting to service…"}
+              </Typography>
+            )}
+            {entries.length > 0 && visibleEntries.length === 0 && (
+              <Typography variant="body2" color="textSecondary" sx={{ p: 1.5, pt: `${PANEL_HEADER_HEIGHT + 12}px` }}>
+                Cleared - waiting for new logs…
+              </Typography>
+            )}
+            {visibleEntries.length > 0 && filteredEntries.length === 0 && (
+              <Typography variant="body2" color="textSecondary" sx={{ p: 1.5, pt: `${PANEL_HEADER_HEIGHT + 12}px` }}>
+                {hasActiveFilters ? "No logs match the current filters" : `No logs at "${minLevel}" level or above`}
+              </Typography>
+            )}
+            {filteredEntries.length > 0 && (
+              <List
+                listRef={listRef}
+                rowCount={filteredEntries.length}
+                rowHeight={dynamicRowHeight}
+                rowComponent={LogRow}
+                rowProps={{ entries: filteredEntries, showTimestamp, showTag }}
+                rowKey={(index, data) => data.entries[index]!.id}
+                onRowsRendered={handleRowsRendered}
+                style={{ height: "100%", scrollbarGutter: "stable" }}
+              />
+            )}
+          </Box>
+          {shouldStickToBottom && !stuckToBottom && filteredEntries.length > 0 && (
+            <Fab
+              size="small"
+              onClick={scrollToBottom}
+              aria-label="Scroll to bottom"
+              sx={{ position: "absolute", bottom: 24, right: 24, boxShadow: 3 }}
+            >
+              <KeyboardArrowDown />
+            </Fab>
           )}
         </Box>
-        {shouldStickToBottom && !stuckToBottom && filteredEntries.length > 0 && (
-          <Fab
-            size="small"
-            onClick={scrollToBottom}
-            aria-label="Scroll to bottom"
-            sx={{ position: "absolute", bottom: 24, right: 24, boxShadow: 3 }}
-          >
-            <KeyboardArrowDown />
-          </Fab>
-        )}
-      </Box>
+      )}
       <Box sx={{ position: "relative", zIndex: 1 }}>
         <PanelHeader
-          icon={<Terminal sx={{ fontSize: 16 }} />}
-          title="Service Logs"
+          icon={collapsed ? undefined : <Terminal sx={{ fontSize: 16 }} />}
+          title={collapsed ? undefined : "Service Logs"}
           sticky={false}
           px={1.5}
           actions={
             <>
-              <Tooltip title="Filters">
-                <IconButton
-                  size="small"
-                  onClick={() => setFiltersOpen((prev) => !prev)}
-                  color={filtersOpen || hasActiveFilters ? "primary" : "default"}
-                >
-                  <FilterAlt fontSize="small" />
+              {!collapsed && (
+                <>
+                  <Tooltip title="Filters">
+                    <IconButton
+                      size="small"
+                      onClick={() => setFiltersOpen((prev) => !prev)}
+                      color={filtersOpen || hasActiveFilters ? "primary" : "default"}
+                    >
+                      <FilterAlt fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Clear logs">
+                    <span>
+                      <IconButton size="small" onClick={clearLogs} disabled={visibleEntries.length === 0}>
+                        <ClearAll fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </>
+              )}
+              <Tooltip title={collapsed ? "Expand" : "Collapse"}>
+                <IconButton size="small" onClick={() => setCollapsed(!collapsed)}>
+                  {collapsed ? <ChevronLeft fontSize="small" /> : <ChevronRight fontSize="small" />}
                 </IconButton>
-              </Tooltip>
-              <Tooltip title="Clear logs">
-                <span>
-                  <IconButton size="small" onClick={clearLogs} disabled={visibleEntries.length === 0}>
-                    <ClearAll fontSize="small" />
-                  </IconButton>
-                </span>
               </Tooltip>
             </>
           }
         />
-        {filtersOpen && (
+        {!collapsed && filtersOpen && (
           <Stack
             sx={{
               gap: 1.25,

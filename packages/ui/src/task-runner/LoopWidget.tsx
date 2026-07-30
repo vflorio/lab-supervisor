@@ -1,5 +1,5 @@
 import { Box, Stack, Typography } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { StatusPill } from "../registry/StatusPill";
 import { type LoopState, loopTone } from "./types";
 
@@ -17,9 +17,6 @@ function formatCountdown(ms: number): string {
 }
 
 export interface LoopWidgetProps {
-  // Identità stabile del loop (vedi LoopDescriptor lato core) - non renderizzato, serve solo
-  // da chiave quando più widget vengono elencati (es. ServiceStrip), dove `label` da solo
-  // non è garantito unico (es. più policy di recovery).
   readonly id: string;
   readonly label: string;
   readonly state: LoopState;
@@ -32,9 +29,6 @@ export interface LoopWidgetProps {
   readonly now?: number;
 }
 
-// Heartbeat di un loop di background: vivo/fermo, punto nel ciclo, prossimo tick, cadenza.
-// Il countdown avanza con un clock interno (setInterval, ripulito allo smontaggio); quando
-// `now` e' passato lo sostituisce del tutto, cosi' storie e SSR restano deterministici.
 export function LoopWidget({
   label,
   state,
@@ -48,7 +42,7 @@ export function LoopWidget({
 }: LoopWidgetProps) {
   const [clock, setClock] = useState(() => nowProp ?? Date.now());
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (nowProp !== undefined) {
       setClock(nowProp);
       return;
@@ -63,17 +57,16 @@ export function LoopWidget({
   const progress = delayMs && nextIn !== undefined ? Math.max(0, Math.min(1, 1 - nextIn / delayMs)) : undefined;
 
   return (
-    <Box
+    <Stack
       sx={{
         border: "1px solid",
         borderColor: "divider",
         borderRadius: 1,
         bgcolor: "background.paper",
+        justifyContent: "space-between",
         p: 1.5,
-        display: "flex",
-        flexDirection: "column",
         gap: 1.25,
-        width: 176,
+        width: 240,
         flexShrink: 0,
       }}
     >
@@ -84,8 +77,8 @@ export function LoopWidget({
         <StatusPill label={state} tone={tone} />
       </Stack>
 
-      {progress !== undefined && (
-        <Box sx={{ height: 2, borderRadius: 999, overflow: "hidden", bgcolor: "divider" }}>
+      <Box sx={{ height: 2, borderRadius: 999, overflow: "hidden", bgcolor: "divider" }}>
+        {progress ? (
           <Box
             sx={{
               height: "100%",
@@ -94,8 +87,8 @@ export function LoopWidget({
               transition: "width 1s linear",
             }}
           />
-        </Box>
-      )}
+        ) : null}
+      </Box>
 
       <Stack direction="row" sx={{ gap: 2 }}>
         <Box>
@@ -157,6 +150,6 @@ export function LoopWidget({
           </Typography>
         </Stack>
       )}
-    </Box>
+    </Stack>
   );
 }

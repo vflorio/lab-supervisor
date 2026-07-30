@@ -1,5 +1,5 @@
 import { Dns } from "@mui/icons-material";
-import { Button } from "@mui/material";
+import { Box, Button } from "@mui/material";
 import type { ControlUnitEntry } from "../domain/types";
 import { EntryRow } from "../misc/EntryRow";
 import { IndicatorStat } from "./IndicatorStat";
@@ -33,7 +33,22 @@ export function ControlUnitRow({
 }: ControlUnitRowProps) {
   return (
     <EntryRow
-      icon={<Dns fontSize="small" />}
+      icon={
+        <Box
+          sx={{
+            width: 24,
+            height: 24,
+            borderRadius: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            bgcolor: "rgba(74,222,128,0.1)",
+            color: "primary.main",
+          }}
+        >
+          <Dns fontSize="small" />
+        </Box>
+      }
       label={cu.label}
       secondary={cu.id}
       checked={cu.controlled}

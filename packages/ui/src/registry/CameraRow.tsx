@@ -63,7 +63,7 @@ export function CameraRow({
       ]}
       context={
         <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap", alignItems: "center" }}>
-          <RecoveryActivityView status={recoveryStatus} />
+          {camera.videoCaptureDeviceId && <RecoveryActivityView status={recoveryStatus} />}
           <AdbBridgeActivityView status={adbActivityStatus} />
         </Stack>
       }

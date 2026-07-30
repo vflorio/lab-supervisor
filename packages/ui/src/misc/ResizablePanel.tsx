@@ -12,6 +12,11 @@ export interface ResizablePanelProps {
   // primo utilizzo, che non ne ha ancora salvato uno)
   readonly defaultSize: number;
   readonly minSize?: number;
+  // Quando true, ignora `size` e mostra una striscia stretta larga `collapsedSize`, senza
+  // drag handle - stesso pattern di collasso della Sidebar, applicato a un pannello
+  // ridimensionabile. Lo stato collapsed/expanded resta a carico del chiamante.
+  readonly collapsed?: boolean;
+  readonly collapsedSize?: number;
   readonly component?: ElementType;
   readonly sx?: SxProps<Theme>;
   readonly children: ReactNode;
@@ -32,6 +37,8 @@ export function ResizablePanel({
   storageKey,
   defaultSize,
   minSize = 160,
+  collapsed = false,
+  collapsedSize = minSize,
   component = "div",
   sx,
   children,
@@ -95,36 +102,48 @@ export function ResizablePanel({
   return (
     <Box
       component={component}
-      sx={{ position: "relative", flexShrink: 0, width: size, minWidth: 0, overflow: "hidden", ...sx }}
+      sx={{
+        position: "relative",
+        flexShrink: 0,
+        width: collapsed ? collapsedSize : size,
+        minWidth: 0,
+        overflow: "hidden",
+        // Nessuna transizione durante il drag - farebbe rincorrere il pointer al box invece di
+        // seguirlo 1:1; si anima solo il passaggio collapsed/expanded.
+        transition: isActive ? "none" : (t) => t.transitions.create("width"),
+        ...sx,
+      }}
     >
       {children}
-      <Box
-        onPointerDown={startDragging}
-        onPointerMove={handleDragging}
-        onPointerUp={stopDragging}
-        onPointerCancel={stopDragging}
-        sx={{
-          position: "absolute",
-          top: 0,
-          bottom: 0,
-          [handleSide]: -HANDLE_HITBOX / 2,
-          width: HANDLE_HITBOX,
-          display: "flex",
-          justifyContent: "center",
-          cursor: "col-resize",
-          zIndex: 1,
-          "&:hover": { bgcolor: isActive ? undefined : "action.hover" },
-        }}
-      >
+      {!collapsed && (
         <Box
+          onPointerDown={startDragging}
+          onPointerMove={handleDragging}
+          onPointerUp={stopDragging}
+          onPointerCancel={stopDragging}
           sx={{
-            width: isActive ? 4 : 2,
-            height: "100%",
-            bgcolor: isActive ? "primary.main" : "transparent",
-            transition: "width 0.1s, background-color 0.1s",
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            [handleSide]: -HANDLE_HITBOX / 2,
+            width: HANDLE_HITBOX,
+            display: "flex",
+            justifyContent: "center",
+            cursor: "col-resize",
+            zIndex: 1,
+            "&:hover": { bgcolor: isActive ? undefined : "action.hover" },
           }}
-        />
-      </Box>
+        >
+          <Box
+            sx={{
+              width: isActive ? 4 : 2,
+              height: "100%",
+              bgcolor: isActive ? "primary.main" : "transparent",
+              transition: "width 0.1s, background-color 0.1s",
+            }}
+          />
+        </Box>
+      )}
     </Box>
   );
 }

@@ -11,7 +11,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { match } from "ts-pattern";
 import { useLogFeed } from "../hooks/useLogFeed";
 import { PANEL_HEADER_HEIGHT, panelHeaderIconSx } from "./PanelHeader";

@@ -59,6 +59,9 @@ export interface EntryRowProps {
   readonly secondary?: string;
   readonly checked: boolean;
   readonly checkedTitle?: string;
+  // Slot accostato all'etichetta (non nella colonna indicators/context) - oggi usato solo dal
+  // badge espandi/comprimi di TvRow, che nel mockup vive lì e non tra i pill di destra.
+  readonly leadingExtra?: ReactNode;
   readonly indicators?: ReactNode[];
   readonly context?: ReactNode;
   readonly actions?: ReactNode[];
@@ -73,6 +76,7 @@ export function EntryRow({
   secondary,
   checked,
   checkedTitle,
+  leadingExtra,
   indicators = [],
   context,
   actions = [],
@@ -95,6 +99,7 @@ export function EntryRow({
             </Typography>
           )}
         </Box>
+        {leadingExtra}
       </Box>
       <Stack
         direction="row"

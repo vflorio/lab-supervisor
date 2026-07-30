@@ -42,9 +42,7 @@ export interface Env {
   readonly notifyStream: NotifyStream.NotifyStream;
   readonly activityStream: Activity.ActivityStream;
   readonly androidBridge: AndroidBridgeOrchestrator.Handle;
-  // Un loop per RecoveryPolicy (§7): N policy -> N widget, ognuno con il proprio titolo
-  // ("Recovery · <policy>"), mai un merge - decisione esplicita, non un'omissione.
-  readonly loopStream?: TaskRunner.LoopStream;
+  readonly loopStream: TaskRunner.LoopStream;
 }
 
 export type StartError = RetryCodec.PolicyDecodeError;
@@ -191,12 +189,12 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
     E.map((entries): Handle => {
       const handles = new Map(entries);
       return {
+        capabilitiesEnv,
         stop: () => {
           for (const handle of handles.values()) handle.stop();
         },
         reset: (policyLabel, entityId, tripwireIndex) =>
           handles.get(policyLabel)?.reset(entityId, tripwireIndex) ?? false,
-        capabilitiesEnv,
       };
     }),
   );

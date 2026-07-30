@@ -57,6 +57,17 @@ export function TvRow({
         secondary={tv.ip}
         checked={tv.controlled}
         checkedTitle="Controlled by supervisor"
+        leadingExtra={
+          cameraCount > 0 && (
+            <Chip
+              size="small"
+              variant="outlined"
+              onClick={() => setExpanded((current) => !current)}
+              label={`${expanded ? "▲" : "▼"} ${cameraCount}`}
+              sx={{ flexShrink: 0 }}
+            />
+          )
+        }
         indicators={[
           <SuitestDeviceStatusView key="status" value={deviceStatus} />,
           <SuitestDeviceInUseView key="inuse" value={inUse} by={inUseBy} />,
@@ -65,14 +76,6 @@ export function TvRow({
           <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap", alignItems: "center" }}>
             <RecoveryActivityView status={recoveryStatus} />
             <ManualWorkflowActivityView status={workflowStatus} />
-            {cameraCount > 0 && (
-              <Chip
-                size="small"
-                variant="outlined"
-                onClick={() => setExpanded((current) => !current)}
-                label={`${expanded ? "▲" : "▼"} ${cameraCount}`}
-              />
-            )}
           </Stack>
         }
         actions={[

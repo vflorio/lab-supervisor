@@ -11,6 +11,7 @@ type Controller = Pick<
   | "handleDelete"
   | "setAssigningCamera"
   | "handleLinkCamera"
+  | "setLinkingTv"
   | "handleRunWorkflow"
   | "handleResetRecovery"
 >;
@@ -33,6 +34,7 @@ export function TvRowContainer({
       onToggle={() => controller.handleToggle("tv", group.tv.deviceId, group.tv.controlled)}
       onEdit={() => controller.startEdit("tv", group.tv.deviceId, group.tv.label)}
       onDelete={() => controller.handleDelete("tv", group.tv.deviceId)}
+      onLinkCamera={() => controller.setLinkingTv(group.tv)}
     >
       {group.cameras.map((camera) => (
         <CameraRowContainer key={camera.id} camera={camera} workflows={workflows} controller={controller} />

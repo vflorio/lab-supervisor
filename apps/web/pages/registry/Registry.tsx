@@ -8,6 +8,7 @@ import { AddDeviceDialog } from "./AddDeviceDialog";
 import { AssignCameraDialog } from "./AssignCameraDialog";
 import { CameraRowContainer } from "./CameraRowContainer";
 import { ControlUnitCardContainer } from "./ControlUnitCardContainer";
+import { LinkCameraToTvDialog } from "./LinkCameraToTvDialog";
 import { LinkSuitestDialog } from "./LinkSuitestDialog";
 import { TvRowContainer } from "./TvRowContainer";
 import type { Database } from "./types";
@@ -122,6 +123,14 @@ export function RegistryBody({
         candidates={controller.linkCandidates}
         onLink={controller.handleLinkSuitest}
         onClose={() => controller.setLinking(null)}
+      />
+
+      {/* Riconciliazione manuale invertita: collega una camera orfana a una TV */}
+      <LinkCameraToTvDialog
+        tv={controller.linkingTv}
+        candidates={controller.linkTvCandidates}
+        onLink={controller.handleLinkCameraToTv}
+        onClose={() => controller.setLinkingTv(null)}
       />
     </Box>
   );
