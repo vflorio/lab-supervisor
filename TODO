@@ -105,13 +105,20 @@
 
 ### Scheduled TV Recording Sessions
 
+- [ ] Refactor activationSchedule come policy libera componibile
+  - [ ] Estrarre activationSchedule dal modello Schedule attuale
+  - [ ] Rendere componibile per supportare fasce notturne e giornaliere separatamente
+  - [ ] Permettere combinazione via monoid/combinator (es. union, intersection di fasce orarie)
 - [ ] Recording session model
   - [ ] Definire `start time`, `end time`, `target device`, `input/channel`
   - [ ] Definire strategia di storage delle registrazioni (path locale e naming convention)
+  - [ ] Integrare activationSchedule policy per determinare finestre di esecuzione valide
 - [ ] Scheduling UI
   - [ ] Interfaccia per creare e modificare recording sessions
+  - [ ] Supporto per configurare fasce notturne e giornaliere
 - [ ] Session runner
   - [ ] Eseguire workflow: power on -> selezione input -> avvio registrazione -> stop -> salvataggio -> power off opzionale
+  - [ ] Rispettare activation policy per avvio/stop della registrazione
 
 ### Misc
 
