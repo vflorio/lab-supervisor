@@ -4,7 +4,7 @@ import { COMMAND_SCHEMA, WorkflowJsonCodec } from "@supervisor/core/workflow/cod
 import type { Workflow } from "@supervisor/core/workflow/workflow";
 import { DomainCardHeader } from "@supervisor/ui/misc/DomainCardHeader";
 import { JsonView } from "@supervisor/ui/misc/JsonView";
-import { WorkflowAccordionList } from "@supervisor/ui/workflow";
+import { WorkflowList } from "@supervisor/ui/workflow";
 import { useState } from "react";
 import { trpc } from "../../../trpc/client";
 import type { Config } from "../Settings";
@@ -77,7 +77,7 @@ export function WorkflowsCard({ config, onSaved }: { config: Config; onSaved: (n
       {showJson ? (
         <JsonView data={config.workflows} />
       ) : (
-        <WorkflowAccordionList
+        <WorkflowList
           workflows={workflows}
           editing={editing}
           schema={COMMAND_SCHEMA}

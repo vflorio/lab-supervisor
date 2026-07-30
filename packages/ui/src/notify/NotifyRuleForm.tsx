@@ -5,9 +5,6 @@ import { FieldLabel } from "../misc/FieldLabel";
 
 const LIFECYCLES: readonly NotifyLifecycle[] = ["immediate", "exhausted"];
 
-// Form controllata per una NotifyRule. Il target (oggi solo "slack") e' pilotato da
-// NOTIFY_TARGET_SCHEMA - vedi @supervisor/core/notify/codec - cosi' un futuro "webhook"
-// non richiede modifiche qui. Lifecycle e' un'unione chiusa di 2 valori, hardcoded.
 export interface NotifyRuleFormProps {
   readonly value: NotifyRule;
   readonly onChange: (next: NotifyRule) => void;
@@ -34,14 +31,14 @@ export function NotifyRuleForm({ value, onChange, targetSchema }: NotifyRuleForm
     });
 
   return (
-    <Stack sx={{ gap: 1 }}>
-      <Stack direction="row" sx={{ gap: 1, alignItems: "center", flexWrap: "wrap" }}>
-        <Select
+    <Stack sx={{ gap: 2, flexGrow: 1 }}>
+      <Stack direction="row" sx={{ gap: 1, alignItems: "center", flexWrap: "wrap", flexGrow: 1 }}>
+        <TextField
+          select
+          label="type"
           size="small"
           value={value.type.type}
-          onChange={(event: SelectChangeEvent) =>
-            onChange({ ...value, type: targetFor(targetSchema, event.target.value) })
-          }
+          onChange={(event) => onChange({ ...value, type: targetFor(targetSchema, event.target.value) })}
           sx={{ minWidth: 110 }}
         >
           {targetSchema.map((s) => (
@@ -49,39 +46,40 @@ export function NotifyRuleForm({ value, onChange, targetSchema }: NotifyRuleForm
               {s.type}
             </MenuItem>
           ))}
-        </Select>
+        </TextField>
         {fields.map((field) => (
-          <FieldLabel key={field.key} label={field.label} width={160}>
-            <TextField
-              size="small"
-              fullWidth
-              value={typeof targetRecord[field.key] === "string" ? (targetRecord[field.key] as string) : ""}
-              onChange={(event) =>
-                onChange({
-                  ...value,
-                  type: { ...targetRecord, [field.key]: event.target.value } as unknown as NotifyRule["type"],
-                })
-              }
-            />
-          </FieldLabel>
-        ))}
-        <FieldLabel label="channel" width={160}>
           <TextField
+            key={field.key}
+            label={field.label}
+            sx={{ minWidth: 160 }}
             size="small"
             fullWidth
-            value={value.channel}
-            onChange={(event) => onChange({ ...value, channel: event.target.value })}
+            value={typeof targetRecord[field.key] === "string" ? (targetRecord[field.key] as string) : ""}
+            onChange={(event) =>
+              onChange({
+                ...value,
+                type: { ...targetRecord, [field.key]: event.target.value } as unknown as NotifyRule["type"],
+              })
+            }
           />
-        </FieldLabel>
-      </Stack>
-      <FieldLabel label="message" width="100%">
+        ))}
         <TextField
+          label="channel"
           size="small"
-          fullWidth
-          value={value.message.message}
-          onChange={(event) => onChange({ ...value, message: { type: "template", message: event.target.value } })}
+          sx={{ flexGrow: 1, minWidth: 160 }}
+          value={value.channel}
+          onChange={(event) => onChange({ ...value, channel: event.target.value })}
         />
-      </FieldLabel>
+      </Stack>
+      <TextField
+        label="message"
+        multiline
+        minRows={3}
+        fullWidth
+        size="small"
+        value={value.message.message}
+        onChange={(event) => onChange({ ...value, message: { type: "template", message: event.target.value } })}
+      />
       <Stack direction="row" sx={{ gap: 1 }}>
         {LIFECYCLES.map((lifecycle) => (
           <FormControlLabel

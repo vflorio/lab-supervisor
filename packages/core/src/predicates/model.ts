@@ -4,6 +4,12 @@
 
 export type PredicateValue = boolean | string | number;
 
+// Domini tracciati noti - domain resta string (non union) sul modello/codec per non rendere
+// la validazione rigida su domini futuri; questa lista serve solo alla UI (select) per
+// vincolare l'input ai valori noti oggi.
+export const TRACKED_DOMAINS = ["adb", "suitest-camera", "suitest-control-unit", "suitest-device"] as const;
+export type TrackedDomain = (typeof TRACKED_DOMAINS)[number];
+
 export interface PredicateFact {
   readonly domain: string; // es. "adb" | "suitest-camera" | "suitest-control-unit" | "suitest-device"
   readonly entityId: string; // chiave dell'entità all'interno del proprio dominio
@@ -17,6 +23,5 @@ export interface PredicateEntry extends PredicateFact {
   readonly timestamp: number;
 }
 
-// Chiave univoca di un fatto, usata per indicizzare lo snapshot "valore corrente"
 export const factKey = (fact: Pick<PredicateFact, "domain" | "entityId" | "name">): string =>
   `${fact.domain}:${fact.entityId}:${fact.name}`;

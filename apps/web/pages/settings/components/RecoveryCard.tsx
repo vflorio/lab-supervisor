@@ -6,7 +6,7 @@ import type { RecoveryPolicy } from "@supervisor/core/recovery/model";
 import { POLICY_STEP_SCHEMA } from "@supervisor/core/retry/retry";
 import { DomainCardHeader } from "@supervisor/ui/misc/DomainCardHeader";
 import { JsonView } from "@supervisor/ui/misc/JsonView";
-import { RecoveryPolicyAccordionList } from "@supervisor/ui/recovery";
+import { RecoveryPolicyList } from "@supervisor/ui/recovery";
 import { useMemo, useState } from "react";
 import { usePredicates } from "../../../hooks/usePredicates";
 import { trpc } from "../../../trpc/client";
@@ -18,7 +18,11 @@ export function RecoveryCard({ config, onSaved }: { config: Config; onSaved: (ne
 
   const predicateOptions = useMemo(
     () =>
-      Array.from(table.values()).map((entry) => ({ domain: entry.domain, entityId: entry.entityId, name: entry.name })),
+      Array.from(table.values()).map((entry) => ({
+        domain: entry.domain,
+        entityId: entry.entityId, //FIXME: ???
+        name: entry.name,
+      })),
     [table],
   );
 
@@ -95,7 +99,7 @@ export function RecoveryCard({ config, onSaved }: { config: Config; onSaved: (ne
       {showJson ? (
         <JsonView data={config.recovery ?? []} />
       ) : (
-        <RecoveryPolicyAccordionList
+        <RecoveryPolicyList
           policies={policies}
           editing={editing}
           retrySchema={POLICY_STEP_SCHEMA}

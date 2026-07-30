@@ -1,4 +1,34 @@
 import { createTheme } from "@mui/material/styles";
+import type { CSSProperties } from "react";
+
+export const monoFontFamily = "'JetBrains Mono', monospace" as const;
+
+declare module "@mui/material/styles" {
+  interface TypographyVariants {
+    monoEyebrow: CSSProperties;
+    monoLabel: CSSProperties;
+    monoTitle: CSSProperties;
+    monoCode: CSSProperties;
+    emphasizedValue: CSSProperties;
+  }
+  interface TypographyVariantsOptions {
+    monoEyebrow?: CSSProperties;
+    monoLabel?: CSSProperties;
+    monoTitle?: CSSProperties;
+    monoCode?: CSSProperties;
+    emphasizedValue?: CSSProperties;
+  }
+}
+
+declare module "@mui/material/Typography" {
+  interface TypographyPropsVariantOverrides {
+    monoEyebrow: true;
+    monoLabel: true;
+    monoTitle: true;
+    monoCode: true;
+    emphasizedValue: true;
+  }
+}
 
 export const theme = createTheme({
   palette: {
@@ -15,7 +45,31 @@ export const theme = createTheme({
   typography: {
     fontFamily: "'Inter', sans-serif",
     fontSize: 13,
-    button: { textTransform: "none", fontFamily: "'JetBrains Mono', monospace" },
+    button: { textTransform: "none", fontFamily: monoFontFamily },
+    monoEyebrow: {
+      fontFamily: monoFontFamily,
+      fontSize: 10,
+      textTransform: "uppercase",
+      letterSpacing: "0.1em",
+    },
+    monoLabel: {
+      fontFamily: monoFontFamily,
+      fontSize: 10,
+    },
+    monoTitle: {
+      fontFamily: monoFontFamily,
+      fontSize: 12,
+    },
+    monoCode: {
+      fontFamily: monoFontFamily,
+      fontSize: 11,
+      lineHeight: 1.7,
+    },
+    emphasizedValue: {
+      fontSize: 13,
+      lineHeight: 1.4,
+      fontWeight: 700,
+    },
   },
   shape: { borderRadius: 8 },
   components: {
@@ -46,7 +100,7 @@ export const theme = createTheme({
         root: {
           border: "1px solid rgba(255,255,255,0.07)",
           color: "#6b7280",
-          fontFamily: "'JetBrains Mono', monospace",
+          fontFamily: monoFontFamily,
           fontSize: 11,
           padding: "3px 10px",
           "&.Mui-selected": {
@@ -60,46 +114,45 @@ export const theme = createTheme({
     },
     MuiChip: {
       styleOverrides: {
-        root: { fontFamily: "'JetBrains Mono', monospace", fontSize: 10, height: 20, borderRadius: 4 },
+        root: { fontFamily: monoFontFamily, fontSize: 10, height: 20, borderRadius: 4 },
       },
     },
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
-          fontFamily: "'JetBrains Mono', monospace",
+          fontFamily: monoFontFamily,
           fontSize: 12,
           "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.07)" },
           "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.15)" },
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(74,222,128,0.5)" },
         },
-        input: { padding: "6px 10px" },
       },
     },
     MuiInputLabel: {
       styleOverrides: {
-        root: { fontFamily: "'JetBrains Mono', monospace", fontSize: 12 },
+        root: { fontFamily: monoFontFamily, fontSize: 12 },
       },
     },
     MuiAutocomplete: {
       styleOverrides: {
-        listbox: { fontFamily: "'JetBrains Mono', monospace", fontSize: 12, padding: 4 },
+        listbox: { fontFamily: monoFontFamily, fontSize: 12, padding: 4 },
         option: { borderRadius: 4 },
       },
     },
     MuiButton: {
       styleOverrides: {
-        root: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11 },
+        root: { fontFamily: monoFontFamily, fontSize: 11 },
         sizeSmall: { padding: "3px 10px" },
       },
     },
     MuiMenuItem: {
       styleOverrides: {
-        root: { fontFamily: "'JetBrains Mono', monospace", fontSize: 12 },
+        root: { fontFamily: monoFontFamily, fontSize: 12 },
       },
     },
     MuiStepLabel: {
       styleOverrides: {
-        label: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11 },
+        label: { fontFamily: monoFontFamily, fontSize: 11 },
       },
     },
     MuiDrawer: {

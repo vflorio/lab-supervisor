@@ -2,7 +2,6 @@ import { Box, Typography } from "@mui/material";
 import type { ReactNode } from "react";
 import type { StatusTone } from "./StatusPill";
 
-// Griglia di coppie label/value, tono colorato in base allo StatusTone del chiamante.
 export interface DetailItem {
   readonly label: string;
   readonly value: ReactNode;
@@ -27,27 +26,12 @@ export function DetailGrid({ items }: DetailGridProps) {
       {items.map((item, index) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: DetailItem non ha id, sola lettura
         <Box key={index}>
-          <Typography
-            variant="caption"
-            sx={{
-              display: "block",
-              fontSize: "0.65rem",
-              lineHeight: 1.4,
-              color: "textSecondary",
-              textTransform: "uppercase",
-              letterSpacing: "0.04em",
-            }}
-          >
+          <Typography variant="overline" color="textSecondary">
             {item.label}
           </Typography>
           <Typography
-            sx={{
-              display: "block",
-              fontSize: "0.8rem",
-              lineHeight: 1.4,
-              fontWeight: 700,
-              color: item.tone ? TONE_TEXT_COLOR[item.tone] : "text.primary",
-            }}
+            variant="emphasizedValue"
+            sx={{ color: item.tone ? TONE_TEXT_COLOR[item.tone] : "text.primary" }}
           >
             {item.value}
           </Typography>

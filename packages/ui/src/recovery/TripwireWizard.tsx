@@ -50,10 +50,6 @@ const CAN_NEXT: readonly ((state: WizardState) => boolean)[] = [
   () => true,
 ];
 
-// Wizard guidato per costruire un nuovo RecoveryTripwire, un componente-layer che compone gli
-// atomi gia' esistenti (duration/predicate/pipeline/retry/notify) invece di reinventare editor
-// per ogni step - equivalente del wizard del mockup figma, qui alimentato da dati reali
-// (predicateOptions dal tracking live, workflowNames dalla config) invece di liste mock.
 export interface TripwireWizardProps {
   readonly open: boolean;
   readonly domain: string;
@@ -114,13 +110,12 @@ export function TripwireWizard({
         }}
       >
         <Box>
-          <Typography
-            color="textSecondary"
-            sx={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", mb: 0.5 }}
-          >
+          <Typography variant="overline" color="textSecondary" sx={{ mb: 0.5 }}>
             recovery · {domain}
           </Typography>
-          <Typography sx={{ fontSize: 14, fontWeight: 600 }}>Nuovo Tripwire</Typography>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+            Nuovo Tripwire
+          </Typography>
         </Box>
         <IconButton color="secondary" size="small" onClick={onClose}>
           <Close />

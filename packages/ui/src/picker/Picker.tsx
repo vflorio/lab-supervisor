@@ -1,8 +1,6 @@
 import { Autocomplete, Box, Stack, TextField, Typography } from "@mui/material";
 import type { ReactNode } from "react";
 
-// Opzione di un Picker/MultiPicker - stesso shape id/primary/secondary/trailing di
-// SelectOption (SelectDialog.tsx), cosi' i due restano intercambiabili.
 export interface PickerOption {
   readonly id: string;
   readonly primary: string;
@@ -32,7 +30,7 @@ export function renderPickerOption(
     <Box component="li" key={key} {...rest}>
       <Stack sx={{ gap: 0.25, minWidth: 0, flex: 1 }}>
         <Stack direction="row" sx={{ gap: 1, alignItems: "center" }}>
-          <Typography variant="body2" noWrap sx={{ flex: 1 }}>
+          <Typography variant="body2" sx={{ flex: 1 }}>
             {option.primary}
           </Typography>
           {option.trailing}
@@ -47,9 +45,6 @@ export function renderPickerOption(
   );
 }
 
-// Autocomplete generico con ricerca: unico punto da cui i picker di entita' server-driven
-// (workflow, predicate, device registry...) prendono stile e comportamento - il chiamante
-// resta puro/senza IO, fornisce solo `options` con la label gia' risolta lato dominio.
 export function Picker({
   options,
   value,
@@ -65,6 +60,7 @@ export function Picker({
   return (
     <Autocomplete
       options={options}
+      size="small"
       value={selected}
       onChange={(_, option) => onChange(option?.id ?? null)}
       getOptionLabel={(option) => option.primary}

@@ -1,4 +1,4 @@
-import { Add, Delete, KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
+import { Add } from "@mui/icons-material";
 import { Chip, IconButton, MenuItem, Select, type SelectChangeEvent, Stack, TextField } from "@mui/material";
 import type { DayOfWeek, DurationString, TimeString } from "@supervisor/core/date-time";
 import type {
@@ -11,7 +11,9 @@ import type {
 } from "@supervisor/core/schedule/codec";
 import { match } from "ts-pattern";
 import { DurationForm } from "../duration/DurationForm";
+import { DomainSortable } from "../misc/DomainSortable";
 import { FieldLabel } from "../misc/FieldLabel";
+import { moveAt, removeAt } from "../misc/sortable";
 
 const DAYS: readonly DayOfWeek[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const DAY_SHORT: Record<DayOfWeek, string> = {
@@ -30,9 +32,6 @@ const OP_LABELS: Record<ScheduleOp, string> = {
   subtract: "Sottrazione",
 };
 
-// Form controllata per uno ScheduleJson: array di step [op, [verbo, ...args]]. Lo schema (quali
-// verbi esistono, che argomenti prendono) e' iniettato dal chiamante - vedi
-// @supervisor/core/schedule/codec#SCHEDULE_STEP_SCHEMA - stessa idea di RetryPolicyForm.
 export interface ScheduleFormProps {
   readonly value: ScheduleJson;
   readonly onChange: (next: ScheduleJson) => void;
@@ -54,14 +53,8 @@ const verbFor = (schema: readonly ScheduleStepSchema[], name: string): ScheduleV
 
 export function ScheduleForm({ value, onChange, schema }: ScheduleFormProps) {
   const updateStep = (index: number, step: ScheduleStepJson) => onChange(value.map((s, i) => (i === index ? step : s)));
-  const removeStep = (index: number) => onChange(value.filter((_, i) => i !== index));
-  const moveStep = (index: number, delta: number) => {
-    const target = index + delta;
-    if (target < 0 || target >= value.length) return;
-    const next = [...value];
-    [next[index], next[target]] = [next[target]!, next[index]!];
-    onChange(next);
-  };
+  const removeStep = (index: number) => onChange(removeAt<ScheduleStepJson>(index)(value));
+  const moveStep = (index: number, delta: number) => onChange(moveAt<ScheduleStepJson>(index, delta)(value));
 
   const addStep = () => schema[0] && onChange([...value, ["union", verbFor(schema, schema[0].name)]]);
 
@@ -143,28 +136,25 @@ export function ScheduleForm({ value, onChange, schema }: ScheduleFormProps) {
               }
 
               return (
-                // biome-ignore lint/suspicious/noArrayIndexKey: posizione dell'arg nello schema dello step, stabile
-                <FieldLabel key={argIndex} label={argSchema.label} width={130}>
-                  <TextField
-                    size="small"
-                    type="time"
-                    fullWidth
-                    value={typeof arg === "string" ? arg : "09:00"}
-                    onChange={(event) => setArg(event.target.value as TimeString)}
-                  />
-                </FieldLabel>
+                <TextField
+                  // biome-ignore lint/suspicious/noArrayIndexKey: posizione dell'arg nello schema dello step, stabile
+                  key={argIndex}
+                  label={argSchema.label}
+                  size="small"
+                  type="time"
+                  fullWidth
+                  value={typeof arg === "string" ? arg : "09:00"}
+                  onChange={(event) => setArg(event.target.value as TimeString)}
+                />
               );
             })}
-            <div style={{ flexGrow: 1 }} />
-            <IconButton size="small" onClick={() => moveStep(index, -1)} disabled={index === 0}>
-              <KeyboardArrowUp fontSize="small" />
-            </IconButton>
-            <IconButton size="small" onClick={() => moveStep(index, 1)} disabled={index === value.length - 1}>
-              <KeyboardArrowDown fontSize="small" />
-            </IconButton>
-            <IconButton size="small" onClick={() => removeStep(index)}>
-              <Delete fontSize="small" />
-            </IconButton>
+
+            <DomainSortable
+              index={index}
+              length={value.length}
+              onMove={(delta) => moveStep(index, delta)}
+              onRemove={() => removeStep(index)}
+            />
           </Stack>
         );
       })}

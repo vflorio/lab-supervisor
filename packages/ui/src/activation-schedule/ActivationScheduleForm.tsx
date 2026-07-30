@@ -14,10 +14,7 @@ const DAY_SHORT: Record<DayOfWeek, string> = {
   saturday: "Sab",
   sunday: "Dom",
 };
-const mono = { fontFamily: "'JetBrains Mono', monospace" } as const;
 
-// Form controllata per un ActivationSchedule: giorni attivi (toggle multiplo) + range orario,
-// con la stessa griglia di ActivationScheduleView come anteprima live del draft.
 export interface ActivationScheduleFormProps {
   readonly value: ActivationSchedule;
   readonly onChange: (next: ActivationSchedule) => void;
@@ -27,16 +24,7 @@ export function ActivationScheduleForm({ value, onChange }: ActivationScheduleFo
   return (
     <Stack spacing={2}>
       <Box>
-        <Typography
-          sx={{
-            ...mono,
-            fontSize: 10,
-            color: "textSecondary",
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
-            mb: 1,
-          }}
-        >
+        <Typography variant="monoEyebrow" sx={{ color: "textSecondary", mb: 1 }}>
           Giorni attivi
         </Typography>
         <ToggleButtonGroup
@@ -55,7 +43,7 @@ export function ActivationScheduleForm({ value, onChange }: ActivationScheduleFo
           }}
         >
           {DAYS.map((day) => (
-            <ToggleButton key={day} value={day} sx={mono}>
+            <ToggleButton key={day} value={day}>
               {DAY_SHORT[day]}
             </ToggleButton>
           ))}

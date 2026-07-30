@@ -1,13 +1,12 @@
-import { Add, Delete, KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
-import { Button, IconButton, Stack, TextField } from "@mui/material";
+import { Add } from "@mui/icons-material";
+import { Button, Stack, TextField } from "@mui/material";
 import type { DurationString } from "@supervisor/core/date-time";
 import type { CommandSchema } from "@supervisor/core/workflow/codec";
 import type { Command, Workflow } from "@supervisor/core/workflow/workflow";
-import { FieldLabel } from "../misc/FieldLabel";
+import { DomainSortable } from "../misc/DomainSortable";
+import { moveAt, removeAt } from "../misc/sortable";
 import { CommandForm } from "./CommandForm";
 
-// Form controllata per un Workflow: nome + array di Command, stessa meccanica
-// (add/remove/sposta) di RetryPolicyForm sugli step di una PolicyJson.
 export interface WorkflowFormProps {
   readonly value: Workflow;
   readonly onChange: (next: Workflow) => void;
@@ -30,29 +29,22 @@ export function WorkflowForm({ value, onChange, schema }: WorkflowFormProps) {
   const updateCommand = (index: number, command: Command) =>
     onChange({ ...value, commands: value.commands.map((c, i) => (i === index ? command : c)) });
 
-  const removeCommand = (index: number) =>
-    onChange({ ...value, commands: value.commands.filter((_, i) => i !== index) });
+  const removeCommand = (index: number) => onChange({ ...value, commands: removeAt<Command>(index)(value.commands) });
 
-  const moveCommand = (index: number, delta: number) => {
-    const target = index + delta;
-    if (target < 0 || target >= value.commands.length) return;
-    const next = [...value.commands];
-    [next[index], next[target]] = [next[target]!, next[index]!];
-    onChange({ ...value, commands: next });
-  };
+  const moveCommand = (index: number, delta: number) =>
+    onChange({ ...value, commands: moveAt<Command>(index, delta)(value.commands) });
 
   const addCommand = () => onChange({ ...value, commands: [...value.commands, defaultCommand(schema)] });
 
   return (
-    <Stack sx={{ gap: 1.5 }}>
-      <FieldLabel label="name" width={280}>
-        <TextField
-          size="small"
-          fullWidth
-          value={value.name}
-          onChange={(event) => onChange({ ...value, name: event.target.value })}
-        />
-      </FieldLabel>
+    <Stack sx={{ gap: 1, py: 1 }}>
+      <TextField
+        label="name"
+        size="small"
+        fullWidth
+        value={value.name}
+        onChange={(event) => onChange({ ...value, name: event.target.value })}
+      />
       <Stack sx={{ gap: 1 }}>
         {value.commands.map((command, index) => (
           <Stack
@@ -67,24 +59,16 @@ export function WorkflowForm({ value, onChange, schema }: WorkflowFormProps) {
               borderColor: "divider",
               borderRadius: 1,
               px: 2,
-              py: 1.5,
+              py: 2,
             }}
           >
             <CommandForm value={command} schema={schema} onChange={(next) => updateCommand(index, next)} />
-            <div style={{ flexGrow: 1 }} />
-            <IconButton size="small" onClick={() => moveCommand(index, -1)} disabled={index === 0}>
-              <KeyboardArrowUp fontSize="small" />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => moveCommand(index, 1)}
-              disabled={index === value.commands.length - 1}
-            >
-              <KeyboardArrowDown fontSize="small" />
-            </IconButton>
-            <IconButton size="small" onClick={() => removeCommand(index)}>
-              <Delete fontSize="small" />
-            </IconButton>
+            <DomainSortable
+              index={index}
+              length={value.commands.length}
+              onMove={(delta) => moveCommand(index, delta)}
+              onRemove={() => removeCommand(index)}
+            />
           </Stack>
         ))}
       </Stack>
@@ -93,7 +77,7 @@ export function WorkflowForm({ value, onChange, schema }: WorkflowFormProps) {
         variant="outlined"
         startIcon={<Add fontSize="small" />}
         onClick={addCommand}
-        sx={{ alignSelf: "flex-start", fontFamily: "'JetBrains Mono', monospace", fontSize: 11 }}
+        sx={{ alignSelf: "flex-start" }}
       >
         Aggiungi step
       </Button>

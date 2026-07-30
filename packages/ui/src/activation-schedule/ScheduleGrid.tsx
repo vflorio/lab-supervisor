@@ -13,15 +13,12 @@ const DAY_SHORT: Record<DayOfWeek, string> = {
   sunday: "Dom",
 };
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
-const mono = { fontFamily: "'JetBrains Mono', monospace" } as const;
 
 const toMinutes = (time: string): number => {
   const [h, m] = time.split(":").map(Number);
   return h * 60 + m;
 };
 
-// Griglia 7gg x 24h: colora le celle in cui il range from-to ricade su un giorno attivo.
-// Condivisa da View e Form cosi' l'editor mostra la stessa anteprima del render finale.
 export interface ScheduleGridProps {
   readonly value: ActivationSchedule;
 }
@@ -40,7 +37,7 @@ export function ScheduleGrid({ value }: ScheduleGridProps) {
           {HOURS.map((h) => (
             <Box key={h} sx={{ flex: 1, textAlign: "center", py: 1 }}>
               {h % 6 === 0 && (
-                <Typography sx={{ ...mono, fontSize: 9, color: "textSecondary" }}>
+                <Typography variant="monoLabel" sx={{ color: "textSecondary" }}>
                   {String(h).padStart(2, "0")}
                 </Typography>
               )}
@@ -71,7 +68,7 @@ export function ScheduleGrid({ value }: ScheduleGridProps) {
                   py: 0.75,
                 }}
               >
-                <Typography sx={{ ...mono, fontSize: 9, color: active ? "text.primary" : "text.disabled" }}>
+                <Typography variant="monoLabel" sx={{ color: active ? "text.primary" : "text.disabled" }}>
                   {DAY_SHORT[day]}
                 </Typography>
               </Box>
@@ -113,7 +110,9 @@ export function ScheduleGrid({ value }: ScheduleGridProps) {
                 borderColor: "divider",
               }}
             />
-            <Typography sx={{ ...mono, fontSize: 10, color: "textSecondary" }}>{l.label}</Typography>
+            <Typography variant="monoLabel" sx={{ color: "textSecondary" }}>
+              {l.label}
+            </Typography>
           </Stack>
         ))}
       </Stack>

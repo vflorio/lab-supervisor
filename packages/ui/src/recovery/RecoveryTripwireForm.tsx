@@ -8,20 +8,26 @@ import { DurationForm } from "../duration/DurationForm";
 import { NotifyRuleListForm } from "../notify/NotifyRuleListForm";
 import { PipelineForm } from "../pipeline/PipelineForm";
 import { PredicateExpressionForm } from "../predicates/PredicateExpressionForm";
+import type { PredicateOption } from "../predicates/PredicateRefPicker";
 import { RetryPolicyForm } from "../retry-policy/RetryPolicyForm";
 
-// Form controllata per un RecoveryTripwire: compone i moduli gia' esistenti (duration,
-// predicate expression, pipeline, retry policy, notify rule list) - stesso set di atomi
-// riusato dal TripwireWizard. Expand/collapse locale segue il pattern gia' usato da
-// EntryCard - stato di presentazione, non dominio.
 export interface RecoveryTripwireFormProps {
   readonly value: RecoveryTripwire;
   readonly onChange: (next: RecoveryTripwire) => void;
   readonly retrySchema: readonly PolicyStepSchema[];
   readonly notifyTargetSchema: readonly NotifyTargetSchema[];
+  readonly workflowNames: readonly string[];
+  readonly predicateOptions: readonly PredicateOption[];
 }
 
-export function RecoveryTripwireForm({ value, onChange, retrySchema, notifyTargetSchema }: RecoveryTripwireFormProps) {
+export function RecoveryTripwireForm({
+  value,
+  onChange,
+  retrySchema,
+  notifyTargetSchema,
+  workflowNames,
+  predicateOptions,
+}: RecoveryTripwireFormProps) {
   const [expanded, setExpanded] = useState(true);
   const notify = value.notify ?? [];
 
@@ -29,14 +35,14 @@ export function RecoveryTripwireForm({ value, onChange, retrySchema, notifyTarge
     <Box>
       <Stack
         direction="row"
-        sx={{ gap: 1, alignItems: "center", cursor: "pointer" }}
+        sx={{ gap: 1, alignItems: "center", cursor: "pointer", pb: 1 }}
         onClick={() => setExpanded((current) => !current)}
       >
         <IconButton size="small">
           {expanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
         </IconButton>
         <Typography variant="body2" sx={{ fontWeight: 600 }}>
-          grace {value.grace}
+          Tripwire
         </Typography>
       </Stack>
       {expanded && (
@@ -49,13 +55,18 @@ export function RecoveryTripwireForm({ value, onChange, retrySchema, notifyTarge
             <PredicateExpressionForm
               value={value.predicate}
               onChange={(predicate) => onChange({ ...value, predicate })}
+              predicateOptions={predicateOptions}
             />
           </Stack>
           <Stack sx={{ gap: 1 }}>
             <Typography variant="overline" color="textSecondary">
               Pipeline
             </Typography>
-            <PipelineForm value={value.pipeline} onChange={(pipeline) => onChange({ ...value, pipeline })} />
+            <PipelineForm
+              value={value.pipeline}
+              onChange={(pipeline) => onChange({ ...value, pipeline })}
+              workflowNames={workflowNames}
+            />
           </Stack>
           <Stack sx={{ gap: 1 }}>
             <Typography variant="overline" color="textSecondary">

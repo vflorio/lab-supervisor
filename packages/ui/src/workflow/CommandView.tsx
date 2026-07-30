@@ -4,10 +4,6 @@ import type { CommandSchema } from "@supervisor/core/workflow/codec";
 import type { Command } from "@supervisor/core/workflow/workflow";
 import { DurationView } from "../duration/DurationView";
 
-const mono = { fontFamily: "'JetBrains Mono', monospace" } as const;
-
-// Readonly: badge "type field field ...", riusa DurationView per il campo duration. Il badge
-// su sfondo scuro è lo stesso layer visivo usato per isolare item annidati (vedi ScheduleGrid).
 export interface CommandViewProps {
   readonly value: Command;
   readonly schema: readonly CommandSchema[];
@@ -38,7 +34,7 @@ export function CommandView({ value, schema }: CommandViewProps) {
         size="small"
         color="primary"
         variant="outlined"
-        sx={{ ...mono, fontSize: 10, height: 18, borderRadius: "4px" }}
+        sx={{ height: 18 }}
       />
       {fields.map((field) => {
         const raw = record[field.key];
@@ -46,13 +42,13 @@ export function CommandView({ value, schema }: CommandViewProps) {
         if (field.kind === "coords") {
           const coords = raw as { x: number; y: number };
           return (
-            <Typography key={field.key} sx={{ ...mono, fontSize: 10, color: "textSecondary" }}>
+            <Typography key={field.key} variant="monoLabel" sx={{ color: "textSecondary" }}>
               ({coords.x}, {coords.y})
             </Typography>
           );
         }
         return (
-          <Typography key={field.key} sx={{ ...mono, fontSize: 10, color: "textSecondary" }}>
+          <Typography key={field.key} variant="monoLabel" sx={{ color: "textSecondary" }}>
             {String(raw)}
           </Typography>
         );

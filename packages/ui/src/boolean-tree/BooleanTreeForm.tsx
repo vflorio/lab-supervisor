@@ -1,10 +1,10 @@
-import { Add, Delete, KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
+import { Add } from "@mui/icons-material";
 import { IconButton, MenuItem, Select, type SelectChangeEvent, Stack } from "@mui/material";
 import type { ReactNode } from "react";
+import { DomainSortable } from "../misc/DomainSortable";
+import { moveAt, removeAt } from "../misc/sortable";
 import type { BooleanTreeOps } from "./types";
 
-// Editor ricorsivo controllato per un albero booleano and/or/not; il leaf e' delegato al
-// chiamante (vedi PredicateExpressionForm/PipelineForm per le istanze concrete).
 export interface BooleanTreeFormProps<Node, Leaf> {
   readonly value: Node;
   readonly onChange: (next: Node) => void;
@@ -18,10 +18,6 @@ type NodeKind = "leaf" | "and" | "or" | "not";
 const kindOf = <Node, Leaf>(ops: BooleanTreeOps<Node, Leaf>, node: Node): NodeKind =>
   ops.match<NodeKind>(node, { and: () => "and", or: () => "or", not: () => "not", leaf: () => "leaf" });
 
-// Retag tra leaf/and/or/not: and<->or riusa i figli, and/or->not prende il primo figlio
-// (gli altri si perdono, non c'e' un modo sensato di comprimerli in un solo slot),
-// leaf/not<->and/or avvolge/spacchetta in un array singleton (i codec rifiutano and/or
-// vuoti), *->leaf recupera il primo figlio solo se e' gia' un leaf, altrimenti azzera.
 const retag = <Node, Leaf>(ops: BooleanTreeOps<Node, Leaf>, node: Node, kind: NodeKind, defaultLeaf: Leaf): Node => {
   if (kindOf(ops, node) === kind) return node;
 
@@ -76,17 +72,10 @@ function Junction<Node, Leaf>({
 }: JunctionProps<Node, Leaf>) {
   const updateItem = (index: number, next: Node) => onChange(items.map((item, i) => (i === index ? next : item)));
 
-  const removeItem = (index: number) => onChange(items.filter((_, i) => i !== index));
+  const removeItem = (index: number) => onChange(removeAt<Node>(index)(items));
 
-  const moveItem = (index: number, delta: number) => {
-    const target = index + delta;
+  const moveItem = (index: number, delta: number) => onChange(moveAt<Node>(index, delta)(items));
 
-    if (target < 0 || target >= items.length) return;
-    const next = [...items];
-
-    [next[index], next[target]] = [next[target]!, next[index]!];
-    onChange(next);
-  };
   const addItem = () => onChange([...items, ops.leaf(defaultLeaf)]);
 
   return (
@@ -103,16 +92,13 @@ function Junction<Node, Leaf>({
               defaultLeaf={defaultLeaf}
               renderLeafForm={renderLeafForm}
             />
-            <div style={{ flexGrow: 1 }} />
-            <IconButton size="small" onClick={() => moveItem(index, -1)} disabled={index === 0}>
-              <KeyboardArrowUp fontSize="small" />
-            </IconButton>
-            <IconButton size="small" onClick={() => moveItem(index, 1)} disabled={index === items.length - 1}>
-              <KeyboardArrowDown fontSize="small" />
-            </IconButton>
-            <IconButton size="small" onClick={() => removeItem(index)} disabled={items.length === 1}>
-              <Delete fontSize="small" />
-            </IconButton>
+            <DomainSortable
+              index={index}
+              length={items.length}
+              onMove={(delta) => moveItem(index, delta)}
+              onRemove={() => removeItem(index)}
+              removeDisabled={items.length === 1}
+            />
           </Stack>
         ))}
         <IconButton size="small" onClick={addItem} title="Add" sx={{ alignSelf: "flex-start" }}>

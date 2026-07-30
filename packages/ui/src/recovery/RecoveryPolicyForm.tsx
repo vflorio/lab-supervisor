@@ -1,19 +1,22 @@
-import { Add, Delete, KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
-import { Box, IconButton, Stack, TextField } from "@mui/material";
+import { Add } from "@mui/icons-material";
+import { Box, IconButton, MenuItem, Select, type SelectChangeEvent, Stack, TextField } from "@mui/material";
 import type { DurationString } from "@supervisor/core/date-time";
 import type { NotifyTargetSchema } from "@supervisor/core/notify/codec";
+import { TRACKED_DOMAINS } from "@supervisor/core/predicates/model";
 import type { RecoveryPolicy, RecoveryTripwire } from "@supervisor/core/recovery/model";
 import type { PolicyStepSchema } from "@supervisor/core/retry/codec";
-import { FieldLabel } from "../misc/FieldLabel";
+import { DomainSortable } from "../misc/DomainSortable";
+import { moveAt, removeAt } from "../misc/sortable";
+import type { PredicateOption } from "../predicates/PredicateRefPicker";
 import { RecoveryTripwireForm } from "./RecoveryTripwireForm";
 
-// Form controllata per una RecoveryPolicy: label/domain + array di tripwire, stessa
-// meccanica (add/remove/sposta) di RetryPolicyForm/WorkflowForm sui rispettivi array.
 export interface RecoveryPolicyFormProps {
   readonly value: RecoveryPolicy;
   readonly onChange: (next: RecoveryPolicy) => void;
   readonly retrySchema: readonly PolicyStepSchema[];
   readonly notifyTargetSchema: readonly NotifyTargetSchema[];
+  readonly workflowNames: readonly string[];
+  readonly predicateOptions: readonly PredicateOption[];
 }
 
 const defaultTripwire = (): RecoveryTripwire => ({
@@ -24,42 +27,47 @@ const defaultTripwire = (): RecoveryTripwire => ({
   notify: [],
 });
 
-export function RecoveryPolicyForm({ value, onChange, retrySchema, notifyTargetSchema }: RecoveryPolicyFormProps) {
+export function RecoveryPolicyForm({
+  value,
+  onChange,
+  retrySchema,
+  notifyTargetSchema,
+  workflowNames,
+  predicateOptions,
+}: RecoveryPolicyFormProps) {
   const updateTripwire = (index: number, next: RecoveryTripwire) =>
     onChange({ ...value, tripwires: value.tripwires.map((t, i) => (i === index ? next : t)) });
 
   const removeTripwire = (index: number) =>
-    onChange({ ...value, tripwires: value.tripwires.filter((_, i) => i !== index) });
+    onChange({ ...value, tripwires: removeAt<RecoveryTripwire>(index)(value.tripwires) });
 
-  const moveTripwire = (index: number, delta: number) => {
-    const target = index + delta;
-    if (target < 0 || target >= value.tripwires.length) return;
-    const next = [...value.tripwires];
-    [next[index], next[target]] = [next[target]!, next[index]!];
-    onChange({ ...value, tripwires: next });
-  };
+  const moveTripwire = (index: number, delta: number) =>
+    onChange({ ...value, tripwires: moveAt<RecoveryTripwire>(index, delta)(value.tripwires) });
 
   const addTripwire = () => onChange({ ...value, tripwires: [...value.tripwires, defaultTripwire()] });
 
   return (
     <Stack sx={{ gap: 1.5 }}>
       <Stack direction="row" sx={{ gap: 1 }}>
-        <FieldLabel label="label" width={220}>
-          <TextField
-            size="small"
-            fullWidth
-            value={value.label}
-            onChange={(event) => onChange({ ...value, label: event.target.value })}
-          />
-        </FieldLabel>
-        <FieldLabel label="domain" width={220}>
-          <TextField
-            size="small"
-            fullWidth
-            value={value.domain}
-            onChange={(event) => onChange({ ...value, domain: event.target.value })}
-          />
-        </FieldLabel>
+        <TextField
+          label="label"
+          size="small"
+          fullWidth
+          value={value.label}
+          onChange={(event) => onChange({ ...value, label: event.target.value })}
+        />
+        <Select
+          size="small"
+          fullWidth
+          value={value.domain}
+          onChange={(event: SelectChangeEvent) => onChange({ ...value, domain: event.target.value })}
+        >
+          {TRACKED_DOMAINS.map((domain) => (
+            <MenuItem key={domain} value={domain}>
+              {domain}
+            </MenuItem>
+          ))}
+        </Select>
       </Stack>
       <Stack sx={{ gap: 1 }}>
         {value.tripwires.map((tripwire, index) => (
@@ -82,26 +90,25 @@ export function RecoveryPolicyForm({ value, onChange, retrySchema, notifyTargetS
                 onChange={(next) => updateTripwire(index, next)}
                 retrySchema={retrySchema}
                 notifyTargetSchema={notifyTargetSchema}
+                workflowNames={workflowNames}
+                predicateOptions={predicateOptions}
               />
             </Box>
-            <div style={{ flexGrow: 1 }} />
-            <IconButton size="small" onClick={() => moveTripwire(index, -1)} disabled={index === 0}>
-              <KeyboardArrowUp fontSize="small" />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => moveTripwire(index, 1)}
-              disabled={index === value.tripwires.length - 1}
-            >
-              <KeyboardArrowDown fontSize="small" />
-            </IconButton>
-            <IconButton size="small" onClick={() => removeTripwire(index)}>
-              <Delete fontSize="small" />
-            </IconButton>
+            <DomainSortable
+              index={index}
+              length={value.tripwires.length}
+              onMove={(delta) => moveTripwire(index, delta)}
+              onRemove={() => removeTripwire(index)}
+            />
           </Stack>
         ))}
       </Stack>
-      <IconButton size="small" onClick={addTripwire} title="Add tripwire" sx={{ alignSelf: "flex-start" }}>
+      <IconButton
+        size="small"
+        onClick={addTripwire}
+        title="Add tripwire (manual setup) "
+        sx={{ alignSelf: "flex-start" }}
+      >
         <Add fontSize="small" />
       </IconButton>
     </Stack>

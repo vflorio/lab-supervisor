@@ -1,9 +1,5 @@
 import { Box, Stack, Typography } from "@mui/material";
 
-const mono = { fontFamily: "'JetBrains Mono', monospace" } as const;
-
-// Riquadro terminal-style per il toggle JSON di una DomainCardHeader: stesso sfondo scuro
-// annidato (#0a0c0e) usato da ScheduleGrid/CommandView per isolare i layer di dati.
 export interface JsonViewProps {
   readonly data: unknown;
 }
@@ -23,11 +19,19 @@ export function JsonView({ data }: JsonViewProps) {
           bgcolor: "#0d0f11",
         }}
       >
-        <Typography sx={{ ...mono, fontSize: 10, color: "textSecondary", ml: 1 }}>JSON</Typography>
+        <Typography variant="monoLabel" sx={{ color: "textSecondary", ml: 1 }}>
+          JSON
+        </Typography>
       </Stack>
       <Box
         component="pre"
-        sx={{ ...mono, fontSize: 11, color: "primary.main", p: 2, m: 0, overflowX: "auto", lineHeight: 1.7 }}
+        sx={(theme) => ({
+          ...theme.typography.monoCode,
+          color: "primary.main",
+          p: 2,
+          m: 0,
+          overflowX: "auto",
+        })}
       >
         {JSON.stringify(data, null, 2)}
       </Box>

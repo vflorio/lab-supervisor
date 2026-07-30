@@ -2,11 +2,6 @@ import { Code } from "@mui/icons-material";
 import { Box, Stack, Switch, Typography } from "@mui/material";
 import type { ReactNode } from "react";
 
-const mono = { fontFamily: "'JetBrains Mono', monospace" } as const;
-
-// Header comune a ogni card di dominio (config domain): icona + eyebrow "config domain" +
-// titolo/sottotitolo, azioni del chiamante (es. Modifica/Salva/Annulla) + toggle JSON.
-// Un solo componente riusato da ogni card di settings invece di ridisegnarlo per dominio.
 export interface DomainCardHeaderProps {
   readonly icon: ReactNode;
   readonly title: string;
@@ -35,28 +30,25 @@ export function DomainCardHeader({ icon, title, subtitle, showJson, onToggleJson
           {icon}
         </Box>
         <Box>
-          <Typography
-            sx={{
-              ...mono,
-              fontSize: 10,
-              color: "textSecondary",
-              textTransform: "uppercase",
-              letterSpacing: "0.12em",
-              mb: 0.5,
-            }}
-          >
+          <Typography variant="monoEyebrow" sx={{ color: "textSecondary", mb: 0.5 }}>
             Domain
           </Typography>
-          <Typography sx={{ ...mono, fontSize: 13, fontWeight: 600, color: "text.primary", lineHeight: 1 }}>
+          <Typography variant="monoTitle" sx={{ fontWeight: 600, color: "text.primary", lineHeight: 1 }}>
             {title}
           </Typography>
-          {subtitle && <Typography sx={{ fontSize: 11, color: "textSecondary", mt: 0.5 }}>{subtitle}</Typography>}
+          {subtitle && (
+            <Typography variant="caption" color="textSecondary" sx={{ display: "block", mt: 0.5 }}>
+              {subtitle}
+            </Typography>
+          )}
         </Box>
       </Stack>
       <Stack direction="row" sx={{ gap: 1, alignItems: "center" }}>
         {actions}
         <Stack direction="row" sx={{ gap: 1, alignItems: "center" }}>
-          <Typography sx={{ ...mono, fontSize: 11, color: "textSecondary" }}>JSON</Typography>
+          <Typography variant="monoLabel" sx={{ color: "textSecondary" }}>
+            JSON
+          </Typography>
           <Switch checked={showJson} onChange={onToggleJson} size="small" color="primary" />
           <Code sx={{ fontSize: 14, color: showJson ? "primary.main" : "textSecondary" }} />
         </Stack>

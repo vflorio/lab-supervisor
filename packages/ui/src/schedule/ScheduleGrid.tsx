@@ -49,9 +49,6 @@ function computeBreakdown(
   });
 }
 
-// Griglia 7gg x 24h a risoluzione del minuto: ogni cella e' colorata in base a quanti minuti
-// dell'ora sono attivi nello Schedule composto - condivisa da ScheduleForm (anteprima live) e
-// ScheduleView (risultato finale).
 export interface ScheduleGridProps {
   readonly composed: readonly ComposedStep[];
   readonly labels: readonly string[];
@@ -78,7 +75,7 @@ export function ScheduleGrid({ composed, labels }: ScheduleGridProps) {
       {HOURS.map((h) => (
         <Box key={h} sx={{ textAlign: "center" }}>
           {h % 3 === 0 && (
-            <Typography sx={{ fontSize: 9, fontWeight: 600, color: "textSecondary" }}>
+            <Typography sx={{ fontSize: 10, fontWeight: 600, color: "textSecondary" }}>
               {String(h).padStart(2, "0")}
             </Typography>
           )}
@@ -86,7 +83,7 @@ export function ScheduleGrid({ composed, labels }: ScheduleGridProps) {
       ))}
       {grid.map((row, d) => (
         <Fragment key={DAY_NAMES[d]}>
-          <Box sx={{ fontWeight: 600, display: "flex", alignItems: "center", fontSize: 9, color: "textSecondary" }}>
+          <Box sx={{ fontWeight: 600, display: "flex", alignItems: "center", fontSize: 10, color: "textSecondary" }}>
             {DAY_NAMES[d]}
           </Box>
           {row.map((mins, h) => {

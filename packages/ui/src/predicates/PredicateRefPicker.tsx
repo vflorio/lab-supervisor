@@ -1,17 +1,12 @@
 import { Chip } from "@mui/material";
 import { Picker } from "../picker/Picker";
 
-// Un predicato osservato dal tracking live (vedi trpc.tracking.snapshot) - il chiamante
-// fornisce la lista, questo componente resta puro/senza IO.
 export interface PredicateOption {
   readonly domain: string;
   readonly entityId: string;
   readonly name: string;
 }
 
-// Picker con ricerca per un singolo nome di predicato, usato dallo step "Predicate" del
-// TripwireWizard - alimentato dai predicati realmente osservati invece di una lista mock,
-// sul Picker generico condiviso con gli altri picker server-driven (workflow, device...).
 export interface PredicateRefPickerProps {
   readonly options: readonly PredicateOption[];
   readonly value: string;

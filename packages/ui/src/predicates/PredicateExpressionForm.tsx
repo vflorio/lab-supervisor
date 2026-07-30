@@ -2,25 +2,26 @@ import type { PredicateExpression } from "@supervisor/core/predicates/expression
 import { BooleanTreeForm } from "../boolean-tree/BooleanTreeForm";
 import { type PredicateLeaf, predicateTreeOps } from "./ops";
 import { PredicateLeafForm } from "./PredicateLeafForm";
+import type { PredicateOption } from "./PredicateRefPicker";
 
 const DEFAULT_LEAF: PredicateLeaf = { type: "ref", name: "" };
 
-// Form controllata per una PredicateExpression: albero and/or/not generico
-// (vedi ../boolean-tree) con leaf ref/equals/includes editati da PredicateLeafForm.
 export interface PredicateExpressionFormProps {
   readonly value: PredicateExpression;
   readonly onChange: (next: PredicateExpression) => void;
+  readonly predicateOptions: readonly PredicateOption[];
 }
 
-export function PredicateExpressionForm({ value, onChange }: PredicateExpressionFormProps) {
+export function PredicateExpressionForm({ value, onChange, predicateOptions }: PredicateExpressionFormProps) {
   return (
     <BooleanTreeForm
       value={value}
       onChange={onChange}
       ops={predicateTreeOps}
       defaultLeaf={DEFAULT_LEAF}
-      renderLeafForm={(leaf, onLeafChange) => <PredicateLeafForm value={leaf} onChange={onLeafChange} />}
+      renderLeafForm={(leaf, onLeafChange) => (
+        <PredicateLeafForm value={leaf} onChange={onLeafChange} predicateOptions={predicateOptions} />
+      )}
     />
   );
 }
-1;

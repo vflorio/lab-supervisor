@@ -13,17 +13,14 @@ import { ActivationScheduleForm, ActivationScheduleView } from "@supervisor/ui/a
 import { DurationForm, DurationView } from "@supervisor/ui/duration";
 import { PipelineForm, PipelineView } from "@supervisor/ui/pipeline";
 import { PredicateExpressionForm, PredicateExpressionView, type PredicateOption } from "@supervisor/ui/predicates";
-import { RecoveryPolicyAccordionList } from "@supervisor/ui/recovery";
+import { RecoveryPolicyList } from "@supervisor/ui/recovery";
 import { RetryPolicyForm, RetryPolicyView } from "@supervisor/ui/retry-policy";
 import { ScheduleForm, ScheduleView } from "@supervisor/ui/schedule";
-import { WorkflowAccordionList } from "@supervisor/ui/workflow";
+import { WorkflowList } from "@supervisor/ui/workflow";
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./retry";
 import { theme } from "@supervisor/ui/theme";
-
-// Storybook-ish: ogni sezione monta un modulo puro con un payload di esempio, Form e View
-// sulla stessa istanza cosi' si vede subito l'effetto di un edit.
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -111,7 +108,7 @@ function WorkflowDemo() {
 
   return (
     <Stack sx={{ gap: 2 }}>
-      <WorkflowAccordionList
+      <WorkflowList
         workflows={workflows}
         editing
         schema={COMMAND_SCHEMA}
@@ -119,7 +116,7 @@ function WorkflowDemo() {
         onCreate={createWorkflow}
       />
       <Divider />
-      <WorkflowAccordionList workflows={workflows} editing={false} schema={COMMAND_SCHEMA} onChange={() => {}} />
+      <WorkflowList workflows={workflows} editing={false} schema={COMMAND_SCHEMA} onChange={() => {}} />
     </Stack>
   );
 }
@@ -143,7 +140,7 @@ function PredicateExpressionDemo() {
 
   return (
     <Stack sx={{ gap: 1.5 }}>
-      <PredicateExpressionForm value={value} onChange={setValue} />
+      <PredicateExpressionForm value={value} onChange={setValue} predicateOptions={mockPredicateOptions} />
       <Divider />
       <PredicateExpressionView value={value} />
     </Stack>
@@ -160,10 +157,11 @@ const initialPipeline: Pipeline = {
 
 function PipelineDemo() {
   const [value, setValue] = useState<Pipeline>(initialPipeline);
+  const workflowNames = initialWorkflows.map((w) => w.name);
 
   return (
     <Stack sx={{ gap: 1.5 }}>
-      <PipelineForm value={value} onChange={setValue} />
+      <PipelineForm value={value} onChange={setValue} workflowNames={workflowNames} />
       <Divider />
       <PipelineView value={value} />
     </Stack>
@@ -223,7 +221,7 @@ function RecoveryDemo() {
 
   return (
     <Stack sx={{ gap: 2 }}>
-      <RecoveryPolicyAccordionList
+      <RecoveryPolicyList
         policies={policies}
         editing
         retrySchema={POLICY_STEP_SCHEMA}
@@ -234,7 +232,7 @@ function RecoveryDemo() {
         onCreate={createPolicy}
       />
       <Divider />
-      <RecoveryPolicyAccordionList
+      <RecoveryPolicyList
         policies={policies}
         editing={false}
         retrySchema={POLICY_STEP_SCHEMA}

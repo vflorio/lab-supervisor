@@ -1,15 +1,14 @@
-import { MenuItem, Select, type SelectChangeEvent, Stack, TextField } from "@mui/material";
+import { Box, MenuItem, Select, type SelectChangeEvent, Stack, TextField } from "@mui/material";
 import type { PredicateValue } from "@supervisor/core/predicates/model";
 import { FieldLabel } from "../misc/FieldLabel";
 import { NumberField } from "../misc/number-field/NumberField";
 import type { PredicateLeaf } from "./ops";
+import { type PredicateOption, PredicateRefPicker } from "./PredicateRefPicker";
 
-// Editor per un leaf di PredicateExpression: ref/equals/includes e' un'unione chiusa
-// definita una volta in expression.ts, niente schema iniettato (a differenza di
-// Command/PolicyStep, che duplicano un registro esterno che potrebbe crescere).
 export interface PredicateLeafFormProps {
   readonly value: PredicateLeaf;
   readonly onChange: (next: PredicateLeaf) => void;
+  readonly predicateOptions: readonly PredicateOption[];
 }
 
 type ValueKind = "boolean" | "string" | "number";
@@ -71,7 +70,7 @@ const leafFor = (kind: (typeof KINDS)[number], name: string): PredicateLeaf =>
       ? { type: "equals", name, value: false }
       : { type: "includes", name, value: "" };
 
-export function PredicateLeafForm({ value, onChange }: PredicateLeafFormProps) {
+export function PredicateLeafForm({ value, onChange, predicateOptions }: PredicateLeafFormProps) {
   return (
     <Stack direction="row" sx={{ gap: 1, alignItems: "center", flexWrap: "wrap" }}>
       <Select
@@ -88,14 +87,13 @@ export function PredicateLeafForm({ value, onChange }: PredicateLeafFormProps) {
           </MenuItem>
         ))}
       </Select>
-      <FieldLabel label="name" width={180}>
-        <TextField
-          size="small"
-          fullWidth
+      <Box sx={{ minWidth: 340 }}>
+        <PredicateRefPicker
+          options={predicateOptions}
           value={value.name}
-          onChange={(event) => onChange({ ...value, name: event.target.value })}
+          onChange={(name) => onChange({ ...value, name })}
         />
-      </FieldLabel>
+      </Box>
       {value.type === "equals" && (
         <ValueEditor value={value.value} onChange={(next) => onChange({ ...value, value: next })} />
       )}

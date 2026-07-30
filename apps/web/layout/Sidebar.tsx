@@ -23,8 +23,6 @@ const NAV_ITEMS = [
 ];
 
 const SIDEBAR_WIDTH = 240;
-// Uguale all'altezza del PanelHeader (vedi PanelHeader.tsx) - stesso modulo verticale in
-// tutta l'app, così la sidebar collassata e l'header dei pannelli si allineano perfettamente.
 const SIDEBAR_COLLAPSED_WIDTH = PANEL_HEADER_HEIGHT;
 const COLLAPSED_STORAGE_KEY = "sidebar:collapsed";
 
@@ -103,7 +101,7 @@ export function Sidebar({ urlPathname }: { urlPathname: string }) {
                   <Box
                     sx={{
                       ...panelHeaderIconSx,
-                      ...(isActive && { bgcolor: "rgba(255,255,255,0.35)", color: "inherit" }),
+                      ...(isActive && { bgcolor: "rgba(0,0,0,0.8)" }),
                     }}
                   >
                     {item.icon}
