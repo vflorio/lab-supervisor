@@ -4,8 +4,9 @@ import type * as Logger from "@supervisor/core/logger/logger";
 import * as Network from "@supervisor/core/network";
 import * as Predicates from "@supervisor/core/predicates/index";
 import type * as Retry from "@supervisor/core/retry/retry";
-import * as TaskRunner from "@supervisor/core/task-runner";
+import * as TaskRunner from "@supervisor/core/task-runner/index";
 import * as E from "fp-ts/Either";
+import type * as TE from "fp-ts/TaskEither";
 import type { AdbDeviceStream } from "./adb-stream";
 
 // ADB reachability tracker - dominio "adb": raggiungibilità dei device Android via rete locale
@@ -23,6 +24,8 @@ export interface Deps {
   readonly adbDeviceStream: AdbDeviceStream;
   readonly policy: Retry.Policy;
   readonly predicateStream: Predicates.PredicateStream;
+  readonly descriptor: TaskRunner.LoopDescriptor;
+  readonly loopStream?: TaskRunner.LoopStream;
 }
 
 // Un target sparito del tutto dall'output di `adb devices` (a differenza di uno con status
@@ -36,7 +39,15 @@ const retractVanished = (
     .filter((target) => !seenTargets.has(target))
     .map((target) => ({ domain: DOMAIN, entityId: target, name: "adb_device_reachable", value: false }));
 
-export const create = ({ logger, predicateStream, policy, adbEnv, adbDeviceStream }: Deps): TaskRunner.Handle => {
+export const create = ({
+  logger,
+  predicateStream,
+  policy,
+  adbEnv,
+  adbDeviceStream,
+  descriptor,
+  loopStream,
+}: Deps): TaskRunner.Handle => {
   const diffFor = Predicates.diff<Adb.Device>(DOMAIN, keyOf, toFacts);
 
   let snapshot: ReadonlyMap<string, Predicates.PredicateValue> = new Map();
@@ -44,14 +55,12 @@ export const create = ({ logger, predicateStream, policy, adbEnv, adbDeviceStrea
 
   const domainLogger = logger.child(DOMAIN);
 
-  const tick = async (): Promise<void> => {
-    domainLogger.debug(`Tracking tick`);
-
+  const onTick: TE.TaskEither<Errors.AppError, string | undefined> = async () => {
     const result = await Adb.devices(adbEnv)();
 
     if (E.isLeft(result)) {
       domainLogger.error(`[${DOMAIN}] tracker poll failed: ${Errors.format(result.left)}`)();
-      return;
+      return result;
     }
 
     adbDeviceStream.publish(result.right);
@@ -68,7 +77,9 @@ export const create = ({ logger, predicateStream, policy, adbEnv, adbDeviceStrea
     knownTargets = seenTargets;
 
     for (const fact of [...changed, ...retracted]) predicateStream.emit(fact);
+
+    return E.right(`${result.right.length} devices, ${changed.length + retracted.length} changed`);
   };
 
-  return TaskRunner.create(domainLogger, policy, tick, `(Tracker) ${DOMAIN}`);
+  return TaskRunner.create({ logger: domainLogger, descriptor, policy, onTick, loopStream });
 };

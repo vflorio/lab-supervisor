@@ -8,8 +8,9 @@ import * as Logger from "@supervisor/core/logger/logger";
 import * as Notify from "@supervisor/core/notify/stream";
 import * as Predicates from "@supervisor/core/predicates/index";
 import * as Recovery from "@supervisor/core/recovery/index";
-import * as RetryPolicy from "@supervisor/core/retry/retry";
+import * as RetryCodec from "@supervisor/core/retry/codec";
 import type * as Schedule from "@supervisor/core/schedule/schedule";
+import * as TaskRunner from "@supervisor/core/task-runner/index";
 import type * as Validation from "@supervisor/core/validation";
 import * as WorkflowInterpreter from "@supervisor/core/workflow/interpreter";
 import * as E from "fp-ts/Either";
@@ -38,7 +39,7 @@ export interface Env {
 
 type Effect<A> = RTE.ReaderTaskEither<
   Env,
-  Validation.ValidationError | Config.FetchError | RetryPolicy.PolicyDecodeError | Activation.StartError,
+  Validation.ValidationError | Config.FetchError | RetryCodec.PolicyDecodeError | Activation.StartError,
   A
 >;
 
@@ -51,20 +52,13 @@ const logInfo = (message: string): Effect<void> =>
 
 const loadConfig: Effect<ConfigModel.Service> = (env) => Config.load(env.configFetcher);
 
-const parseConfigPolicies = (
-  config: ConfigModel.Service,
-): Effect<{
-  adbTrackingPolicy: RetryPolicy.Policy;
-  suitestCameraTrackingPolicy: RetryPolicy.Policy;
-  suitestControlUnitTrackingPolicy: RetryPolicy.Policy;
-  suitestDeviceTrackingPolicy: RetryPolicy.Policy;
-}> =>
+const parseConfigPolicies = (config: ConfigModel.Service): Effect<ServiceLifecycle.Policies> =>
   pipe(
     E.Do,
-    E.bind("adbTrackingPolicy", () => RetryPolicy.decode(config.tracking.adb.policy)),
-    E.bind("suitestCameraTrackingPolicy", () => RetryPolicy.decode(config.tracking.suitestCamera.policy)),
-    E.bind("suitestControlUnitTrackingPolicy", () => RetryPolicy.decode(config.tracking.suitestControlUnit.policy)),
-    E.bind("suitestDeviceTrackingPolicy", () => RetryPolicy.decode(config.tracking.suitestDevice.policy)),
+    E.bind("adbTrackingPolicy", () => RetryCodec.described(config.tracking.adb.policy)),
+    E.bind("suitestCameraTrackingPolicy", () => RetryCodec.described(config.tracking.suitestCamera.policy)),
+    E.bind("suitestControlUnitTrackingPolicy", () => RetryCodec.described(config.tracking.suitestControlUnit.policy)),
+    E.bind("suitestDeviceTrackingPolicy", () => RetryCodec.described(config.tracking.suitestDevice.policy)),
     RTE.fromEither,
   );
 
@@ -106,6 +100,9 @@ export const create: Effect<ServiceHandle> = pipe(
     const recoveryStream = Recovery.createRecoveryStream();
     const notifyStream = Notify.createNotifyStream();
     const activityStream = Activity.createActivityStream();
+    // Sopravvive al ciclo di activation (§7): quando il lifecycle si ferma ogni loop pubblica
+    // "stopped" con la sua ultima iteration, non sparisce dalla strip.
+    const loopStream = TaskRunner.createLoopStream();
 
     let active: O.Option<ServiceLifecycle.ActiveLifecycle> = O.none;
 
@@ -143,6 +140,7 @@ export const create: Effect<ServiceHandle> = pipe(
         recoveryStream,
         notifyStream,
         activityStream,
+        loopStream,
         resetRecovery,
         runManualWorkflow,
       }),
@@ -169,6 +167,7 @@ export const create: Effect<ServiceHandle> = pipe(
           recoveryStream,
           notifyStream,
           activityStream,
+          loopStream,
         }),
         TE.tapIO((lifecycle) => () => {
           active = O.some(lifecycle);

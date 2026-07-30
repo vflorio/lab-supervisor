@@ -1,11 +1,18 @@
 import * as Logger from "@supervisor/core/logger/logger";
 import * as Retry from "@supervisor/core/retry/retry";
 import * as Schedule from "@supervisor/core/schedule/schedule";
+import * as E from "fp-ts/Either";
 import type * as T from "fp-ts/Task";
+import type * as TE from "fp-ts/TaskEither";
+import type * as Errors from "../errors";
 import * as TaskRunner from "../task-runner";
 import { type ActivationMachineEnv, type ActivationState, dispatch, init } from "./machine";
 
 export type StartError = TaskRunner.StartError;
+
+// Loop puramente interno (valuta lo schedule ogni secondo): niente `loopStream`, non alimenta
+// la dashboard - esiste e viene loggato, ma non è uno dei quattro loop di §7.
+const DESCRIPTOR: TaskRunner.LoopDescriptor = { id: "activation", label: "Activation", policyLabel: "constant 1s" };
 
 export const create = (
   logger: Logger.Tagged,
@@ -16,11 +23,19 @@ export const create = (
 
   let state: ActivationState = init;
 
-  const tick = async (): Promise<void> => {
+  const onTick: TE.TaskEither<Errors.AppError, string | undefined> = async () => {
     const isActive = schedule(Schedule.toTimeSlot(new Date()));
     const result = await dispatch(state, { _tag: "ScheduleEvaluated", isActive })(env)();
-    if (result._tag === "Right") state = result.right;
+    if (E.isLeft(result)) return result;
+
+    state = result.right;
+    return E.right(undefined);
   };
 
-  return TaskRunner.create(Logger.muted(logger), Retry.constantDelay(1000), tick);
+  return TaskRunner.create({
+    logger: Logger.muted(logger),
+    descriptor: DESCRIPTOR,
+    policy: Retry.constantDelay(1000),
+    onTick,
+  });
 };

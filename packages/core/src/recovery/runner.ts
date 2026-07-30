@@ -24,6 +24,10 @@ export interface RecoveryRunnerEnv {
   readonly capabilitiesFor: (entityId: string) => CommandCapabilities;
   // Cadenza del tick periodico di ri-osservazione (per rilevare grace scaduti senza nuovi fatti)
   readonly tickPolicy: Policy;
+  // Identità del tick loop per la dashboard (§7): un loop per RecoveryPolicy, non un
+  // aggregato - ognuno il proprio widget, non un merge.
+  readonly descriptor: TaskRunner.LoopDescriptor;
+  readonly loopStream?: TaskRunner.LoopStream;
   readonly now?: () => number;
   // Notifica opzionale ad ogni transizione di un tripwire, per un'entità - lo stato intero
   // (incluso l'esito di un tentativo di recovery, non più un side-channel separato)
@@ -90,13 +94,16 @@ export const start = (
         );
       });
 
-      const tickLoop = TaskRunner.create(
-        Logger.muted(env.logger.child(`RecoveryRunner:${policy.label}`)),
-        env.tickPolicy,
-        async () => {
+      const tickLoop = TaskRunner.create({
+        logger: Logger.muted(env.logger.child(`RecoveryRunner:${policy.label}`)),
+        descriptor: env.descriptor,
+        policy: env.tickPolicy,
+        loopStream: env.loopStream,
+        onTick: async () => {
           for (const entityId of factsByEntity.keys()) await observeEntity(entityId);
+          return E.right(undefined);
         },
-      );
+      });
 
       // Avvia il loop in background
       pipe(tickLoop.start, TaskRunner.detach)();

@@ -9,6 +9,7 @@ import * as Network from "@supervisor/core/network";
 import type * as Notify from "@supervisor/core/notify/stream";
 import type * as Predicates from "@supervisor/core/predicates/index";
 import type * as Recovery from "@supervisor/core/recovery/index";
+import type * as TaskRunner from "@supervisor/core/task-runner/index";
 import type * as Trpc from "@supervisor/core/trpc";
 import type * as WorkflowInterpreter from "@supervisor/core/workflow/interpreter";
 import { pipe } from "fp-ts/function";
@@ -38,6 +39,7 @@ export type Deps = {
   readonly recoveryStream: Recovery.RecoveryFeed;
   readonly notifyStream: Notify.NotifyFeed;
   readonly activityStream: Activity.ActivityFeed;
+  readonly loopStream: TaskRunner.LoopFeed;
   readonly resetRecovery: (policyLabel: string, entityId: string, tripwireIndex: number) => boolean;
   readonly runManualWorkflow: (
     cameraId: string,
@@ -55,6 +57,7 @@ export const create = ({
   recoveryStream,
   notifyStream,
   activityStream,
+  loopStream,
   resetRecovery,
   runManualWorkflow,
 }: Deps): Trpc.Services => {
@@ -68,6 +71,7 @@ export const create = ({
     android: android(trpcLog, adbDeviceStream),
     notifications: notifyStream,
     activity: activityStream,
+    loops: loopStream,
     registry: registry(config.registry.dbPath),
 
     // Già redatta - mai esporre credenziali raw

@@ -12,6 +12,7 @@ import type { NotifyFeed } from "./notify/stream";
 import type { PredicateFeed } from "./predicates/feed";
 import type * as RecoveryModel from "./recovery/model";
 import type { RecoveryFeed } from "./recovery/status";
+import type { LoopFeed } from "./task-runner/stream";
 import type * as WorkflowInterpreter from "./workflow/interpreter";
 import type * as Workflow from "./workflow/workflow";
 
@@ -83,7 +84,9 @@ interface Settings {
   // a differenza delle update* sopra che restano in-memory. Oggi solo i campi di `Infra`
   // (trpc/log/adb/tracking per intero, suitest/slack solo baseUrl/active) sono nel patch -
   // fallisce se la config non è stata caricata da file (es. `--config-url`).
-  readonly setConfig: (patch: ConfigModel.ConfigPatch) => TE.TaskEither<ConfigModel.ConfigError | Errors.AppError, ConfigModel.Service>;
+  readonly setConfig: (
+    patch: ConfigModel.ConfigPatch,
+  ) => TE.TaskEither<ConfigModel.ConfigError | Errors.AppError, ConfigModel.Service>;
 }
 
 export interface Services {
@@ -116,4 +119,6 @@ export interface Services {
   readonly activity: ActivityFeed; // Service -> Web
   // Feed delle transizioni di stato del motore di recovery
   readonly recovery: RecoveryFeed; // Service -> Web
+  // Heartbeat dei loop di background (§7 - vedi packages/ui/src/task-runner)
+  readonly loops: LoopFeed; // Service -> Web
 }

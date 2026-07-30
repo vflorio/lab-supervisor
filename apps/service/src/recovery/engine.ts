@@ -8,8 +8,8 @@ import type { NotifyLifecycle, NotifyRule } from "@supervisor/core/notify/model"
 import type * as NotifyStream from "@supervisor/core/notify/stream";
 import type * as Predicates from "@supervisor/core/predicates/index";
 import * as Recovery from "@supervisor/core/recovery/index";
-import type { PolicyDecodeError } from "@supervisor/core/retry/codec";
-import * as RetryPolicy from "@supervisor/core/retry/retry";
+import * as RetryCodec from "@supervisor/core/retry/codec";
+import type * as TaskRunner from "@supervisor/core/task-runner/index";
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
@@ -32,7 +32,7 @@ import * as Target from "./target";
 // Cadenza del tick di ri-osservazione di ogni RecoveryRunner - non configurabile: serve solo
 // a rilevare un grace period scaduto anche senza nuovi fatti dal predicate feed (nessun I/O
 // proprio). Un tick più fitto costa solo CPU locale, non richieste esterne.
-const TICK_POLICY: RetryPolicy.Policy = RetryPolicy.constantDelay(1000);
+const TICK_POLICY = RetryCodec.describedConstant(1000);
 
 export interface Env {
   readonly logger: Logger.Tagged;
@@ -42,9 +42,12 @@ export interface Env {
   readonly notifyStream: NotifyStream.NotifyStream;
   readonly activityStream: Activity.ActivityStream;
   readonly androidBridge: AndroidBridgeOrchestrator.Handle;
+  // Un loop per RecoveryPolicy (§7): N policy -> N widget, ognuno con il proprio titolo
+  // ("Recovery · <policy>"), mai un merge - decisione esplicita, non un'omissione.
+  readonly loopStream?: TaskRunner.LoopStream;
 }
 
-export type StartError = PolicyDecodeError;
+export type StartError = RetryCodec.PolicyDecodeError;
 
 export interface Handle {
   readonly stop: () => void;
@@ -145,7 +148,13 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
           stream: env.predicateStream,
           workflows: env.config.workflows,
           capabilitiesFor: Capabilities.capabilitiesFor(policy.domain, capabilitiesEnv),
-          tickPolicy: TICK_POLICY,
+          tickPolicy: TICK_POLICY.policy,
+          descriptor: {
+            id: `recovery:${policy.label}`,
+            label: `Recovery · ${policy.label}`,
+            policyLabel: TICK_POLICY.label,
+          },
+          loopStream: env.loopStream,
           onStatus: (entityId, tripwireIndex, state) => {
             const source: NotifyStream.NotifyEventSource = {
               policy: policy.label,

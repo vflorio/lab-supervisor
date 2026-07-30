@@ -30,14 +30,14 @@ export function DomainCardHeader({ icon, title, subtitle, showJson, onToggleJson
           {icon}
         </Box>
         <Box>
-          <Typography variant="monoEyebrow" sx={{ color: "textSecondary", mb: 0.5 }}>
+          <Typography variant="monoEyebrow" sx={{ color: "textSecondary", display: "block" }}>
             Domain
           </Typography>
           <Typography variant="monoTitle" sx={{ fontWeight: 600, color: "text.primary", lineHeight: 1 }}>
             {title}
           </Typography>
           {subtitle && (
-            <Typography variant="caption" color="textSecondary" sx={{ display: "block", mt: 0.5 }}>
+            <Typography variant="caption" color="textSecondary" sx={{ display: "block" }}>
               {subtitle}
             </Typography>
           )}

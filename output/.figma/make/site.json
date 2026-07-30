@@ -1,0 +1,10 @@
+{
+  "description": "Manage and organize your devices seamlessly with this intuitive web application, designed for users seeking efficient device registry solutions.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

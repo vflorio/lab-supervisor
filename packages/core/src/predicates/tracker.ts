@@ -1,5 +1,6 @@
 import * as E from "fp-ts/Either";
 import type * as RTE from "fp-ts/ReaderTaskEither";
+import type * as TE from "fp-ts/TaskEither";
 import * as Errors from "../errors";
 import * as Logger from "../logger/logger";
 import type * as Retry from "../retry/retry";
@@ -52,38 +53,50 @@ export const diff =
     return { changed, next };
   };
 
+export interface TrackerDeps<Env, Err extends Errors.AppError, RawItem> {
+  readonly logger: Logger.Tagged;
+  readonly stream: PredicateStream;
+  readonly policy: Retry.Policy;
+  readonly config: TrackerConfig<Env, Err, RawItem>;
+  readonly descriptor: TaskRunner.LoopDescriptor;
+  readonly loopStream?: TaskRunner.LoopStream;
+}
+
 // Effettivo: fetch -> diff contro lo snapshot in closure -> emette i fatti cambiati -> ripete sull'TaskRunner.
-// Un fallimento del fetch viene loggato e ignorato (nessuna emissione),
+// Un fallimento del fetch resta osservabile (stato "error" sul loop) ma non ferma il loop,
 // il tracker riprova al prossimo tick
 export const create =
-  <Env, Error extends Errors.AppError, RawItem>(
-    logger: Logger.Tagged,
-    stream: PredicateStream,
-    policy: Retry.Policy,
-    config: TrackerConfig<Env, Error, RawItem>,
-  ) =>
+  <Env, Err extends Errors.AppError, RawItem>({
+    logger,
+    stream,
+    policy,
+    config,
+    descriptor,
+    loopStream,
+  }: TrackerDeps<Env, Err, RawItem>) =>
   (env: Env): TaskRunner.Handle => {
     const diffFor = diff<RawItem>(config.domain, config.keyOf, config.toFacts);
     let snapshot: ReadonlyMap<string, PredicateValue> = new Map();
 
     const trackerLogger = logger.child("Tracker");
 
-    const tick = async (): Promise<void> => {
+    const onTick: TE.TaskEither<Errors.AppError, string | undefined> = async () => {
       const result = await config.fetch(env)();
 
       if (E.isLeft(result)) {
         trackerLogger.error(`${config.domain} poll failed: ${Errors.format(result.left)}`)();
-        return;
+        return result;
       }
 
       const { changed, next } = diffFor(snapshot, result.right);
       snapshot = next;
 
-      trackerLogger.info(`${config.domain} tick - changed facts: ${changed.length}`)();
       trackerLogger.debug(`${config.domain} = ${Logger.formatJsonLog([{ changed }])}`)();
 
       for (const fact of changed) stream.emit(fact);
+
+      return E.right(`${changed.length} changed`);
     };
 
-    return TaskRunner.create(trackerLogger, policy, tick, `(Tracker) ${config.domain}`);
+    return TaskRunner.create({ logger: trackerLogger, descriptor, policy, onTick, loopStream });
   };

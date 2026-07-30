@@ -89,7 +89,13 @@ describe("predicates/tracker run", () => {
     const emitted: PredicateEntry[] = [];
     stream.subscribe((entry) => emitted.push(entry));
 
-    const handle = create(noopLogger, stream, Retry.constantDelay(5), { domain: "d", keyOf, toFacts, fetch })({});
+    const handle = create({
+      logger: noopLogger,
+      stream,
+      policy: Retry.constantDelay(5),
+      config: { domain: "d", keyOf, toFacts, fetch },
+      descriptor: { id: "d", label: "d", policyLabel: "constant 5ms" },
+    })({});
 
     const done = handle.start();
     await sleep(20);
@@ -116,7 +122,13 @@ describe("predicates/tracker run", () => {
     const emitted: PredicateEntry[] = [];
     stream.subscribe((entry) => emitted.push(entry));
 
-    const handle = create(noopLogger, stream, Retry.constantDelay(5), { domain: "d", keyOf, toFacts, fetch })({});
+    const handle = create({
+      logger: noopLogger,
+      stream,
+      policy: Retry.constantDelay(5),
+      config: { domain: "d", keyOf, toFacts, fetch },
+      descriptor: { id: "d", label: "d", policyLabel: "constant 5ms" },
+    })({});
 
     const done = handle.start();
     await sleep(20);

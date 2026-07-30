@@ -5,11 +5,10 @@ import type * as Logger from "@supervisor/core/logger/logger";
 import type * as Notify from "@supervisor/core/notify/stream";
 import type * as Predicates from "@supervisor/core/predicates/index";
 import type * as Recovery from "@supervisor/core/recovery/index";
-import type * as RetryPolicy from "@supervisor/core/retry/retry";
-import * as Retry from "@supervisor/core/retry/retry";
-import * as TaskRunner from "@supervisor/core/task-runner";
+import * as RetryCodec from "@supervisor/core/retry/codec";
+import * as TaskRunner from "@supervisor/core/task-runner/index";
 import type * as WorkflowInterpreter from "@supervisor/core/workflow/interpreter";
-import { constVoid, flow, pipe } from "fp-ts/function";
+import { flow, pipe } from "fp-ts/function";
 import * as IO from "fp-ts/IO";
 import * as TE from "fp-ts/TaskEither";
 import type * as AdbStream from "./adb/adb-stream";
@@ -28,10 +27,10 @@ import * as SuitestTracking from "./suitest/tracking";
 // da una create riuscita.
 
 export interface Policies {
-  readonly adbTrackingPolicy: RetryPolicy.Policy;
-  readonly suitestCameraTrackingPolicy: RetryPolicy.Policy;
-  readonly suitestControlUnitTrackingPolicy: RetryPolicy.Policy;
-  readonly suitestDeviceTrackingPolicy: RetryPolicy.Policy;
+  readonly adbTrackingPolicy: RetryCodec.DescribedPolicy;
+  readonly suitestCameraTrackingPolicy: RetryCodec.DescribedPolicy;
+  readonly suitestControlUnitTrackingPolicy: RetryCodec.DescribedPolicy;
+  readonly suitestDeviceTrackingPolicy: RetryCodec.DescribedPolicy;
 }
 
 export interface Env {
@@ -43,6 +42,9 @@ export interface Env {
   readonly recoveryStream: Recovery.RecoveryStream;
   readonly notifyStream: Notify.NotifyStream;
   readonly activityStream: Activity.ActivityStream;
+  // Heartbeat dei loop di background (§7 - vedi packages/ui/src/task-runner): sopravvive al
+  // ciclo di activation, per questo vive nell'Env del servizio e non nell'ActiveLifecycle.
+  readonly loopStream: TaskRunner.LoopStream;
 }
 
 export interface ActiveLifecycle {
@@ -74,10 +76,12 @@ const readRegistry = (env: Env) =>
     fsEnv: Node.fsEnv,
   });
 
+const RECONCILE_POLICY = RetryCodec.describedConstant(ADB_RECONCILE_TICK_MS);
+
 const createAdbReconciler = (env: Env, androidBridge: AndroidBridgeOrchestrator.Handle): TaskRunner.Handle => {
   const reconcileLog = env.logger.child("AndroidBridge");
 
-  const tick = pipe(
+  const onTick: TE.TaskEither<Errors.AppError, string | undefined> = pipe(
     readRegistry(env),
     TE.orElseFirstIOK((error) => reconcileLog.error(`registry read failed - ${Errors.format(error)}`)),
     TE.flatMap((registry) =>
@@ -86,10 +90,20 @@ const createAdbReconciler = (env: Env, androidBridge: AndroidBridgeOrchestrator.
         TE.orElseFirstIOK((error) => reconcileLog.error(`reconcile failed: ${Errors.format(error)}`)),
       ),
     ),
-    TE.match(constVoid, constVoid),
+    TE.map(() => undefined),
   );
 
-  return TaskRunner.create(reconcileLog, Retry.constantDelay(ADB_RECONCILE_TICK_MS), tick, "(AndroidBridge) reconcile");
+  return TaskRunner.create({
+    logger: reconcileLog,
+    descriptor: {
+      id: "android-bridge:reconcile",
+      label: "AndroidBridge reconcile",
+      policyLabel: RECONCILE_POLICY.label,
+    },
+    policy: RECONCILE_POLICY.policy,
+    onTick,
+    loopStream: env.loopStream,
+  });
 };
 
 const createRecovery = (
@@ -105,6 +119,7 @@ const createRecovery = (
       notifyStream: env.notifyStream,
       activityStream: env.activityStream,
       androidBridge: resources.androidBridge,
+      loopStream: env.loopStream,
     }),
     TE.fromEither,
     TE.map(
@@ -143,7 +158,13 @@ const createResources =
       predicateStream: env.predicateStream,
       adbDeviceStream: env.adbDeviceStream,
       adbEnv: { logger: trackingLog.child("Tracker-ADB"), spawn: Node.spawn },
-      policy: env.policies.adbTrackingPolicy,
+      policy: env.policies.adbTrackingPolicy.policy,
+      descriptor: {
+        id: "tracker:adb",
+        label: "ADB tracking",
+        policyLabel: env.policies.adbTrackingPolicy.label,
+      },
+      loopStream: env.loopStream,
     });
 
     const suitestTracking = SuitestTracking.create({
@@ -155,6 +176,7 @@ const createResources =
         suitestControlUnit: env.policies.suitestControlUnitTrackingPolicy,
         suitestDevice: env.policies.suitestDeviceTrackingPolicy,
       },
+      loopStream: env.loopStream,
     });
 
     return { androidBridge, adbTracking, suitestTracking, adbReconciler };

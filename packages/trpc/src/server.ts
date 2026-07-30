@@ -5,6 +5,7 @@ import { activityRouter } from "./routers/activity";
 import { androidRouter } from "./routers/android";
 import { registryRouter } from "./routers/device-registry";
 import { logsRouter } from "./routers/logs";
+import { loopsRouter } from "./routers/loops";
 import { notifyRouter } from "./routers/notify";
 import { recoveryRouter } from "./routers/recovery";
 import { settingsRouter } from "./routers/settings";
@@ -28,6 +29,7 @@ export const appRouter = router({
   tracking: trackingRouter,
   activity: activityRouter,
   workflow: workflowRouter,
+  loops: loopsRouter,
 });
 
 export type AppRouter = typeof appRouter;

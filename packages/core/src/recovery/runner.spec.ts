@@ -63,6 +63,7 @@ describe("recovery/runner", () => {
         },
       }),
       tickPolicy: Retry.constantDelay(5),
+      descriptor: { id: "recovery-test", label: "recovery-test", policyLabel: "constant 5ms" },
     });
 
     expect(E.isRight(result)).toBe(true);
@@ -108,6 +109,7 @@ describe("recovery/runner", () => {
         },
       }),
       tickPolicy: Retry.constantDelay(5),
+      descriptor: { id: "recovery-test", label: "recovery-test", policyLabel: "constant 5ms" },
     });
 
     expect(E.isRight(result)).toBe(true);
@@ -155,6 +157,7 @@ describe("recovery/runner", () => {
         },
       }),
       tickPolicy: Retry.constantDelay(5),
+      descriptor: { id: "recovery-test", label: "recovery-test", policyLabel: "constant 5ms" },
     });
 
     expect(E.isRight(result)).toBe(true);
@@ -189,6 +192,7 @@ describe("recovery/runner", () => {
       workflows: [],
       capabilitiesFor: () => noopCapabilities(),
       tickPolicy: Retry.constantDelay(5),
+      descriptor: { id: "recovery-test", label: "recovery-test", policyLabel: "constant 5ms" },
     });
 
     expect(E.isLeft(result)).toBe(true);
