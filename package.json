@@ -40,5 +40,8 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "storybook": "10.5.5"
+  }
 }
