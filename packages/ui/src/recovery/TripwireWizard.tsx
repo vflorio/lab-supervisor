@@ -7,7 +7,7 @@ import type { RecoveryTripwire } from "@supervisor/core/recovery/model";
 import type { PolicyJson, PolicyStepSchema } from "@supervisor/core/retry/codec";
 import { useState } from "react";
 import { DurationForm } from "../duration/DurationForm";
-import { JsonView } from "../JsonView";
+import { JsonView } from "../misc/JsonView";
 import { NotifyRuleListForm } from "../notify/NotifyRuleListForm";
 import { buildPipeline, PipelineWorkflowPicker } from "../pipeline/PipelineWorkflowPicker";
 import { type PredicateOption, PredicateRefPicker } from "../predicates/PredicateRefPicker";

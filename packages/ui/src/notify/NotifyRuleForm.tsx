@@ -1,6 +1,7 @@
 import { Checkbox, FormControlLabel, MenuItem, Select, type SelectChangeEvent, Stack, TextField } from "@mui/material";
 import type { NotifyTargetSchema } from "@supervisor/core/notify/codec";
 import type { NotifyLifecycle, NotifyRule } from "@supervisor/core/notify/model";
+import { FieldLabel } from "../misc/FieldLabel";
 
 const LIFECYCLES: readonly NotifyLifecycle[] = ["immediate", "exhausted"];
 
@@ -50,35 +51,37 @@ export function NotifyRuleForm({ value, onChange, targetSchema }: NotifyRuleForm
           ))}
         </Select>
         {fields.map((field) => (
-          <TextField
-            key={field.key}
-            size="small"
-            label={field.label}
-            value={typeof targetRecord[field.key] === "string" ? (targetRecord[field.key] as string) : ""}
-            onChange={(event) =>
-              onChange({
-                ...value,
-                type: { ...targetRecord, [field.key]: event.target.value } as unknown as NotifyRule["type"],
-              })
-            }
-            sx={{ width: 160 }}
-          />
+          <FieldLabel key={field.key} label={field.label} width={160}>
+            <TextField
+              size="small"
+              fullWidth
+              value={typeof targetRecord[field.key] === "string" ? (targetRecord[field.key] as string) : ""}
+              onChange={(event) =>
+                onChange({
+                  ...value,
+                  type: { ...targetRecord, [field.key]: event.target.value } as unknown as NotifyRule["type"],
+                })
+              }
+            />
+          </FieldLabel>
         ))}
+        <FieldLabel label="channel" width={160}>
+          <TextField
+            size="small"
+            fullWidth
+            value={value.channel}
+            onChange={(event) => onChange({ ...value, channel: event.target.value })}
+          />
+        </FieldLabel>
+      </Stack>
+      <FieldLabel label="message" width="100%">
         <TextField
           size="small"
-          label="channel"
-          value={value.channel}
-          onChange={(event) => onChange({ ...value, channel: event.target.value })}
-          sx={{ width: 160 }}
+          fullWidth
+          value={value.message.message}
+          onChange={(event) => onChange({ ...value, message: { type: "template", message: event.target.value } })}
         />
-      </Stack>
-      <TextField
-        size="small"
-        label="message"
-        value={value.message.message}
-        onChange={(event) => onChange({ ...value, message: { type: "template", message: event.target.value } })}
-        fullWidth
-      />
+      </FieldLabel>
       <Stack direction="row" sx={{ gap: 1 }}>
         {LIFECYCLES.map((lifecycle) => (
           <FormControlLabel

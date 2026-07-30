@@ -1,6 +1,7 @@
 import { Box, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import type { ActivationSchedule } from "@supervisor/core/activation/schedule";
 import type { DayOfWeek } from "@supervisor/core/date-time";
+import { FieldLabel } from "../misc/FieldLabel";
 import { ScheduleGrid } from "./ScheduleGrid";
 
 const DAYS: readonly DayOfWeek[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
@@ -61,25 +62,25 @@ export function ActivationScheduleForm({ value, onChange }: ActivationScheduleFo
         </ToggleButtonGroup>
       </Box>
       <Stack direction="row" sx={{ gap: 2, alignItems: "flex-end" }}>
-        <TextField
-          label="From"
-          size="small"
-          type="time"
-          value={value.from}
-          onChange={(e) => onChange({ ...value, from: e.target.value as ActivationSchedule["from"] })}
-          sx={{ width: 130 }}
-          slotProps={{ inputLabel: { shrink: true } }}
-        />
+        <FieldLabel label="From" width={130}>
+          <TextField
+            size="small"
+            type="time"
+            fullWidth
+            value={value.from}
+            onChange={(e) => onChange({ ...value, from: e.target.value as ActivationSchedule["from"] })}
+          />
+        </FieldLabel>
         <Box sx={{ pb: 1, color: "textSecondary" }}>→</Box>
-        <TextField
-          label="To"
-          size="small"
-          type="time"
-          value={value.to}
-          onChange={(e) => onChange({ ...value, to: e.target.value as ActivationSchedule["to"] })}
-          sx={{ width: 130 }}
-          slotProps={{ inputLabel: { shrink: true } }}
-        />
+        <FieldLabel label="To" width={130}>
+          <TextField
+            size="small"
+            type="time"
+            fullWidth
+            value={value.to}
+            onChange={(e) => onChange({ ...value, to: e.target.value as ActivationSchedule["to"] })}
+          />
+        </FieldLabel>
       </Stack>
       <ScheduleGrid value={value} />
     </Stack>

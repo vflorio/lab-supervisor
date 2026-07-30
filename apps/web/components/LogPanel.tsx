@@ -19,7 +19,7 @@ import {
 import { LEVEL_PALETTE, TAG_PALETTE } from "@supervisor/core/logger/log-palette";
 import type { LogEntry } from "@supervisor/core/logger/log-stream";
 import { isLevelEnabled, type LogLevel, padContinuationLines } from "@supervisor/core/logger/logger";
-import { ResizablePanel } from "@supervisor/ui/ResizablePanel";
+import { ResizablePanel } from "@supervisor/ui/misc/ResizablePanel";
 import { useEffect, useRef, useState } from "react";
 import { List, type RowComponentProps, useDynamicRowHeight, useListRef } from "react-window";
 import { useLogFeed } from "../hooks/useLogFeed";
@@ -108,13 +108,9 @@ export function LogPanel() {
   // (spesso di lunghezza diversa) rispetto a quando sono state misurate, con conseguenti righe
   // troncate/sovrapposte. Passare `key` forza l'hook a scartare la cache stale ogni volta che
   // cambia il criterio di filtro (non ad ogni nuovo log, che si limita ad accodare in fondo).
-  const rowHeightKey = `${minLevel}|${search}|${[...disabledTags].sort().join(",")}|${clearedBeforeId}`;
+  const rowHeightKey = `${minLevel}|${search}|${[...disabledTags].toSorted().join(",")}|${clearedBeforeId}`;
   const dynamicRowHeight = useDynamicRowHeight({ defaultRowHeight: DEFAULT_ROW_HEIGHT, key: rowHeightKey });
 
-  // Elenco tag stabile: a differenza di derivarlo dagli entry correnti (che scorrono/scadono
-  // di continuo), qui si accumula man mano che nuovi tag vengono visti e non si rimuove mai -
-  // altrimenti con i log che scorrono veloci le chip del filtro appaiono/scompaiono/si
-  // riordinano di continuo, rendendo impossibile selezionarle.
   const knownTagsRef = useRef<Map<string, string | undefined>>(new Map());
   const lastScannedIdRef = useRef(-1);
   const [, bumpTagsVersion] = useState(0);
@@ -221,9 +217,6 @@ export function LogPanel() {
         bgcolor: "background.paper",
       }}
     >
-      {/* Viewport log a tutta altezza: header e filtri sono sovraimpressi (vedi overlay sotto),
-          semitrasparenti e sfocati, così i log continuano a scorrere sotto di loro invece di
-          essere spinti in basso quando i filtri si aprono. */}
       <Box sx={{ position: "absolute", inset: 0 }}>
         <Box
           sx={{
@@ -273,9 +266,6 @@ export function LogPanel() {
           </Fab>
         )}
       </Box>
-      {/* Overlay: header + filtri, in flow normale (non absolute) sopra il Box dei log - lo
-          zIndex li mantiene sovraimpressi mentre lo sfondo semitrasparente/blur di
-          PanelHeader e dello Stack filtri lascia intravedere i log che scorrono sotto. */}
       <Box sx={{ position: "relative", zIndex: 1 }}>
         <PanelHeader
           icon={<Terminal sx={{ fontSize: 16 }} />}
@@ -344,9 +334,10 @@ export function LogPanel() {
                   </Tooltip>
                 </Stack>
                 <Stack direction="row" sx={{ gap: 0.5, flexWrap: "wrap" }}>
-                  {[...availableTags].map(([tag, color]) => {
-                    const active = !disabledTags.has(tag);
-                    return (
+                  {[...availableTags]
+                    .toSorted(([a], [b]) => a.localeCompare(b))
+                    .map(([tag, color]) => [tag, color, !disabledTags.has(tag)] as const)
+                    .map(([tag, color, active]) => (
                       <Chip
                         key={tag}
                         label={tag}
@@ -360,8 +351,7 @@ export function LogPanel() {
                           opacity: active ? 1 : 0.6,
                         }}
                       />
-                    );
-                  })}
+                    ))}
                 </Stack>
               </Stack>
             )}

@@ -1,3 +1,4 @@
+import { ArrowForward } from "@mui/icons-material";
 import { Stack, Typography } from "@mui/material";
 import type { PolicyJson } from "@supervisor/core/retry/codec";
 import { DurationView } from "../duration/DurationView";
@@ -15,11 +16,7 @@ export function RetryPolicyView({ value }: RetryPolicyViewProps) {
         return (
           // biome-ignore lint/suspicious/noArrayIndexKey: PolicyJson non ha id, sola lettura
           <Stack key={index} direction="row" sx={{ gap: 0.75, alignItems: "center" }}>
-            {index > 0 && (
-              <Typography variant="caption" color="textSecondary">
-                →
-              </Typography>
-            )}
+            {index > 0 && <ArrowForward fontSize="small" sx={{ color: "text.secondary", mt: 0.25 }} />}
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
               {name}
             </Typography>

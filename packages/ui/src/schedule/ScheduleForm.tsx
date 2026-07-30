@@ -11,6 +11,7 @@ import type {
 } from "@supervisor/core/schedule/codec";
 import { match } from "ts-pattern";
 import { DurationForm } from "../duration/DurationForm";
+import { FieldLabel } from "../misc/FieldLabel";
 
 const DAYS: readonly DayOfWeek[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const DAY_SHORT: Record<DayOfWeek, string> = {
@@ -142,17 +143,16 @@ export function ScheduleForm({ value, onChange, schema }: ScheduleFormProps) {
               }
 
               return (
-                <TextField
-                  // biome-ignore lint/suspicious/noArrayIndexKey: posizione dell'arg nello schema dello step, stabile
-                  key={argIndex}
-                  size="small"
-                  type="time"
-                  label={argSchema.label}
-                  value={typeof arg === "string" ? arg : "09:00"}
-                  onChange={(event) => setArg(event.target.value as TimeString)}
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  sx={{ width: 130 }}
-                />
+                // biome-ignore lint/suspicious/noArrayIndexKey: posizione dell'arg nello schema dello step, stabile
+                <FieldLabel key={argIndex} label={argSchema.label} width={130}>
+                  <TextField
+                    size="small"
+                    type="time"
+                    fullWidth
+                    value={typeof arg === "string" ? arg : "09:00"}
+                    onChange={(event) => setArg(event.target.value as TimeString)}
+                  />
+                </FieldLabel>
               );
             })}
             <div style={{ flexGrow: 1 }} />

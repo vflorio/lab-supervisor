@@ -1,6 +1,6 @@
 import { Bolt, Dns } from "@mui/icons-material";
 import { Box, Paper } from "@mui/material";
-import { EntryRow, entryRowGridSx, entryRowSubgridSx } from "@supervisor/ui/EntryRow";
+import { EntryRow, entryRowGridSx, entryRowSubgridSx } from "@supervisor/ui/misc/EntryRow";
 import { ActivityStat } from "../../components/ActivityStat";
 import { ActivityStatus } from "../../components/ActivityStatus";
 import { PredicateStat } from "../../components/PredicateStat";

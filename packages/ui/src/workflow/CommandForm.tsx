@@ -1,8 +1,11 @@
-import { MenuItem, Select, type SelectChangeEvent, Stack, TextField } from "@mui/material";
+import { Stack, TextField } from "@mui/material";
 import type { DurationString } from "@supervisor/core/date-time";
 import type { CommandSchema } from "@supervisor/core/workflow/codec";
 import type { Command } from "@supervisor/core/workflow/workflow";
 import { DurationForm } from "../duration/DurationForm";
+import { FieldLabel } from "../misc/FieldLabel";
+import { NumberField } from "../misc/number-field/NumberField";
+import { CommandTypePicker } from "./CommandTypePicker";
 
 // Form controllata per un singolo Command. Lo schema (quali comandi esistono, che campi
 // hanno) e' iniettato dal chiamante - vedi @supervisor/core/workflow/codec#COMMAND_SCHEMA -
@@ -32,18 +35,7 @@ export function CommandForm({ value, onChange, schema }: CommandFormProps) {
 
   return (
     <Stack direction="row" sx={{ gap: 1, alignItems: "center", flexWrap: "wrap" }}>
-      <Select
-        size="small"
-        value={value.type}
-        onChange={(event: SelectChangeEvent) => onChange(commandFor(schema, event.target.value))}
-        sx={{ minWidth: 180 }}
-      >
-        {schema.map((s) => (
-          <MenuItem key={s.type} value={s.type}>
-            {s.type}
-          </MenuItem>
-        ))}
-      </Select>
+      <CommandTypePicker schema={schema} value={value.type} onChange={(type) => onChange(commandFor(schema, type))} />
       {commandSchema?.fields.map((field) => {
         const raw = record[field.key];
 
@@ -62,35 +54,31 @@ export function CommandForm({ value, onChange, schema }: CommandFormProps) {
           const coords = (raw as { x: number; y: number } | undefined) ?? { x: 0, y: 0 };
           return (
             <Stack key={field.key} direction="row" sx={{ gap: 1 }}>
-              <TextField
-                size="small"
-                type="number"
+              <NumberField
                 label="x"
                 value={coords.x}
-                onChange={(event) => setField(field.key, { ...coords, x: Number(event.target.value) })}
-                sx={{ width: 80 }}
+                onChange={(next) => setField(field.key, { ...coords, x: next })}
+                width={80}
               />
-              <TextField
-                size="small"
-                type="number"
+              <NumberField
                 label="y"
                 value={coords.y}
-                onChange={(event) => setField(field.key, { ...coords, y: Number(event.target.value) })}
-                sx={{ width: 80 }}
+                onChange={(next) => setField(field.key, { ...coords, y: next })}
+                width={80}
               />
             </Stack>
           );
         }
 
         return (
-          <TextField
-            key={field.key}
-            size="small"
-            label={field.label}
-            value={typeof raw === "string" ? raw : ""}
-            onChange={(event) => setField(field.key, event.target.value)}
-            sx={{ width: 160 }}
-          />
+          <FieldLabel key={field.key} label={field.label} width={160}>
+            <TextField
+              size="small"
+              fullWidth
+              value={typeof raw === "string" ? raw : ""}
+              onChange={(event) => setField(field.key, event.target.value)}
+            />
+          </FieldLabel>
         );
       })}
     </Stack>

@@ -77,7 +77,7 @@ export const theme = createTheme({
     },
     MuiInputLabel: {
       styleOverrides: {
-        root: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11 },
+        root: { fontFamily: "'JetBrains Mono', monospace", fontSize: 12 },
       },
     },
     MuiAutocomplete: {

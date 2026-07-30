@@ -1,6 +1,6 @@
 import { Chip } from "@mui/material";
 import * as Network from "@supervisor/core/network";
-import { SelectDialog } from "@supervisor/ui/SelectDialog";
+import { SelectDialog } from "@supervisor/ui/misc/SelectDialog";
 import type { AdbDevice } from "../../hooks/useAdbDevices";
 import type { CameraView } from "./types";
 

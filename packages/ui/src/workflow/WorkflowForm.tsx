@@ -3,6 +3,7 @@ import { Button, IconButton, Stack, TextField } from "@mui/material";
 import type { DurationString } from "@supervisor/core/date-time";
 import type { CommandSchema } from "@supervisor/core/workflow/codec";
 import type { Command, Workflow } from "@supervisor/core/workflow/workflow";
+import { FieldLabel } from "../misc/FieldLabel";
 import { CommandForm } from "./CommandForm";
 
 // Form controllata per un Workflow: nome + array di Command, stessa meccanica
@@ -44,13 +45,14 @@ export function WorkflowForm({ value, onChange, schema }: WorkflowFormProps) {
 
   return (
     <Stack sx={{ gap: 1.5 }}>
-      <TextField
-        size="small"
-        label="name"
-        value={value.name}
-        onChange={(event) => onChange({ ...value, name: event.target.value })}
-        sx={{ maxWidth: 280 }}
-      />
+      <FieldLabel label="name" width={280}>
+        <TextField
+          size="small"
+          fullWidth
+          value={value.name}
+          onChange={(event) => onChange({ ...value, name: event.target.value })}
+        />
+      </FieldLabel>
       <Stack sx={{ gap: 1 }}>
         {value.commands.map((command, index) => (
           <Stack

@@ -1,4 +1,4 @@
-import { SelectDialog } from "@supervisor/ui/SelectDialog";
+import { SelectDialog } from "@supervisor/ui/misc/SelectDialog";
 import type { LinkingTarget } from "./types";
 
 export function LinkSuitestDialog({

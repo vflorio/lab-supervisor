@@ -14,7 +14,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { entryRowGridSx } from "@supervisor/ui/EntryRow";
+import { entryRowGridSx } from "@supervisor/ui/misc/EntryRow";
 import { match } from "ts-pattern";
 import { useData } from "vike-react/useData";
 import { type AdbDevice, useAdbDevices } from "../../hooks/useAdbDevices";

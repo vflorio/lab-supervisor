@@ -15,9 +15,11 @@ import {
 import type { Infra } from "@supervisor/core/config";
 import { LogLevel } from "@supervisor/core/logger/logger";
 import { POLICY_STEP_SCHEMA } from "@supervisor/core/retry/codec";
-import { DomainCardHeader } from "@supervisor/ui/DomainCardHeader";
 import { DurationForm, DurationView } from "@supervisor/ui/duration";
-import { JsonView } from "@supervisor/ui/JsonView";
+import { DomainCardHeader } from "@supervisor/ui/misc/DomainCardHeader";
+import { FieldLabel } from "@supervisor/ui/misc/FieldLabel";
+import { JsonView } from "@supervisor/ui/misc/JsonView";
+import { NumberField } from "@supervisor/ui/misc/number-field/index";
 import { RetryPolicyForm, RetryPolicyView } from "@supervisor/ui/retry-policy";
 import { useState } from "react";
 import { trpc } from "../../../trpc/client";
@@ -121,13 +123,14 @@ export function InfraConfigCard({ config, onSaved }: { config: Config; onSaved: 
         <Stack sx={{ gap: 2 }}>
           <Group title="Suitest">
             {editing ? (
-              <TextField
-                size="small"
-                label="baseUrl"
-                value={draft.suitest.baseUrl}
-                onChange={(e) => setDraft({ ...draft, suitest: { baseUrl: e.target.value } })}
-                sx={{ minWidth: 260 }}
-              />
+              <FieldLabel label="baseUrl" width={260}>
+                <TextField
+                  size="small"
+                  fullWidth
+                  value={draft.suitest.baseUrl}
+                  onChange={(e) => setDraft({ ...draft, suitest: { baseUrl: e.target.value } })}
+                />
+              </FieldLabel>
             ) : (
               <Field label="baseUrl">{infra.suitest.baseUrl}</Field>
             )}
@@ -149,20 +152,19 @@ export function InfraConfigCard({ config, onSaved }: { config: Config; onSaved: 
           <Group title="tRPC">
             {editing ? (
               <>
-                <TextField
-                  size="small"
-                  label="hostname"
-                  value={draft.trpc.hostname}
-                  onChange={(e) => setDraft({ ...draft, trpc: { ...draft.trpc, hostname: e.target.value } })}
-                  sx={{ width: 160 }}
-                />
-                <TextField
-                  size="small"
-                  type="number"
+                <FieldLabel label="hostname" width={160}>
+                  <TextField
+                    size="small"
+                    fullWidth
+                    value={draft.trpc.hostname}
+                    onChange={(e) => setDraft({ ...draft, trpc: { ...draft.trpc, hostname: e.target.value } })}
+                  />
+                </FieldLabel>
+                <NumberField
                   label="port"
                   value={draft.trpc.port}
-                  onChange={(e) => setDraft({ ...draft, trpc: { ...draft.trpc, port: Number(e.target.value) } })}
-                  sx={{ width: 100 }}
+                  onChange={(next) => setDraft({ ...draft, trpc: { ...draft.trpc, port: next } })}
+                  width={100}
                 />
               </>
             ) : (
@@ -189,13 +191,14 @@ export function InfraConfigCard({ config, onSaved }: { config: Config; onSaved: 
                     </MenuItem>
                   ))}
                 </Select>
-                <TextField
-                  size="small"
-                  label="path"
-                  value={draft.log.path ?? ""}
-                  onChange={(e) => setDraft({ ...draft, log: { ...draft.log, path: e.target.value } })}
-                  sx={{ minWidth: 220 }}
-                />
+                <FieldLabel label="path" width={220}>
+                  <TextField
+                    size="small"
+                    fullWidth
+                    value={draft.log.path ?? ""}
+                    onChange={(e) => setDraft({ ...draft, log: { ...draft.log, path: e.target.value } })}
+                  />
+                </FieldLabel>
                 <Stack direction="row" sx={{ alignItems: "center", gap: 1 }}>
                   <Typography sx={{ ...mono, fontSize: 11, color: "textSecondary" }}>network</Typography>
                   <Switch
@@ -216,15 +219,13 @@ export function InfraConfigCard({ config, onSaved }: { config: Config; onSaved: 
           <Group title="ADB">
             {editing ? (
               <>
-                <TextField
-                  size="small"
-                  type="number"
+                <NumberField
                   label="port"
                   value={draft.adb.port}
-                  onChange={(e) =>
-                    setDraft({ ...draft, adb: { ...draft.adb, port: Number(e.target.value) as typeof draft.adb.port } })
+                  onChange={(next) =>
+                    setDraft({ ...draft, adb: { ...draft.adb, port: next as typeof draft.adb.port } })
                   }
-                  sx={{ width: 100 }}
+                  width={100}
                 />
                 <DurationForm
                   label="waitForDeviceTimeout"

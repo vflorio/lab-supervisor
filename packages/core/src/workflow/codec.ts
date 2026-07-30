@@ -17,27 +17,53 @@ export interface CommandFieldSchema {
 
 export interface CommandSchema {
   readonly type: Command["type"];
+  readonly description: string;
   readonly fields: readonly CommandFieldSchema[];
 }
 
 export const COMMAND_SCHEMA: readonly CommandSchema[] = [
-  { type: "restartApp", fields: [{ key: "packageId", label: "package id", kind: "string" }] },
+  {
+    type: "restartApp",
+    description: "Forza lo stop e riavvia l'app indicata",
+    fields: [{ key: "packageId", label: "package id", kind: "string" }],
+  },
   {
     type: "ensureActivity",
+    description: "Porta in primo piano l'activity indicata, avviandola se necessario",
     fields: [
       { key: "packageId", label: "package id", kind: "string" },
       { key: "activity", label: "activity", kind: "string" },
     ],
   },
-  { type: "openUrl", fields: [{ key: "url", label: "url", kind: "string" }] },
-  { type: "openDeveloperSettings", fields: [] },
-  { type: "reboot", fields: [] },
-  { type: "wakeUp", fields: [] },
-  { type: "inputTap", fields: [{ key: "coords", label: "coords", kind: "coords" }] },
-  { type: "waitForDevice", fields: [] },
-  { type: "waitForActivity", fields: [{ key: "activity", label: "activity", kind: "string" }] },
-  { type: "run", fields: [{ key: "workflowName", label: "workflow name", kind: "string" }] },
-  { type: "sleep", fields: [{ key: "duration", label: "duration", kind: "duration" }] },
+  {
+    type: "openUrl",
+    description: "Apre l'URL indicato nel browser di default del device",
+    fields: [{ key: "url", label: "url", kind: "string" }],
+  },
+  { type: "openDeveloperSettings", description: "Apre le impostazioni sviluppatore di Android", fields: [] },
+  { type: "reboot", description: "Riavvia il device", fields: [] },
+  { type: "wakeUp", description: "Riaccende lo schermo del device", fields: [] },
+  {
+    type: "inputTap",
+    description: "Simula un tap sulle coordinate indicate",
+    fields: [{ key: "coords", label: "coords", kind: "coords" }],
+  },
+  { type: "waitForDevice", description: "Attende che il device sia raggiungibile via ADB", fields: [] },
+  {
+    type: "waitForActivity",
+    description: "Attende che l'activity indicata sia in primo piano",
+    fields: [{ key: "activity", label: "activity", kind: "string" }],
+  },
+  {
+    type: "run",
+    description: "Esegue un altro workflow per nome",
+    fields: [{ key: "workflowName", label: "workflow name", kind: "string" }],
+  },
+  {
+    type: "sleep",
+    description: "Attende per la durata indicata",
+    fields: [{ key: "duration", label: "duration", kind: "duration" }],
+  },
 ];
 
 const isCommand = (u: unknown): u is Command => typeof u === "object" && u !== null && "type" in u;

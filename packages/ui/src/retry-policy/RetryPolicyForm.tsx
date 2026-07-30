@@ -1,8 +1,9 @@
 import { Add, Delete, KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
-import { IconButton, MenuItem, Select, type SelectChangeEvent, Stack, TextField } from "@mui/material";
+import { IconButton, MenuItem, Select, type SelectChangeEvent, Stack } from "@mui/material";
 import type { DurationString } from "@supervisor/core/date-time";
 import type { PolicyJson, PolicyStepArg, PolicyStepJson, PolicyStepSchema } from "@supervisor/core/retry/codec";
 import { DurationForm } from "../duration/DurationForm";
+import { NumberField } from "../misc/number-field/NumberField";
 
 // Form controllata per una PolicyJson: array di step [name, ...args]. Lo schema (quali
 // step esistono, che argomenti prendono) e' iniettato dal chiamante - vedi
@@ -79,15 +80,13 @@ export function RetryPolicyForm({ value, onChange, schema }: RetryPolicyFormProp
                   onChange={setArg}
                 />
               ) : (
-                <TextField
+                <NumberField
                   // biome-ignore lint/suspicious/noArrayIndexKey: posizione dell'arg nello schema dello step, stabile
                   key={argIndex}
-                  size="small"
-                  type="number"
                   label={argSchema.label}
                   value={typeof arg === "number" ? arg : 0}
-                  onChange={(event) => setArg(Number(event.target.value))}
-                  sx={{ width: 100 }}
+                  onChange={setArg}
+                  width={100}
                 />
               );
             })}

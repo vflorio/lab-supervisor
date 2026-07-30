@@ -2,6 +2,7 @@
   "name": "@supervisor/ui",
   "version": "0.1.0",
   "devDependencies": {
+    "@base-ui/react": "1.6.0",
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
     "@mui/icons-material": "9.2.0",
@@ -30,6 +31,7 @@
     "./recovery": "./src/recovery/index.tsx"
   },
   "peerDependencies": {
+    "@base-ui/react": "1.6.0",
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
     "@mui/icons-material": "9.2.0",

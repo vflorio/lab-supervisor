@@ -4,6 +4,7 @@ import type { DurationString } from "@supervisor/core/date-time";
 import type { NotifyTargetSchema } from "@supervisor/core/notify/codec";
 import type { RecoveryPolicy, RecoveryTripwire } from "@supervisor/core/recovery/model";
 import type { PolicyStepSchema } from "@supervisor/core/retry/codec";
+import { FieldLabel } from "../misc/FieldLabel";
 import { RecoveryTripwireForm } from "./RecoveryTripwireForm";
 
 // Form controllata per una RecoveryPolicy: label/domain + array di tripwire, stessa
@@ -43,20 +44,22 @@ export function RecoveryPolicyForm({ value, onChange, retrySchema, notifyTargetS
   return (
     <Stack sx={{ gap: 1.5 }}>
       <Stack direction="row" sx={{ gap: 1 }}>
-        <TextField
-          size="small"
-          label="label"
-          value={value.label}
-          onChange={(event) => onChange({ ...value, label: event.target.value })}
-          sx={{ maxWidth: 220 }}
-        />
-        <TextField
-          size="small"
-          label="domain"
-          value={value.domain}
-          onChange={(event) => onChange({ ...value, domain: event.target.value })}
-          sx={{ maxWidth: 220 }}
-        />
+        <FieldLabel label="label" width={220}>
+          <TextField
+            size="small"
+            fullWidth
+            value={value.label}
+            onChange={(event) => onChange({ ...value, label: event.target.value })}
+          />
+        </FieldLabel>
+        <FieldLabel label="domain" width={220}>
+          <TextField
+            size="small"
+            fullWidth
+            value={value.domain}
+            onChange={(event) => onChange({ ...value, domain: event.target.value })}
+          />
+        </FieldLabel>
       </Stack>
       <Stack sx={{ gap: 1 }}>
         {value.tripwires.map((tripwire, index) => (

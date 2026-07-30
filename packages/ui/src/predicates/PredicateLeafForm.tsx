@@ -1,5 +1,7 @@
 import { MenuItem, Select, type SelectChangeEvent, Stack, TextField } from "@mui/material";
 import type { PredicateValue } from "@supervisor/core/predicates/model";
+import { FieldLabel } from "../misc/FieldLabel";
+import { NumberField } from "../misc/number-field/NumberField";
 import type { PredicateLeaf } from "./ops";
 
 // Editor per un leaf di PredicateExpression: ref/equals/includes e' un'unione chiusa
@@ -44,23 +46,17 @@ function ValueEditor({ value, onChange }: { value: PredicateValue; onChange: (ne
         </Select>
       )}
       {kind === "number" && (
-        <TextField
-          size="small"
-          type="number"
-          label="value"
-          value={typeof value === "number" ? value : 0}
-          onChange={(event) => onChange(Number(event.target.value))}
-          sx={{ width: 100 }}
-        />
+        <NumberField label="value" value={typeof value === "number" ? value : 0} onChange={onChange} width={100} />
       )}
       {kind === "string" && (
-        <TextField
-          size="small"
-          label="value"
-          value={typeof value === "string" ? value : ""}
-          onChange={(event) => onChange(event.target.value)}
-          sx={{ width: 160 }}
-        />
+        <FieldLabel label="value" width={160}>
+          <TextField
+            size="small"
+            fullWidth
+            value={typeof value === "string" ? value : ""}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        </FieldLabel>
       )}
     </Stack>
   );
@@ -92,24 +88,26 @@ export function PredicateLeafForm({ value, onChange }: PredicateLeafFormProps) {
           </MenuItem>
         ))}
       </Select>
-      <TextField
-        size="small"
-        label="name"
-        value={value.name}
-        onChange={(event) => onChange({ ...value, name: event.target.value })}
-        sx={{ width: 180 }}
-      />
+      <FieldLabel label="name" width={180}>
+        <TextField
+          size="small"
+          fullWidth
+          value={value.name}
+          onChange={(event) => onChange({ ...value, name: event.target.value })}
+        />
+      </FieldLabel>
       {value.type === "equals" && (
         <ValueEditor value={value.value} onChange={(next) => onChange({ ...value, value: next })} />
       )}
       {value.type === "includes" && (
-        <TextField
-          size="small"
-          label="substring"
-          value={value.value}
-          onChange={(event) => onChange({ ...value, value: event.target.value })}
-          sx={{ width: 160 }}
-        />
+        <FieldLabel label="substring" width={160}>
+          <TextField
+            size="small"
+            fullWidth
+            value={value.value}
+            onChange={(event) => onChange({ ...value, value: event.target.value })}
+          />
+        </FieldLabel>
       )}
     </Stack>
   );

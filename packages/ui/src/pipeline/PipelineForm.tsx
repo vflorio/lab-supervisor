@@ -1,6 +1,7 @@
 import { TextField } from "@mui/material";
 import type { Pipeline } from "@supervisor/core/workflow/pipeline";
 import { BooleanTreeForm } from "../boolean-tree/BooleanTreeForm";
+import { FieldLabel } from "../misc/FieldLabel";
 import { type PipelineLeaf, pipelineTreeOps } from "./ops";
 
 const DEFAULT_LEAF: PipelineLeaf = { type: "workflow", workflowName: "" };
@@ -21,13 +22,14 @@ export function PipelineForm({ value, onChange }: PipelineFormProps) {
       ops={pipelineTreeOps}
       defaultLeaf={DEFAULT_LEAF}
       renderLeafForm={(leaf, onLeafChange) => (
-        <TextField
-          size="small"
-          label="workflow name"
-          value={leaf.workflowName}
-          onChange={(event) => onLeafChange({ ...leaf, workflowName: event.target.value })}
-          sx={{ width: 200 }}
-        />
+        <FieldLabel label="workflow name" width={200}>
+          <TextField
+            size="small"
+            fullWidth
+            value={leaf.workflowName}
+            onChange={(event) => onLeafChange({ ...leaf, workflowName: event.target.value })}
+          />
+        </FieldLabel>
       )}
     />
   );

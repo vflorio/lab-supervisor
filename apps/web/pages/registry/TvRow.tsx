@@ -1,6 +1,6 @@
 import { Bolt, Tv } from "@mui/icons-material";
 import { Box } from "@mui/material";
-import { EntryRow, entryRowSubgridSx } from "@supervisor/ui/EntryRow";
+import { EntryRow, entryRowSubgridSx } from "@supervisor/ui/misc/EntryRow";
 import * as O from "fp-ts/Option";
 import { ActivityStat } from "../../components/ActivityStat";
 import { ActivityStatus } from "../../components/ActivityStatus";

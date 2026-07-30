@@ -92,7 +92,7 @@ function Junction<Node, Leaf>({
   return (
     <Stack sx={{ gap: 1 }}>
       {kindSelect}
-      <Stack sx={{ gap: 1, pl: 2, borderLeft: "2px solid", borderColor: "divider" }}>
+      <Stack sx={{ gap: 2, pl: 2, borderLeft: "2px solid", borderColor: "divider" }}>
         {items.map((item, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: nodo controllato via value/onChange, nessun id
           <Stack key={index} direction="row" sx={{ gap: 1, alignItems: "flex-start" }}>

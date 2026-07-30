@@ -1,6 +1,6 @@
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from "@mui/material";
 import type { ReactNode } from "react";
-import { Picker, type PickerOption } from "./picker/Picker";
+import { Picker, type PickerOption } from "../picker/Picker";
 
 // -------------------------------------------------------------------------------------
 // Generic "pick one from a list" dialog: a title, a searchable Picker, and a close

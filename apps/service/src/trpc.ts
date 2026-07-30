@@ -23,7 +23,7 @@ export const startServer = (deps: Deps) => {
 
   const context = (requestHostname: string): Trpc.Context => ({
     services,
-    logger: logger.child("http"),
+    logger: logger.child("tRPC-HTTP"),
     isLocalhost: isLocalhostname(requestHostname),
   });
 

@@ -21,7 +21,10 @@ export interface PickerProps {
   readonly autoFocus?: boolean;
 }
 
-export function renderPickerOption(props: React.HTMLAttributes<HTMLLIElement> & { key: React.Key }, option: PickerOption) {
+export function renderPickerOption(
+  props: React.HTMLAttributes<HTMLLIElement> & { key: React.Key },
+  option: PickerOption,
+) {
   // React vuole `key` passata direttamente alla JSX, non dentro lo spread - MUI la include
   // nel `props` di renderOption, quindi va estratta prima di spargere il resto.
   const { key, ...rest } = props;
@@ -35,7 +38,7 @@ export function renderPickerOption(props: React.HTMLAttributes<HTMLLIElement> & 
           {option.trailing}
         </Stack>
         {option.secondary && (
-          <Typography variant="caption" color="textSecondary" noWrap>
+          <Typography variant="caption" color="textSecondary">
             {option.secondary}
           </Typography>
         )}

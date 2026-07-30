@@ -1,5 +1,6 @@
-import { MenuItem, Select, type SelectChangeEvent, Stack, TextField } from "@mui/material";
+import { MenuItem, Select, type SelectChangeEvent, Stack } from "@mui/material";
 import { type DurationString, type DurationUnit, decomposeDuration, formatDuration } from "@supervisor/core/date-time";
+import { NumberField } from "../misc/number-field/NumberField";
 
 const UNITS: readonly DurationUnit[] = ["ms", "s", "m", "h"];
 
@@ -15,14 +16,7 @@ export function DurationForm({ value, onChange, label }: DurationFormProps) {
 
   return (
     <Stack direction="row" sx={{ gap: 1, alignItems: "center" }}>
-      <TextField
-        size="small"
-        type="number"
-        label={label}
-        value={amount}
-        onChange={(event) => onChange(formatDuration(Number(event.target.value), unit))}
-        sx={{ width: 100 }}
-      />
+      <NumberField label={label} value={amount} onChange={(next) => onChange(formatDuration(next, unit))} width={100} />
       <Select
         size="small"
         value={unit}

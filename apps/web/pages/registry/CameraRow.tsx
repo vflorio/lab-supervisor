@@ -1,7 +1,7 @@
 import { Bolt, Cable, Link as LinkIcon, PlayArrow, Usb, Videocam } from "@mui/icons-material";
 import { Box, Button, Stack, Typography } from "@mui/material";
 import * as Network from "@supervisor/core/network";
-import { EntryRow } from "@supervisor/ui/EntryRow";
+import { EntryRow } from "@supervisor/ui/misc/EntryRow";
 import * as O from "fp-ts/Option";
 import type { ReactNode } from "react";
 import { ActivityStat } from "../../components/ActivityStat";
