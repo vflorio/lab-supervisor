@@ -1,31 +1,23 @@
-import { and, not, or, type Predicate } from "fp-ts/Predicate";
+import type { Predicate } from "fp-ts/Predicate";
 import { match } from "ts-pattern";
+import * as BooleanTree from "../boolean-tree/tree";
 import type { PredicateValue } from "./model";
 
-// Espressione booleana su predicati applicativi nominati (es. "suitest_camera_connected"),
-// combinabili con and/or/not - a differenza di Pipeline questo livello è puro/sincrono: valuta
-// solo lo snapshot corrente dei predicati, non esegue I/O.
+// Pure/sync boolean algebra on named predicates; differs from Pipeline by evaluating snapshot only (no I/O)
 
-// Legge il valore corrente di un predicato per nome (`undefined` se non ancora noto)
+// Read current predicate value by name (undefined if not yet observed)
 export type PredicateLookup = (name: string) => PredicateValue | undefined;
 
-export type PredicateExpression =
+// Unknown fact is false (not error); snapshot fills at tracker's pace
+export type FactLeaf =
   | { readonly type: "ref"; readonly name: string }
   | { readonly type: "equals"; readonly name: string; readonly value: PredicateValue }
-  | { readonly type: "includes"; readonly name: string; readonly value: string }
-  | { readonly type: "and"; readonly exprs: readonly PredicateExpression[] }
-  | { readonly type: "or"; readonly exprs: readonly PredicateExpression[] }
-  | { readonly type: "not"; readonly expr: PredicateExpression };
+  | { readonly type: "includes"; readonly name: string; readonly value: string };
 
-// Compila una PredicateExpression in Predicate<PredicateLookup>
-const foldAnd = (predicates: readonly Predicate<PredicateLookup>[]): Predicate<PredicateLookup> =>
-  predicates.reduce((acc, p) => and(p)(acc));
+export type PredicateExpression = BooleanTree.BooleanTree<FactLeaf>;
 
-const foldOr = (predicates: readonly Predicate<PredicateLookup>[]): Predicate<PredicateLookup> =>
-  predicates.reduce((acc, p) => or(p)(acc));
-
-export const compile = (expr: PredicateExpression): Predicate<PredicateLookup> =>
-  match(expr)
+export const compileFactLeaf = (leaf: FactLeaf): Predicate<PredicateLookup> =>
+  match(leaf)
     .with(
       { type: "ref" },
       ({ name }): Predicate<PredicateLookup> =>
@@ -44,7 +36,16 @@ export const compile = (expr: PredicateExpression): Predicate<PredicateLookup> =
         (lookup) =>
           String(lookup(name) ?? "").includes(value),
     )
-    .with({ type: "and" }, ({ exprs }) => foldAnd(exprs.map(compile)))
-    .with({ type: "or" }, ({ exprs }) => foldOr(exprs.map(compile)))
-    .with({ type: "not" }, ({ expr: inner }) => not(compile(inner)))
     .exhaustive();
+
+// Compile expression into evaluator
+export const compile: (expr: PredicateExpression) => Predicate<PredicateLookup> = BooleanTree.compile(compileFactLeaf);
+
+// Constructors for TypeScript use (config comes via codec); avoid manual leaf wrapping
+export const ref = (name: string): PredicateExpression => BooleanTree.leaf({ type: "ref", name });
+
+export const equals = (name: string, value: PredicateValue): PredicateExpression =>
+  BooleanTree.leaf({ type: "equals", name, value });
+
+export const includes = (name: string, value: string): PredicateExpression =>
+  BooleanTree.leaf({ type: "includes", name, value });

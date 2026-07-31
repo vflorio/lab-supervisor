@@ -2,13 +2,13 @@ import * as E from "fp-ts/Either";
 import * as t from "io-ts";
 import { match } from "ts-pattern";
 import { DurationString } from "../date-time";
-import { PredicateExpressionCodec } from "../predicates/expression-codec";
+import { ConditionCodec } from "./condition-codec";
 import type { Command, Workflow } from "./workflow";
 
 const TapCoordsCodec = t.type({ x: t.number, y: t.number });
 
-// Metadata per la UI: quali comandi esistono e che campi hanno, senza duplicare l'union.
-export type CommandFieldKind = "string" | "duration" | "coords" | "predicate";
+// Metadata for UI: available commands and their fields (avoids duplicating the union)
+export type CommandFieldKind = "string" | "duration" | "coords" | "condition";
 
 export interface CommandFieldSchema {
   readonly key: string;
@@ -51,11 +51,6 @@ export const COMMAND_SCHEMA: readonly CommandSchema[] = [
   },
   { type: "waitForDevice", description: "Attende che il device sia raggiungibile via ADB", fields: [] },
   {
-    type: "waitForActivity",
-    description: "Attende che l'activity indicata sia in primo piano",
-    fields: [{ key: "activity", label: "activity", kind: "string" }],
-  },
-  {
     type: "run",
     description: "Esegue un altro workflow per nome",
     fields: [{ key: "workflowName", label: "workflow name", kind: "string" }],
@@ -66,11 +61,20 @@ export const COMMAND_SCHEMA: readonly CommandSchema[] = [
     fields: [{ key: "duration", label: "duration", kind: "duration" }],
   },
   {
-    type: "awaitPredicate",
-    description: "Attende che i predicati osservati confermino il fix (fallisce allo scadere del timeout)",
+    type: "await",
+    description: "Attende che la condizione sia vera (fallisce allo scadere del timeout)",
     fields: [
-      { key: "expr", label: "predicate", kind: "predicate" },
+      { key: "condition", label: "condition", kind: "condition" },
       { key: "timeout", label: "timeout", kind: "duration" },
+    ],
+  },
+  {
+    type: "when",
+    description: "Esegue un workflow solo se la condizione è vera, con un ramo alternativo opzionale",
+    fields: [
+      { key: "condition", label: "condition", kind: "condition" },
+      { key: "thenWorkflow", label: "then", kind: "string" },
+      { key: "elseWorkflow", label: "else", kind: "string" },
     ],
   },
 ];
@@ -114,12 +118,6 @@ const validateCommand = (u: unknown, c: t.Context): t.Validation<Command> => {
       return t.success({ type: "inputTap" as const, coords });
     })
     .with("waitForDevice", () => t.success({ type: "waitForDevice" as const }))
-    .with("waitForActivity", () => {
-      const activity = args[0];
-      if (typeof activity !== "string") return t.failure(u, c, "waitForActivity requires a string activity name");
-
-      return t.success({ type: "waitForActivity" as const, activity });
-    })
     .with("run", () => {
       const workflowName = args[0];
       if (typeof workflowName !== "string") return t.failure(u, c, "run requires a workflow name");
@@ -134,19 +132,34 @@ const validateCommand = (u: unknown, c: t.Context): t.Validation<Command> => {
 
       return t.success({ type: "sleep" as const, duration });
     })
-    .with("awaitPredicate", () => {
-      const expr = PredicateExpressionCodec.validate(args[0], [
-        ...c,
-        { key: "[1]", type: PredicateExpressionCodec, actual: args[0] },
-      ]);
-      if (E.isLeft(expr)) return expr as t.Validation<Command>;
+    .with("await", () => {
+      const condition = ConditionCodec.validate(args[0], [...c, { key: "[1]", type: ConditionCodec, actual: args[0] }]);
+      if (E.isLeft(condition)) return condition as t.Validation<Command>;
 
       const timeout = args[1];
       if (!DurationString.is(timeout)) {
-        return t.failure(u, c, "awaitPredicate requires a human-readable timeout (e.g. 30s, 2m)");
+        return t.failure(u, c, "await requires a human-readable timeout (e.g. 30s, 2m)");
       }
 
-      return t.success({ type: "awaitPredicate" as const, expr: expr.right, timeout });
+      return t.success({ type: "await" as const, condition: condition.right, timeout });
+    })
+    .with("when", () => {
+      const condition = ConditionCodec.validate(args[0], [...c, { key: "[1]", type: ConditionCodec, actual: args[0] }]);
+      if (E.isLeft(condition)) return condition as t.Validation<Command>;
+
+      const thenWorkflow = args[1];
+      const elseWorkflow = args[2];
+      if (typeof thenWorkflow !== "string") return t.failure(u, c, "when requires the name of the workflow to run");
+      if (elseWorkflow !== undefined && typeof elseWorkflow !== "string") {
+        return t.failure(u, c, "when: the optional else branch must be a workflow name");
+      }
+
+      return t.success({
+        type: "when" as const,
+        condition: condition.right,
+        thenWorkflow,
+        ...(elseWorkflow ? { elseWorkflow } : {}),
+      });
     })
     .otherwise(() => t.failure(u, c, `Unknown command: "${name}"`));
 };
@@ -161,14 +174,14 @@ const encodeCommand = (cmd: Command): unknown[] =>
     .with({ type: "wakeUp" }, () => ["wakeUp"])
     .with({ type: "inputTap" }, ({ coords }) => ["inputTap", coords])
     .with({ type: "waitForDevice" }, () => ["waitForDevice"])
-    .with({ type: "waitForActivity" }, ({ activity }) => ["waitForActivity", activity])
     .with({ type: "run" }, ({ workflowName }) => ["run", workflowName])
     .with({ type: "sleep" }, ({ duration }) => ["sleep", duration])
-    .with({ type: "awaitPredicate" }, ({ expr, timeout }) => [
-      "awaitPredicate",
-      PredicateExpressionCodec.encode(expr),
-      timeout,
-    ])
+    .with({ type: "await" }, ({ condition, timeout }) => ["await", ConditionCodec.encode(condition), timeout])
+    .with({ type: "when" }, ({ condition, thenWorkflow, elseWorkflow }) =>
+      elseWorkflow
+        ? ["when", ConditionCodec.encode(condition), thenWorkflow, elseWorkflow]
+        : ["when", ConditionCodec.encode(condition), thenWorkflow],
+    )
     .exhaustive();
 
 // JSON: ["commandName", ...args] -> Command

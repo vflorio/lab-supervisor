@@ -1,6 +1,7 @@
 import * as E from "fp-ts/Either";
 import * as TE from "fp-ts/TaskEither";
 import { describe, expect, it } from "vitest";
+import * as Predicates from "../predicates/expression";
 import { createPredicateStream } from "../predicates/feed";
 import * as Retry from "../retry/retry";
 import type * as Interpreter from "../workflow/interpreter";
@@ -27,7 +28,6 @@ const noopCapabilities = (): Interpreter.CommandCapabilities => ({
   wakeUp: () => TE.right(undefined),
   inputTap: () => TE.right(undefined),
   waitForDevice: () => TE.right(undefined),
-  waitForActivity: () => TE.right(undefined),
 });
 
 describe("recovery/runner", () => {
@@ -41,7 +41,7 @@ describe("recovery/runner", () => {
       tripwires: [
         {
           grace: "10ms",
-          predicate: { type: "ref", name: "healthy" },
+          predicate: Predicates.ref("healthy"),
           pipeline: { type: "workflow", workflowName: "fix" },
           retry: [
             ["constantDelay", "1ms"],
@@ -87,7 +87,7 @@ describe("recovery/runner", () => {
       tripwires: [
         {
           grace: "10ms",
-          predicate: { type: "ref", name: "healthy" },
+          predicate: Predicates.ref("healthy"),
           pipeline: { type: "workflow", workflowName: "fix" },
           retry: [
             ["constantDelay", "1ms"],
@@ -135,7 +135,7 @@ describe("recovery/runner", () => {
       tripwires: [
         {
           grace: "10ms",
-          predicate: { type: "ref", name: "healthy" },
+          predicate: Predicates.ref("healthy"),
           pipeline: { type: "workflow", workflowName: "fix" },
           retry: [
             ["constantDelay", "1ms"],
@@ -188,7 +188,7 @@ describe("recovery/runner", () => {
       tripwires: [
         {
           grace: "10ms",
-          predicate: { type: "ref", name: "healthy" },
+          predicate: Predicates.ref("healthy"),
           pipeline: { type: "workflow", workflowName: "fix" },
           retry: [
             ["constantDelay", "1ms"],
@@ -237,7 +237,7 @@ describe("recovery/runner", () => {
       tripwires: [
         {
           grace: "10ms",
-          predicate: { type: "ref", name: "healthy" },
+          predicate: Predicates.ref("healthy"),
           pipeline: { type: "workflow", workflowName: "fix" },
           retry: [],
         },

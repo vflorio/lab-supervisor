@@ -44,10 +44,7 @@ export const matchDeviceState = (raw: string): O.Option<Status> =>
     )
     .otherwise(() => O.none);
 
-// Limite di default per ogni comando ADB "one-shot": senza, un transport incastrato (adb
-// devices lo riporta ancora come "device" ma non risponde più) blocca per sempre il comando e
-// tutto ciò che lo aspetta. Esplicitamente escluso per `waitForState`: quei comandi sono
-// bloccanti-per-design (aspettano un cambio di stato reale, non un timeout applicativo).
+// Default timeout for one-shot ADB commands (excludes waitForState; those are blocking-by-design)
 const DEFAULT_COMMAND_TIMEOUT_MS = 15_000;
 
 const run =
@@ -59,10 +56,7 @@ const run =
   ({ logger, spawn: shell }) =>
     Shell.run("adb", target ? ["-s", Network.format(target), ...args] : [...args], timeoutMs)({ spawn: shell, logger });
 
-// Parser per `adb devices`. Output format:
-//   List of devices attached
-//   192.168.1.4:5555\tdevice -> catturato
-//   emulator-5554\toffline   -> escluso
+// Parse adb devices output; capture online devices only
 
 const parseDevicesLine = (line: string): O.Option<Device> => {
   const parts = line.trim().split("\t");
@@ -112,10 +106,7 @@ export const connect = (target: Network.Endpoint): Effect<void> =>
 export const disconnect = (target: Network.Endpoint): Effect<void> =>
   pipe(run(["disconnect", Network.format(target)]), RTE.asUnit);
 
-// Variante best-effort di `disconnect`: un fallimento non è mai bloccante - si sta ripulendo una
-// entry di transport che potrebbe benissimo non esistere più, e l'obiettivo (nessun transport
-// stale verso quel target) è raggiunto comunque. Si logga soltanto.
-// Usata sia per gli host stray sia per l'intent Disconnect della macchina android-bridge.
+// Best-effort disconnect (failure is OK; cleans stray transports; logs only)
 export const disconnectQuietly =
   (target: Network.Endpoint): RTE.ReaderTaskEither<AdbEnv, never, void> =>
   (env) =>
@@ -134,8 +125,7 @@ export const tcpip =
 
 export const devices: Effect<Device[]> = pipe(run(["devices"]), RTE.map(parseDevices));
 
-// Wait for a device to reach a specific state - nessun timeout: bloccante per design, a
-// differenza di tutti gli altri comandi (vedi DEFAULT_COMMAND_TIMEOUT_MS).
+// Wait for specific state; no timeout (blocking-by-design, unlike other commands)
 export const waitForState =
   (state: Status) =>
   (target: Network.Endpoint): Effect<void> =>
@@ -146,11 +136,11 @@ export const waitForDisconnect = waitForState("disconnect");
 
 export const reboot = (target: Network.Endpoint): Effect<void> => pipe(run(["reboot"], target), RTE.asUnit);
 
-// KEYCODE_WAKEUP = 224, non fa toggle-off se lo schermo è già acceso
+// KEYCODE_WAKEUP = 224; doesn't toggle-off if screen already on
 export const wakeUp = (target: Network.Endpoint): Effect<void> =>
   pipe(run(["shell", "input", "keyevent", "KEYCODE_WAKEUP"], target), RTE.asUnit);
 
-// Swipe up - funziona solo su lockscreen non sicura (senza PIN)
+// Swipe up; only works on non-secure lockscreen (no PIN)
 export const dismissKeyguard = (target: Network.Endpoint): Effect<void> =>
   pipe(run(["shell", "input", "swipe", "540", "1800", "540", "400", "300"], target), RTE.asUnit);
 
@@ -178,7 +168,7 @@ export const restartApp =
       RTE.asUnit,
     );
 
-// ACTION_VIEW intent
+// ACTION_VIEW intent (open URL in browser)
 export const openUrl =
   (url: string) =>
   (target: Network.Endpoint): Effect<void> =>
@@ -188,8 +178,7 @@ export const openUrl =
 export const openDeveloperSettings = (target: Network.Endpoint): Effect<void> =>
   pipe(run(["shell", "am", "start", "-a", "android.settings.APPLICATION_DEVELOPMENT_SETTINGS"], target), RTE.asUnit);
 
-// Usa `dumpsys window`/`mFocusedApp`: riporta il vero foreground anche quando la system UI
-// (NotificationShade, ecc.) ha il window focus.
+// Uses dumpsys window/mFocusedApp (true foreground, not system UI)
 export const getResumedActivity = (target: Network.Endpoint): Effect<O.Option<string>> =>
   pipe(
     run(["shell", "dumpsys", "window"], target),
@@ -206,3 +195,30 @@ export const isActivityResumed =
   (activity: string) =>
   (target: Network.Endpoint): Effect<boolean> =>
     pipe(getResumedActivity(target), RTE.map(O.exists((resumed) => resumed.includes(activity))));
+
+// dumpsys power/mWakefulness (Awake|Asleep|Dreaming|Dozing); fallback to Display Power state
+export const isScreenOn = (target: Network.Endpoint): Effect<boolean> =>
+  pipe(
+    run(["shell", "dumpsys", "power"], target),
+    RTE.map((stdout) => /mWakefulness=Awake/.test(stdout) || /Display Power: state=ON/.test(stdout)),
+  );
+
+// dumpsys window/mDreamingLockscreen (check if lockscreen shown; differs from screen power state)
+export const isKeyguardShowing = (target: Network.Endpoint): Effect<boolean> =>
+  pipe(
+    run(["shell", "dumpsys", "window"], target),
+    RTE.map((stdout) => /mDreamingLockscreen=true/.test(stdout) || /mShowingLockscreen=true/.test(stdout)),
+  );
+
+// dumpsys input/SurfaceOrientation (0/2=portrait, 1/3=landscape); caller decides if unavailable
+export const getOrientation = (target: Network.Endpoint): Effect<O.Option<"landscape" | "portrait">> =>
+  pipe(
+    run(["shell", "dumpsys", "input"], target),
+    RTE.map((stdout) => {
+      const match = stdout.match(/SurfaceOrientation:\s*(\d)/);
+      if (!match) return O.none;
+
+      const rotation = Number(match[1]);
+      return O.some(rotation === 1 || rotation === 3 ? "landscape" : "portrait");
+    }),
+  );

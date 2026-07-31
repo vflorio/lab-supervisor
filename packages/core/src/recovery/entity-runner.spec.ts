@@ -2,15 +2,14 @@ import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";
 import { describe, expect, it } from "vitest";
+import * as Predicates from "../predicates/expression";
 import type * as Interpreter from "../workflow/interpreter";
 import * as Compile from "./compile";
 import * as EntityRunner from "./entity-runner";
 import type { RecoveryTripwire } from "./model";
 import type * as TripwireMachine from "./tripwire-machine";
 
-// -------------------------------------------------------------------------------------
-// Nessun timer reale: il tempo è solo un numero passato a `observe`.
-// -------------------------------------------------------------------------------------
+// No real timers: time is just a number passed to observe
 
 const noopLogger = {
   debug: () => () => {},
@@ -21,8 +20,7 @@ const noopLogger = {
   child: (): any => noopLogger,
 };
 
-// Come noopLogger, ma registra i messaggi di warn - usato per verificare gli avvisi emessi
-// quando la pipeline "riesce" senza però che il predicate torni vero.
+// Like noopLogger but captures warn messages (for verifying success-without-healing warnings)
 const loggerCapturingWarnings = (warnings: string[]): any => ({
   debug: () => () => {},
   info: () => () => {},
@@ -41,7 +39,6 @@ const capabilitiesWith = (impl: Partial<Interpreter.CommandCapabilities>): Inter
   wakeUp: () => TE.right(undefined),
   inputTap: () => TE.right(undefined),
   waitForDevice: () => TE.right(undefined),
-  waitForActivity: () => TE.right(undefined),
   ...impl,
 });
 
@@ -53,8 +50,7 @@ const compileOrThrow = (tripwires: readonly RecoveryTripwire[]): readonly Compil
 
 const GRACE = "1s"; // 1000ms
 
-// Gate manuale per tenere una pipeline "in volo" per tutta la durata che serve al test, senza
-// timer: è l'unico modo per esercitare cosa succede *durante* un recovery.
+// Manual gate to keep pipeline in-flight for test duration (only way to test mid-recovery state)
 const gate = () => {
   let open: () => void = () => {};
   const opened = new Promise<void>((resolve) => {
@@ -63,8 +59,7 @@ const gate = () => {
   return { opened, open: () => open() };
 };
 
-// Lascia avanzare la catena RTE fino al primo punto di attesa reale della pipeline: solo
-// microtask, nessun timer, così il test resta deterministico.
+// Advance RTE chain to first real await (microtasks only, no timers; keeps test deterministic)
 const flushMicrotasks = async (): Promise<void> => {
   for (let i = 0; i < 50; i++) await Promise.resolve();
 };
@@ -72,7 +67,7 @@ const flushMicrotasks = async (): Promise<void> => {
 const singleTripwire = (): readonly RecoveryTripwire[] => [
   {
     grace: GRACE,
-    predicate: { type: "ref", name: "connected" },
+    predicate: Predicates.ref("connected"),
     pipeline: { type: "workflow", workflowName: "reconnect" },
     retry: [
       ["constantDelay", "1ms"],
@@ -87,7 +82,7 @@ describe("recovery/entity-runner", () => {
     const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: GRACE,
-        predicate: { type: "ref", name: "connected" },
+        predicate: Predicates.ref("connected"),
         pipeline: { type: "workflow", workflowName: "reconnect" },
         retry: [
           ["constantDelay", "1ms"],
@@ -119,7 +114,7 @@ describe("recovery/entity-runner", () => {
     const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: GRACE,
-        predicate: { type: "ref", name: "connected" },
+        predicate: Predicates.ref("connected"),
         pipeline: { type: "workflow", workflowName: "reconnect" },
         retry: [
           ["constantDelay", "1ms"],
@@ -168,7 +163,7 @@ describe("recovery/entity-runner", () => {
     const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: GRACE,
-        predicate: { type: "ref", name: "connected" },
+        predicate: Predicates.ref("connected"),
         pipeline: { type: "workflow", workflowName: "reconnect" },
         retry: [
           ["constantDelay", "1ms"],
@@ -203,7 +198,7 @@ describe("recovery/entity-runner", () => {
     const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: GRACE,
-        predicate: { type: "ref", name: "connected" },
+        predicate: Predicates.ref("connected"),
         pipeline: { type: "workflow", workflowName: "reconnect" },
         retry: [
           ["constantDelay", "1ms"],
@@ -256,7 +251,7 @@ describe("recovery/entity-runner", () => {
     const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: GRACE,
-        predicate: { type: "ref", name: "connected" },
+        predicate: Predicates.ref("connected"),
         pipeline: { type: "workflow", workflowName: "does-not-exist" },
         retry: [
           ["constantDelay", "1ms"],
@@ -439,7 +434,7 @@ describe("recovery/entity-runner", () => {
     const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: "1s",
-        predicate: { type: "ref", name: "connected" },
+        predicate: Predicates.ref("connected"),
         pipeline: { type: "workflow", workflowName: "tripwire-1" },
         retry: [
           ["constantDelay", "1ms"],
@@ -448,7 +443,7 @@ describe("recovery/entity-runner", () => {
       },
       {
         grace: "2s",
-        predicate: { type: "ref", name: "recording" },
+        predicate: Predicates.ref("recording"),
         pipeline: { type: "workflow", workflowName: "tripwire-2" },
         retry: [
           ["constantDelay", "1ms"],

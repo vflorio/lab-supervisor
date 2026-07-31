@@ -23,15 +23,9 @@ import type * as Workflow from "../workflow";
 import * as Capabilities from "./capabilities";
 import * as Target from "./target";
 
-// Una Recovery.start per ogni RecoveryPolicy configurata (opzionale), ognuna filtrata sul
-// proprio dominio, sullo stesso PredicateFeed, che emette sullo stesso RecoveryStream.
-// Ogni transizione di stato alimenta anche il notify dispatcher: "immediate" quando il
-// tripwire scatta, "exhausted" quando i retry sono esauriti o la pipeline fallisce
-// (fatalError riusa lo stesso lifecycle) - nessun altro stato notifica.
+// One Recovery.start per RecoveryPolicy (optional), filtered by domain; transitions notify dispatcher on "recovering" and "exhausted"
 
-// Cadenza del tick di ri-osservazione di ogni RecoveryRunner - non configurabile: serve solo
-// a rilevare un grace period scaduto anche senza nuovi fatti dal predicate feed (nessun I/O
-// proprio). Un tick più fitto costa solo CPU locale, non richieste esterne.
+// Tick rate for re-observation (detects grace expiry without new predicates); fixed cost is local CPU only
 const TICK_POLICY = RetryCodec.describedConstant(1000);
 
 export interface Env {
@@ -49,17 +43,13 @@ export type StartError = RetryCodec.PolicyDecodeError;
 
 export interface Handle {
   readonly stop: () => void;
-  // Riarma il tripwire di un'entità dopo un esaurimento dei retry (intervento manuale).
-  // `false` se la policy non esiste o l'entità non è mai stata osservata da quella policy.
+  // Rearm tripwire after exhaustion (returns false if policy missing or entity never observed)
   readonly reset: (policyLabel: string, entityId: string, tripwireIndex: number) => boolean;
-  // Esposto per il runner di workflow manuali (vedi ../manual-workflow.ts): stessa Capabilities.Env
-  // usata dalle RecoveryPolicy, così un lancio manuale ottiene lo stesso gating AndroidBridge e la
-  // stessa risoluzione target di una recovery automatica, senza una seconda costruzione che rischia
-  // di andare fuori sincrono (es. waitForDeviceTimeoutMs).
+  // Exposed to manual workflow runner; used by RecoveryPolicy so manual runs get same gating and target resolution
   readonly capabilitiesEnv: Capabilities.Env;
 }
 
-// Deriva il NotifyLifecycle dal tag di TripwireState raggiunto; un ritorno a "healthy" non notifica.
+// Derive NotifyLifecycle from TripwireState tag (healthy returns none)
 const lifecycleOf = (tag: Recovery.TripwireState["tag"]): O.Option<NotifyLifecycle> =>
   match(tag)
     .with("recovering", (): O.Option<NotifyLifecycle> => O.some("immediate"))
@@ -93,8 +83,7 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
     waitForDeviceTimeoutMs: durationToMs(env.config.adb.waitForDeviceTimeout),
   };
 
-  // Descrive l'entità (label/ip leggibili) per i placeholder del messaggio di notifica; un
-  // fallimento di lettura registry ricade sul solo entityId invece di far fallire la notifica.
+  // Describe entity (readable label/ip) for notification message placeholders; registry read failures fall back to entityId
   const describeSource = (source: NotifyStream.NotifyEventSource): T.Task<Target.EntityDescriptor> =>
     pipe(
       Registry.read(capabilitiesEnv.registryEnv),
@@ -102,7 +91,7 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
       TE.getOrElse(() => T.of<Target.EntityDescriptor>({ id: source.entityId, label: source.entityId, ip: "unknown" })),
     );
 
-  // Dispatcha un lifecycle e pubblica ogni esito sul NotifyStream (un Task per rule).
+  // Dispatch lifecycle and publish each result to NotifyStream (one Task per rule)
   const notify = (
     source: NotifyStream.NotifyEventSource,
     lifecycle: NotifyLifecycle,
@@ -146,6 +135,7 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
           stream: env.predicateStream,
           workflows: env.config.workflows,
           capabilitiesFor: Capabilities.capabilitiesFor(policy.domain, capabilitiesEnv),
+          probesFor: Capabilities.probesFor(policy.domain, capabilitiesEnv),
           tickPolicy: TICK_POLICY.policy,
           descriptor: {
             id: `recovery:${policy.label}`,
@@ -175,8 +165,7 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
                 () => {},
                 (lifecycle) => {
                   const rules = policy.tripwires[tripwireIndex]?.notify ?? [];
-                  // onStatus è un callback sincrono, non può essere await-ato: detach and
-                  // forget, il dispatch resta comunque breve (una richiesta HTTP per rule).
+                  // onStatus is synchronous, can't be awaited; detach & forget (dispatch is still quick)
                   void notify(source, lifecycle, rules)();
                 },
               ),

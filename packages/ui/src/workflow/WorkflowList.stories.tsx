@@ -25,7 +25,11 @@ const initialWorkflows: readonly Workflow[] = [
     name: "restart_app",
     commands: [
       { type: "restartApp", packageId: "com.example.app" },
-      { type: "waitForActivity", activity: ".MainActivity" },
+      {
+        type: "await",
+        condition: { type: "leaf", leaf: { type: "probe", name: "activityResumed", args: [".MainActivity"] } },
+        timeout: "30s",
+      },
     ],
   },
 ];

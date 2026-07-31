@@ -3,6 +3,7 @@ import { Box, Button, Drawer, IconButton, Step, StepLabel, Stepper, Typography }
 import type { DurationString } from "@supervisor/core/date-time";
 import type { NotifyTargetSchema } from "@supervisor/core/notify/codec";
 import type { NotifyRule } from "@supervisor/core/notify/model";
+import * as Predicates from "@supervisor/core/predicates/expression";
 import type { RecoveryTripwire } from "@supervisor/core/recovery/model";
 import type { PolicyJson, PolicyStepSchema } from "@supervisor/core/retry/codec";
 import { useState } from "react";
@@ -36,7 +37,7 @@ const INITIAL_STATE: WizardState = {
 
 const buildTripwire = (state: WizardState): RecoveryTripwire => ({
   grace: state.grace,
-  predicate: { type: "ref", name: state.predicateName },
+  predicate: Predicates.ref(state.predicateName),
   pipeline: buildPipeline(state.selectedWorkflows, state.pipelineOp) ?? { type: "workflow", workflowName: "" },
   retry: state.retry,
   notify: state.notify.length > 0 ? state.notify : undefined,

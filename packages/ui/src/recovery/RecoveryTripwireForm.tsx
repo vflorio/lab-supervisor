@@ -66,6 +66,7 @@ export function RecoveryTripwireForm({
               value={value.pipeline}
               onChange={(pipeline) => onChange({ ...value, pipeline })}
               workflowNames={workflowNames}
+              predicateOptions={predicateOptions}
             />
           </Stack>
           <Stack sx={{ gap: 1 }}>

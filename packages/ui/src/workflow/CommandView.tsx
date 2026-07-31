@@ -1,10 +1,10 @@
 import { Chip, Stack, Typography } from "@mui/material";
 import type { DurationString } from "@supervisor/core/date-time";
-import type { PredicateExpression } from "@supervisor/core/predicates/expression";
 import type { CommandSchema } from "@supervisor/core/workflow/codec";
+import type { Condition } from "@supervisor/core/workflow/condition";
 import type { Command } from "@supervisor/core/workflow/workflow";
+import { ConditionView } from "../condition/ConditionView";
 import { DurationView } from "../duration/DurationView";
-import { PredicateExpressionView } from "../predicates/PredicateExpressionView";
 
 export interface CommandViewProps {
   readonly value: Command;
@@ -35,9 +35,7 @@ export function CommandView({ value, schema }: CommandViewProps) {
       {fields.map((field) => {
         const raw = record[field.key];
         if (field.kind === "duration") return <DurationView key={field.key} value={raw as DurationString} />;
-        if (field.kind === "predicate") {
-          return <PredicateExpressionView key={field.key} value={raw as PredicateExpression} />;
-        }
+        if (field.kind === "condition") return <ConditionView key={field.key} value={raw as Condition} />;
         if (field.kind === "coords") {
           const coords = raw as { x: number; y: number };
           return (

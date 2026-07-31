@@ -21,7 +21,7 @@
     "to": "18:00"
   },
   "tracking": {
-    "adb": { "policy": [["constantDelay", "5s"]] }, // poll locale, nessun costo esterno
+    "adb": { "policy": [["constantDelay", "5s"]] }, // local poll, no external cost
     "suitestCamera": { "policy": [["constantDelay", "20s"]] },
     "suitestControlUnit": { "policy": [["constantDelay", "20s"]] },
     "suitestDevice": { "policy": [["constantDelay", "20s"]] }
@@ -31,34 +31,33 @@
   },
   "adb": {
     "port": 5555,
-    // Pazienza di waitForDevice: quanto un workflow attende la riconnessione (già in corso in
-    // background) prima di arrendersi. La forma dei singoli tentativi non è configurabile.
+    // Timeout for device reconnection; individual retry form is fixed
     "waitForDeviceTimeout": "90s"
   },
   "workflows": [
     [
-      // Avviando l'applicazione la connessione è automatica, bisogna eseguire questo flow manualmente in alcuni casi
+      // Auto-connects on app start; run manually in some cases
       "suitest-connect",
       [
-        ["inputTap", { "x": 0.9, "y": 0.1 }], // tap connect button
-        ["inputTap", { "x": 0.5, "y": 0.5 }] // tap confirm
+        ["inputTap", { "x": 0.9, "y": 0.1 }], // connect button
+        ["inputTap", { "x": 0.5, "y": 0.5 }] // confirm
       ]
     ],
     [
       "suitest-set-experimental-profile",
       [
-        ["inputTap", { "x": 2200, "y": 160 }], // tap  right-top corner icon (settings)
-        ["inputTap", { "x": 1000, "y": 440 }], // tap first setting (profile)
-        ["inputTap", { "x": 1000, "y": 640 }], // tap third entry (profile: experimental)
-        ["inputTap", { "x": 180, "y": 180 }] // tap left-top corner icon (back)
+        ["inputTap", { "x": 2200, "y": 160 }], // settings (top-right)
+        ["inputTap", { "x": 1000, "y": 440 }], // profile
+        ["inputTap", { "x": 1000, "y": 640 }], // profile: experimental
+        ["inputTap", { "x": 180, "y": 180 }] // back (top-left)
       ]
     ],
     [
       "android-suitest-test",
       [
-        // wake screen up
+        // wake screen
         ["wakeUp"],
-        // Ensure App is running (start if not opened)
+        // Start app if not running
         ["ensureActivity", "st.suite.camera", "st.suite.android.suitestcamera.MainActivity"],
         ["run", "suitest-set-experimental-profile"]
       ]
@@ -67,8 +66,9 @@
       "android-suitest-camera",
       [
         ["restartApp", "com.suitest.android.camera"],
-        ["waitForActivity", "com.suitest.android.camera.CameraActivity"],
-        ["run", "suitest-connect"]
+        ["await", ["probe", "activityResumed", "com.suitest.android.camera.CameraActivity"], "30s"],
+        // Connect taps use fixed coords; auto-reconnection would land on different UI
+        ["when", ["not", ["ref", "suitest_camera_connected"]], "suitest-connect"]
       ]
     ],
     [
@@ -82,17 +82,14 @@
       ]
     ],
 
-    // Varianti "verified" per le pipeline di recovery: stesso workflow + attesa della conferma
-    // dai predicati. Un ramo di `or` che si limita a eseguire comandi "riesce" anche quando
-    // l'app non si riconnette (restartApp/ensureActivity non falliscono), e l'escalation al
-    // reboot non scatterebbe mai. Il timeout deve superare tracking.suitestCamera (20s).
+    // "async" variants for recovery pipelines: workflow + predicate confirmation (without it, or-branches never escalate)
     [
-      "android-suitest-camera-verified",
-      [["run", "android-suitest-camera"], ["awaitPredicate", ["ref", "suitest_camera_connected"], "45s"]]
+      "android-suitest-camera-async",
+      [["run", "android-suitest-camera"], ["await", ["ref", "suitest_camera_connected"], "45s"]]
     ],
     [
-      "android-suitest-camera-reboot-verified",
-      [["run", "android-suitest-camera-reboot"], ["awaitPredicate", ["ref", "suitest_camera_connected"], "60s"]]
+      "android-suitest-camera-reboot-async",
+      [["run", "android-suitest-camera-reboot"], ["await", ["ref", "suitest_camera_connected"], "60s"]]
     ]
   ],
 
@@ -102,18 +99,20 @@
       "label": "suitest-camera-recovery",
       "tripwires": [
         {
-          // Quanto la camera deve restare disconnessa prima di intervenire: sopra un giro di
-          // polling (20s), così un singolo poll andato a vuoto non fa scattare nulla.
+          // Grace period before intervention; above one poll cycle (20s)
           "grace": "60s",
           "predicate": ["ref", "suitest_camera_connected"],
-          // Escalation: riavvio dell'app, e solo se non basta reboot del device
+          // Escalation: app restart, then device reboot (but never while recording); gate is here, not in workflow
           "pipeline": [
             "or",
-            ["workflow", "android-suitest-camera-verified"],
-            ["workflow", "android-suitest-camera-reboot-verified"]
+            ["workflow", "android-suitest-camera-async"],
+            [
+              "and",
+              ["condition", ["not", ["ref", "suitest_camera_recording"]]],
+              ["workflow", "android-suitest-camera-reboot-async"]
+            ]
           ],
-          // Respiro tra due escalation complete: ogni tentativo attende già la conferma al
-          // proprio interno (awaitPredicate) e il reboot attende il device (90s).
+          // Delay between escalation cycles (each awaits confirmation internally)
           "retry": [["constantDelay", "2m"], ["limitRetries", 2]],
           "notify": [
             {

@@ -140,11 +140,20 @@ const VERBS: Record<string, ((args: readonly ScheduleStepArg[]) => Schedule.Sche
   never: () => Schedule.never,
   day: ([d]) => Schedule.day(DateTime.toDayNumber(d as DateTime.DayOfWeek)),
   timeRange: ([from, to]) =>
-    Schedule.timeRange(DateTime.toTimeTuple(from as DateTime.TimeString), DateTime.toTimeTuple(to as DateTime.TimeString)),
+    Schedule.timeRange(
+      DateTime.toTimeTuple(from as DateTime.TimeString),
+      DateTime.toTimeTuple(to as DateTime.TimeString),
+    ),
   duration: ([start, amount]) =>
-    Schedule.duration(DateTime.toTimeTuple(start as DateTime.TimeString), durationToMinutes(amount as DateTime.DurationString)),
+    Schedule.duration(
+      DateTime.toTimeTuple(start as DateTime.TimeString),
+      durationToMinutes(amount as DateTime.DurationString),
+    ),
   recurring: ([every, dur]) =>
-    Schedule.recurring(durationToMinutes(every as DateTime.DurationString), durationToMinutes(dur as DateTime.DurationString)),
+    Schedule.recurring(
+      durationToMinutes(every as DateTime.DurationString),
+      durationToMinutes(dur as DateTime.DurationString),
+    ),
   block: ([d, from, to]) =>
     Schedule.block(
       DateTime.toDayNumber(d as DateTime.DayOfWeek),
@@ -152,9 +161,15 @@ const VERBS: Record<string, ((args: readonly ScheduleStepArg[]) => Schedule.Sche
       DateTime.toTimeTuple(to as DateTime.TimeString),
     ),
   weekdays: ([from, to]) =>
-    Schedule.weekdays(DateTime.toTimeTuple(from as DateTime.TimeString), DateTime.toTimeTuple(to as DateTime.TimeString)),
+    Schedule.weekdays(
+      DateTime.toTimeTuple(from as DateTime.TimeString),
+      DateTime.toTimeTuple(to as DateTime.TimeString),
+    ),
   weekend: ([from, to]) =>
-    Schedule.weekend(DateTime.toTimeTuple(from as DateTime.TimeString), DateTime.toTimeTuple(to as DateTime.TimeString)),
+    Schedule.weekend(
+      DateTime.toTimeTuple(from as DateTime.TimeString),
+      DateTime.toTimeTuple(to as DateTime.TimeString),
+    ),
 };
 
 const decodeVerb = (verb: ScheduleVerbJson): E.Either<ScheduleDecodeError, Schedule.Schedule> => {

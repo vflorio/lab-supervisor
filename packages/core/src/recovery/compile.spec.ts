@@ -1,5 +1,6 @@
 import * as E from "fp-ts/Either";
 import { describe, expect, it } from "vitest";
+import * as Predicates from "../predicates/expression";
 import { compileTripwires } from "./compile";
 import type { RecoveryTripwire } from "./model";
 
@@ -8,7 +9,7 @@ describe("recovery/compile", () => {
     const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: "1m",
-        predicate: { type: "ref", name: "suitest_camera_connected" },
+        predicate: Predicates.ref("suitest_camera_connected"),
         pipeline: { type: "workflow", workflowName: "restart" },
         retry: [
           ["constantDelay", "10s"],
@@ -31,7 +32,7 @@ describe("recovery/compile", () => {
     const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: "1m",
-        predicate: { type: "ref", name: "x" },
+        predicate: Predicates.ref("x"),
         pipeline: { type: "workflow", workflowName: "y" },
         retry: [],
       },

@@ -87,13 +87,7 @@ export function RecoveryPolicyList({
                 </Typography>
               </>
             }
-            trailing={
-              <Chip
-                label={`${policy.tripwires.length} tripwires`}
-                size="small"
-                sx={{ height: 18 }}
-              />
-            }
+            trailing={<Chip label={`${policy.tripwires.length} tripwires`} size="small" sx={{ height: 18 }} />}
             expanded={expanded.has(policy.label)}
             onToggle={() => toggle(policy.label)}
           >

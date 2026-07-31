@@ -12,7 +12,6 @@ import type {
 import { match } from "ts-pattern";
 import { DurationForm } from "../duration/DurationForm";
 import { DomainSortable } from "../misc/DomainSortable";
-import { FieldLabel } from "../misc/FieldLabel";
 import { moveAt, removeAt } from "../misc/sortable";
 
 const DAYS: readonly DayOfWeek[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];

@@ -13,10 +13,7 @@ import * as Capabilities from "./recovery/capabilities";
 import * as Registry from "./registry";
 import * as SuitestCamera from "./suitest/suitest-camera";
 
-// Lancio manuale (operatore, via tRPC) di un workflow contro una camera - a differenza di
-// RecoveryEngine, non è agganciato a nessun tripwire: risolve solo `cameraId -> adbId` dal
-// registry, poi riusa la stessa Capabilities.Env delle RecoveryPolicy (gating AndroidBridge,
-// notifica bridge su reboot/timeout) così un lancio manuale ha le stesse garanzie di uno automatico.
+// Manual workflow run (operator, via tRPC); reuses RecoveryPolicy's Capabilities.Env for consistent gating and notifications
 
 export interface Env {
   readonly logger: Logger.Tagged;
@@ -32,11 +29,7 @@ export const run =
     const emit = (status: string): void =>
       env.activityStream.emit({ entityId: cameraId, source: "manual-workflow", status });
 
-    // Anche un lancio manuale può contenere `awaitPredicate`: senza lookup lo stesso workflow
-    // funzionerebbe da recovery e fallirebbe dall'UI. I fatti di una camera stanno nel dominio
-    // Suitest, indicizzati per videoCaptureDeviceId - non per l'adbId con cui si risolve il
-    // target ADB. Una camera senza quel legame non ha fatti da attendere: nessun lookup, e il
-    // comando fallisce dicendo perché invece di aspettare a vuoto.
+    // Manual runs can include awaitPredicate; facts keyed by videoCaptureDeviceId not adbId; missing link means no lookup
     const lookupFor = (camera: CameraEntry): Predicates.PredicateLookup | undefined =>
       pipe(
         camera.videoCaptureDeviceId,
@@ -65,6 +58,7 @@ export const run =
           logger: env.logger,
           workflows: env.workflows,
           capabilities: Capabilities.capabilitiesFor(AdbTracking.DOMAIN, env.capabilitiesEnv)(adbId),
+          probes: Capabilities.probesFor(AdbTracking.DOMAIN, env.capabilitiesEnv)(adbId),
           lookup: lookupFor(camera),
         }),
       ),

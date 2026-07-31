@@ -2,6 +2,7 @@ import { Add } from "@mui/icons-material";
 import { Box, IconButton, MenuItem, Select, type SelectChangeEvent, Stack, TextField } from "@mui/material";
 import type { DurationString } from "@supervisor/core/date-time";
 import type { NotifyTargetSchema } from "@supervisor/core/notify/codec";
+import * as Predicates from "@supervisor/core/predicates/expression";
 import { TRACKED_DOMAINS } from "@supervisor/core/predicates/model";
 import type { RecoveryPolicy, RecoveryTripwire } from "@supervisor/core/recovery/model";
 import type { PolicyStepSchema } from "@supervisor/core/retry/codec";
@@ -21,7 +22,7 @@ export interface RecoveryPolicyFormProps {
 
 const defaultTripwire = (): RecoveryTripwire => ({
   grace: "30s" as DurationString,
-  predicate: { type: "ref", name: "" },
+  predicate: Predicates.ref(""),
   pipeline: { type: "workflow", workflowName: "" },
   retry: [],
   notify: [],
@@ -72,7 +73,7 @@ export function RecoveryPolicyForm({
       <Stack sx={{ gap: 1 }}>
         {value.tripwires.map((tripwire, index) => (
           <Stack
-            // biome-ignore lint/suspicious/noArrayIndexKey: tripwire controllato via value/onChange, nessun id
+            // biome-ignore lint/suspicious/noArrayIndexKey: tripwire controlled via value/onChange, no id
             key={index}
             direction="row"
             sx={{

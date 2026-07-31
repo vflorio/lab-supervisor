@@ -1,5 +1,5 @@
 import { Box, Stack, Typography } from "@mui/material";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { StatusPill } from "../registry/StatusPill";
 import { type LoopState, loopTone } from "./types";
 

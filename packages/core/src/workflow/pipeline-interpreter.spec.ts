@@ -1,6 +1,7 @@
 import * as E from "fp-ts/Either";
 import * as TE from "fp-ts/TaskEither";
 import { describe, expect, it } from "vitest";
+import * as Predicates from "../predicates/expression";
 import type * as Interpreter from "./interpreter";
 import * as PipelineInterpreter from "./pipeline-interpreter";
 import type * as Workflow from "./workflow";
@@ -16,7 +17,6 @@ const noopCapabilities = (): Interpreter.CommandCapabilities => ({
   wakeUp: () => TE.right(undefined),
   inputTap: () => TE.right(undefined),
   waitForDevice: () => TE.right(undefined),
-  waitForActivity: () => TE.right(undefined),
 });
 
 const envWith = (workflows: readonly Workflow.Workflow[], calls: string[] = []): Interpreter.WorkflowEnv => ({
@@ -175,9 +175,9 @@ describe("pipeline interpreter", () => {
     expect(calls.length).toBe(2);
   });
 
-  // Lo scenario di produzione: riavvio l'app, se non basta riavvio il device. Senza
-  // awaitPredicate il primo ramo uscirebbe pulito (i comandi ADB non falliscono) e l'`or` non
-  // escalerebbe mai - l'esito del ramo direbbe "comandi eseguiti", non "problema risolto".
+  // Lo scenario di produzione: riavvio l'app, se non basta riavvio il device. Senza `await` il
+  // primo ramo uscirebbe pulito (i comandi ADB non falliscono) e l'`or` non escalerebbe mai -
+  // l'esito del ramo direbbe "comandi eseguiti", non "problema risolto".
   it("or: escalates when the first branch runs clean but its predicate never comes back", async () => {
     const calls: string[] = [];
     let connected = false;
@@ -187,15 +187,12 @@ describe("pipeline interpreter", () => {
         name: "restart-app",
         commands: [
           { type: "restartApp", packageId: "app" },
-          { type: "awaitPredicate", expr: { type: "ref", name: "connected" }, timeout: "40ms" },
+          { type: "await", condition: Predicates.ref("connected"), timeout: "40ms" },
         ],
       },
       {
         name: "reboot-device",
-        commands: [
-          { type: "reboot" },
-          { type: "awaitPredicate", expr: { type: "ref", name: "connected" }, timeout: "100ms" },
-        ],
+        commands: [{ type: "reboot" }, { type: "await", condition: Predicates.ref("connected"), timeout: "100ms" }],
       },
     ];
 
@@ -229,6 +226,38 @@ describe("pipeline interpreter", () => {
 
     expect(result).toStrictEqual(E.right(true));
     expect(calls).toEqual(["restartApp:app", "reboot"]);
+  });
+
+  // Precondizione a livello di policy: "riavvia il device, ma non mentre sta registrando"
+  it("condition leaf: gates a branch without executing anything", async () => {
+    const calls: string[] = [];
+    const workflows: readonly Workflow.Workflow[] = [{ name: "reboot-wf", commands: [{ type: "reboot" }] }];
+
+    const gated = (recording: boolean) =>
+      PipelineInterpreter.interpretPipeline({
+        type: "and",
+        pipelines: [
+          { type: "condition", condition: { type: "not", node: Predicates.ref("recording") } },
+          { type: "workflow", workflowName: "reboot-wf" },
+        ],
+      })({ ...envWith(workflows, calls), lookup: () => recording })();
+
+    expect(await gated(true)).toStrictEqual(E.right(false));
+    expect(calls).toEqual([]);
+
+    expect(await gated(false)).toStrictEqual(E.right(true));
+    expect(calls).toEqual(["reboot"]);
+  });
+
+  // A questo livello un Left è riservato agli errori di configurazione: un probe che non
+  // risponde non deve far finire il tripwire in fatalError, deve solo non far prendere il ramo.
+  it("condition leaf: an unevaluable condition resolves false, not Left", async () => {
+    const result = await PipelineInterpreter.interpretPipeline({
+      type: "condition",
+      condition: { type: "leaf", leaf: { type: "probe", name: "screenOn", args: [] } },
+    })(envWith([]))();
+
+    expect(result).toStrictEqual(E.right(false));
   });
 
   it("not: negates the inner pipeline's result", async () => {

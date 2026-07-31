@@ -1,12 +1,12 @@
 import { Stack, TextField } from "@mui/material";
 import type { DurationString } from "@supervisor/core/date-time";
-import type { PredicateExpression } from "@supervisor/core/predicates/expression";
 import type { CommandSchema } from "@supervisor/core/workflow/codec";
+import type { Condition } from "@supervisor/core/workflow/condition";
 import type { Command } from "@supervisor/core/workflow/workflow";
 import { match } from "ts-pattern";
+import { ConditionForm } from "../condition/ConditionForm";
 import { DurationForm } from "../duration/DurationForm";
 import { NumberField } from "../misc/number-field/NumberField";
-import { PredicateExpressionForm } from "../predicates/PredicateExpressionForm";
 import type { PredicateOption } from "../predicates/PredicateRefPicker";
 import { CommandTypePicker } from "./CommandTypePicker";
 
@@ -14,17 +14,17 @@ export interface CommandFormProps {
   readonly value: Command;
   readonly onChange: (next: Command) => void;
   readonly schema: readonly CommandSchema[];
-  // Solo per i campi `kind: "predicate"` (awaitPredicate) - assente altrove, resta una lista vuota
+  // Solo per i campi `kind: "condition"` (await/when) - assente altrove, resta una lista vuota
   readonly predicateOptions?: readonly PredicateOption[];
 }
 
-const DEFAULT_EXPRESSION: PredicateExpression = { type: "ref", name: "" };
+const DEFAULT_CONDITION: Condition = { type: "leaf", leaf: { type: "ref", name: "" } };
 
 const defaultFieldValue = (kind: CommandSchema["fields"][number]["kind"]): unknown =>
   match(kind)
     .with("duration", () => "0ms" as DurationString)
     .with("coords", () => ({ x: 0, y: 0 }))
-    .with("predicate", () => DEFAULT_EXPRESSION)
+    .with("condition", () => DEFAULT_CONDITION)
     .with("string", () => "")
     .exhaustive();
 
@@ -59,10 +59,10 @@ export function CommandForm({ value, onChange, schema, predicateOptions = [] }: 
               onChange={(next) => setField(field.key, next)}
             />
           ))
-          .with({ kind: "predicate" }, () => (
-            <PredicateExpressionForm
+          .with({ kind: "condition" }, () => (
+            <ConditionForm
               key={field.key}
-              value={(raw as PredicateExpression | undefined) ?? DEFAULT_EXPRESSION}
+              value={(raw as Condition | undefined) ?? DEFAULT_CONDITION}
               onChange={(next) => setField(field.key, next)}
               predicateOptions={predicateOptions}
             />

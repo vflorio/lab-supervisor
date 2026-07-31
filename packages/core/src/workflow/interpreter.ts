@@ -3,47 +3,21 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
 import { durationToMs } from "../date-time";
-import { type AppError, format, of } from "../errors";
-import type { Logger } from "../logger/logger";
-import { compile as compileExpression, type PredicateExpression, type PredicateLookup } from "../predicates/expression";
-import { PredicateExpressionCodec } from "../predicates/expression-codec";
-import type { Command, TapCoords, Workflow } from "../workflow/workflow";
-import { findWorkflow } from "../workflow/workflow";
+import { format } from "../errors";
+import * as Condition from "./condition";
+import {
+  type CommandCapabilities,
+  type Effect,
+  MAX_WORKFLOW_DEPTH,
+  type WorkflowEnv,
+  type WorkflowError,
+  workflowError,
+} from "./env";
+import type { Command, Workflow } from "./workflow";
+import { findWorkflow } from "./workflow";
 
-export interface WorkflowEnv {
-  readonly logger: Logger;
-  readonly capabilities: CommandCapabilities;
-  readonly workflows: readonly Workflow[];
-  // Vista sui fatti applicativi correnti, per il solo comando `awaitPredicate`. Opzionale
-  // perché non ogni contesto ne ha una da offrire: senza, il comando fallisce con un messaggio
-  // esplicito invece di attendere a vuoto un predicate che nessuno aggiornerà mai.
-  // Va letta ad ogni chiamata, non catturata: `awaitPredicate` aspetta proprio che cambi.
-  readonly lookup?: PredicateLookup;
-}
-
-export interface CommandCapabilities {
-  readonly restartApp: (packageId: string) => TE.TaskEither<WorkflowError, void>;
-  readonly ensureActivity: (packageId: string, activity: string) => TE.TaskEither<WorkflowError, void>;
-  readonly openUrl: (url: string) => TE.TaskEither<WorkflowError, void>;
-  readonly openDeveloperSettings: () => TE.TaskEither<WorkflowError, void>;
-  readonly reboot: () => TE.TaskEither<WorkflowError, void>;
-  readonly wakeUp: () => TE.TaskEither<WorkflowError, void>;
-  readonly inputTap: (coords: TapCoords) => TE.TaskEither<WorkflowError, void>;
-  readonly waitForDevice: () => TE.TaskEither<WorkflowError, void>;
-  readonly waitForActivity: (activity: string) => TE.TaskEither<WorkflowError, void>;
-}
-
-// `cause`: preserva l'errore sottostante *con il suo tag* attraverso il mapping generico che
-// appiattisce tutto in un WorkflowError. Senza, un chiamante a valle non può più distinguere
-// un trasporto ADB incastrato (CommandTimeout) da un comando fallito normalmente (es. app non
-// trovata). Restando un AppError, ogni nuova regola di rimedio è un `.with({ type: "..." })` in più.
-export interface WorkflowError extends AppError<"WorkflowError"> {
-  readonly cause?: AppError;
-}
-
-export const workflowError = of("WorkflowError");
-
-export type Effect<A> = RTE.ReaderTaskEither<WorkflowEnv, WorkflowError, A>;
+// Re-export env & error types from ./env
+export * from "./env";
 
 const logInfo =
   (message: string): Effect<void> =>
@@ -55,10 +29,6 @@ const logError =
   ({ logger }) =>
     TE.fromIO(logger.error(message));
 
-// Riusa l'encoder del codec invece di un formatter dedicato: nel log l'espressione appare
-// esattamente come è scritta in config.
-const expressionToString = (expr: PredicateExpression): string => JSON.stringify(PredicateExpressionCodec.encode(expr));
-
 const commandToString = (cmd: Command): string =>
   match(cmd)
     .with({ type: "restartApp" }, ({ packageId }) => `restartApp(${packageId})`)
@@ -69,10 +39,14 @@ const commandToString = (cmd: Command): string =>
     .with({ type: "wakeUp" }, () => "wakeUp")
     .with({ type: "inputTap" }, ({ coords }) => `inputTap(${coords.x}, ${coords.y})`)
     .with({ type: "waitForDevice" }, () => "waitForDevice")
-    .with({ type: "waitForActivity" }, ({ activity }) => `waitForActivity(${activity})`)
     .with({ type: "run" }, ({ workflowName }) => `run(${workflowName})`)
     .with({ type: "sleep" }, ({ duration }) => `sleep(${duration})`)
-    .with({ type: "awaitPredicate" }, ({ expr, timeout }) => `awaitPredicate(${expressionToString(expr)}, ${timeout})`)
+    .with({ type: "await" }, ({ condition, timeout }) => `await(${Condition.describe(condition)}, ${timeout})`)
+    .with(
+      { type: "when" },
+      ({ condition, thenWorkflow, elseWorkflow }) =>
+        `when(${Condition.describe(condition)} -> ${thenWorkflow}${elseWorkflow ? ` else ${elseWorkflow}` : ""})`,
+    )
     .exhaustive();
 
 const liftCommand =
@@ -83,42 +57,70 @@ const liftCommand =
 const delay = (ms: number): TE.TaskEither<never, void> =>
   TE.fromTask(() => new Promise<void>((resolve) => setTimeout(resolve, ms)));
 
-// Pausa pura: a differenza degli altri comandi, non passa da CommandCapabilities (nessuna
-// interazione col device), non fallisce mai.
+// Pure pause: no device interaction, never fails
 const sleep = (ms: number): Effect<void> => RTE.fromTaskEither(delay(ms));
 
-// Cadenza di ricontrollo dei fatti: rileggere il lookup è in-memory e non costa nulla (chi
-// aggiorna i fatti è il tracker, al proprio polling) - il bound reale è il timeout del comando,
-// che va quindi dimensionato sul polling del tracker, non su questa costante.
-const AWAIT_PREDICATE_POLL_MS = 1_000;
+// Poll rate for await; actual bound is the user-set timeout (sized to tracker polling, not this constant)
+const AWAIT_POLL_MS = 1_000;
 
-// A differenza di wait*, non interroga il device: attende che i tracker osservino il mondo
-// cambiato. `deadline` è assoluta, così il tempo speso a valutare non erode il timeout.
-const awaitPredicate =
-  (expr: PredicateExpression, timeoutMs: number): Effect<void> =>
-  ({ lookup }) => {
-    if (!lookup) {
-      return TE.left(
-        workflowError(`awaitPredicate(${expressionToString(expr)}): no predicate lookup available in this context`),
-      );
-    }
+// Wait for condition; absolute deadline so evaluation time doesn't erode timeout
+const await_ = (condition: Condition.Condition, timeoutMs: number): Effect<void> => {
+  const satisfied = Condition.evaluate(condition);
+  const timedOut = workflowError(
+    `await(${Condition.describe(condition)}): still false after ${timeoutMs}ms`,
+  ) as WorkflowError;
 
-    const satisfied = compileExpression(expr);
+  return (env: WorkflowEnv) => {
     const deadline = Date.now() + timeoutMs;
 
-    const poll = (): TE.TaskEither<WorkflowError, void> => {
-      if (satisfied(lookup)) return TE.right(undefined);
+    const poll = (): TE.TaskEither<WorkflowError, void> =>
+      pipe(
+        satisfied(env),
+        TE.flatMap((ok) => {
+          if (ok) return TE.right(undefined);
 
-      const remaining = deadline - Date.now();
-      if (remaining <= 0) {
-        return TE.left(workflowError(`awaitPredicate(${expressionToString(expr)}): still false after ${timeoutMs}ms`));
-      }
+          const remaining = deadline - Date.now();
+          if (remaining <= 0) return TE.left(timedOut);
 
-      return pipe(delay(Math.min(AWAIT_PREDICATE_POLL_MS, remaining)), TE.flatMap(poll));
-    };
+          return pipe(delay(Math.min(AWAIT_POLL_MS, remaining)), TE.flatMap(poll));
+        }),
+      );
 
     return poll();
   };
+};
+
+// Run nested workflow with depth tracking to prevent cycles
+const runNested = (workflowName: string): Effect<void> =>
+  pipe(
+    RTE.ask<WorkflowEnv, WorkflowError>(),
+    RTE.flatMap((env) => {
+      const depth = (env.depth ?? 0) + 1;
+      if (depth > MAX_WORKFLOW_DEPTH) {
+        return RTE.left<WorkflowEnv, WorkflowError, void>(
+          workflowError(`Workflow nesting too deep (>${MAX_WORKFLOW_DEPTH}) at "${workflowName}": cyclic run/when?`),
+        );
+      }
+
+      return pipe(
+        RTE.fromEither(findWorkflow(env.workflows, workflowName)),
+        RTE.mapLeft((e) => workflowError(e.message)),
+        RTE.flatMap((workflow) =>
+          RTE.local<WorkflowEnv, WorkflowEnv>(() => ({ ...env, depth }))(interpretCommands(workflow.commands)),
+        ),
+      );
+    }),
+  );
+
+// Condition failures are Left, not silent fallback to else (see ./condition.ts)
+const when = (condition: Condition.Condition, thenWorkflow: string, elseWorkflow?: string): Effect<void> =>
+  pipe(
+    Condition.evaluate(condition),
+    RTE.flatMap((ok) => {
+      const branch = ok ? thenWorkflow : elseWorkflow;
+      return branch === undefined ? RTE.right<WorkflowEnv, WorkflowError, void>(undefined) : runNested(branch);
+    }),
+  );
 
 const interpretCommand = (cmd: Command): Effect<void> =>
   pipe(
@@ -135,23 +137,18 @@ const interpretCommand = (cmd: Command): Effect<void> =>
         .with({ type: "wakeUp" }, () => liftCommand((c) => c.wakeUp()))
         .with({ type: "inputTap" }, ({ coords }) => liftCommand((c) => c.inputTap(coords)))
         .with({ type: "waitForDevice" }, () => liftCommand((c) => c.waitForDevice()))
-        .with({ type: "waitForActivity" }, ({ activity }) => liftCommand((c) => c.waitForActivity(activity)))
-        .with({ type: "run" }, ({ workflowName }) =>
-          pipe(
-            RTE.asks<WorkflowEnv, readonly Workflow[]>((env) => env.workflows),
-            RTE.flatMapEither((workflows) => findWorkflow(workflows, workflowName)),
-            RTE.mapLeft((e) => workflowError(e.message)),
-            RTE.flatMap((workflow) => interpretCommands(workflow.commands)),
-          ),
-        )
+        .with({ type: "run" }, ({ workflowName }) => runNested(workflowName))
         .with({ type: "sleep" }, ({ duration }) => sleep(durationToMs(duration)))
-        .with({ type: "awaitPredicate" }, ({ expr, timeout }) => awaitPredicate(expr, durationToMs(timeout)))
+        .with({ type: "await" }, ({ condition, timeout }) => await_(condition, durationToMs(timeout)))
+        .with({ type: "when" }, ({ condition, thenWorkflow, elseWorkflow }) =>
+          when(condition, thenWorkflow, elseWorkflow),
+        )
         .exhaustive(),
     ),
     RTE.tapError((error) => logError(`  X ${commandToString(cmd)} failed: ${format(error)}`)),
   );
 
-// Interpreta una sequenza di comandi in ordine
+// Interpret commands in sequence
 export const interpretCommands = (commands: readonly Command[]): Effect<void> =>
   pipe(
     commands.reduce<Effect<void>>(
@@ -164,10 +161,10 @@ export const interpretCommands = (commands: readonly Command[]): Effect<void> =>
     ),
   );
 
-// Esegue un workflow (la sua sequenza piatta di comandi, in ordine)
+// Run workflow's command sequence
 export const interpretWorkflow = (workflow: Workflow): Effect<void> => interpretCommands(workflow.commands);
 
-// Esegue un workflow per nome, risolto dall'elenco dei workflow disponibili
+// Run workflow by name from the workflow list
 export const run = (workflows: readonly Workflow[], workflowName: string): Effect<void> => {
   const workflow = workflows.find((w) => w.name === workflowName);
   if (!workflow) return RTE.left(workflowError(`Workflow not found: "${workflowName}"`));

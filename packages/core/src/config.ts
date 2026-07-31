@@ -4,7 +4,7 @@ import type { Endomorphism } from "fp-ts/Endomorphism";
 import { pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";
 import * as t from "io-ts";
-import { applyEdits, modify as jsoncModify, parse as parseJsoncText, type FormattingOptions } from "jsonc-parser";
+import { applyEdits, type FormattingOptions, modify as jsoncModify, parse as parseJsoncText } from "jsonc-parser";
 import * as Activation from "./activation/schedule";
 import * as DateTime from "./date-time";
 import * as Db from "./db";
@@ -103,23 +103,18 @@ const RegistryCodec = t.intersection([
 
 export type Registry = t.TypeOf<typeof RegistryCodec>;
 
-const ServiceCodec = t.intersection([
-  t.type({
-    activationSchedule: Activation.ActivationScheduleCodec,
-    suitest: SuitestCodec,
-    slack: SlackCodec,
-    tracking: TrackingCodec,
-    adb: AdbCodec,
-    log: LogCodec,
-    workflows: t.array(Workflow.WorkflowJsonCodec),
-    trpc: TrpcCodec,
-    registry: RegistryCodec,
-  }),
-  // `recovery` (Recovery Model) opzionale perché non tutte le installazioni definiscono policy di recovery
-  t.partial({
-    recovery: t.array(Recovery.RecoveryPolicyCodec),
-  }),
-]);
+const ServiceCodec = t.type({
+  activationSchedule: Activation.ActivationScheduleCodec,
+  suitest: SuitestCodec,
+  slack: SlackCodec,
+  tracking: TrackingCodec,
+  adb: AdbCodec,
+  log: LogCodec,
+  workflows: t.array(Workflow.WorkflowJsonCodec),
+  trpc: TrpcCodec,
+  registry: RegistryCodec,
+  recovery: t.array(Recovery.RecoveryPolicyCodec),
+});
 
 export type Service = t.TypeOf<typeof ServiceCodec>;
 

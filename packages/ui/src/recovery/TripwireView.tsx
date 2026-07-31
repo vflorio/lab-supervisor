@@ -11,7 +11,7 @@ import { RetryPolicyView } from "../retry-policy/RetryPolicyView";
 
 const darkBox = { bgcolor: "#0a0c0e", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 1.25 } as const;
 
-const predicateSummary = (expr: PredicateExpression): string => ("name" in expr ? expr.name : expr.type);
+const predicateSummary = (expr: PredicateExpression): string => (expr.type === "leaf" ? expr.leaf.name : expr.type);
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -32,21 +32,15 @@ export function TripwireView({ tripwire, index }: TripwireViewProps) {
   return (
     <DomainCardAccordion
       icon={<NotificationsActive sx={{ fontSize: 13, color: "warning.main" }} />}
-      title={<Typography variant="monoTitle" sx={{ fontWeight: 600 }}>tripwire #{index + 1}</Typography>}
+      title={
+        <Typography variant="monoTitle" sx={{ fontWeight: 600 }}>
+          tripwire #{index + 1}
+        </Typography>
+      }
       trailing={
         <>
-          <Chip
-            label={`grace: ${tripwire.grace}`}
-            size="small"
-            color="warning"
-            sx={{ height: 18 }}
-          />
-          <Chip
-            label={predicateSummary(tripwire.predicate)}
-            size="small"
-            color="success"
-            sx={{ height: 18 }}
-          />
+          <Chip label={`grace: ${tripwire.grace}`} size="small" color="warning" sx={{ height: 18 }} />
+          <Chip label={predicateSummary(tripwire.predicate)} size="small" color="success" sx={{ height: 18 }} />
         </>
       }
       expanded={expanded}

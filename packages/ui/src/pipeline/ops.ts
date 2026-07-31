@@ -1,7 +1,7 @@
 import type { Pipeline } from "@supervisor/core/workflow/pipeline";
 import type { BooleanTreeOps } from "../boolean-tree/types";
 
-export type PipelineLeaf = Extract<Pipeline, { type: "workflow" }>;
+export type PipelineLeaf = Extract<Pipeline, { type: "workflow" | "condition" }>;
 
 export const pipelineTreeOps: BooleanTreeOps<Pipeline, PipelineLeaf> = {
   match: (node, cases) => {

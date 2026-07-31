@@ -27,9 +27,7 @@ export const Default: Story = {
         {...args}
         selected={selected}
         onToggle={(name) => {
-          setSelected((prev) =>
-            prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name],
-          );
+          setSelected((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]));
         }}
         op={op}
         onOpChange={setOp}
@@ -53,9 +51,7 @@ export const Multiple: Story = {
         {...args}
         selected={selected}
         onToggle={(name) => {
-          setSelected((prev) =>
-            prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name],
-          );
+          setSelected((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]));
         }}
         op={op}
         onOpChange={setOp}

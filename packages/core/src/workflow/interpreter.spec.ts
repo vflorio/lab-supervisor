@@ -1,7 +1,10 @@
 import * as E from "fp-ts/Either";
 import * as TE from "fp-ts/TaskEither";
 import { describe, expect, it } from "vitest";
+import * as Predicates from "../predicates/expression";
+import * as Condition from "./condition";
 import * as Interpreter from "./interpreter";
+import type * as Probe from "./probe";
 import type * as Workflow from "./workflow";
 
 //  fixtures
@@ -24,8 +27,14 @@ const noopEnv = (log: string[] = []): Interpreter.WorkflowEnv => ({
     wakeUp: () => TE.right(undefined),
     inputTap: () => TE.right(undefined),
     waitForDevice: () => TE.right(undefined),
-    waitForActivity: () => TE.right(undefined),
   },
+});
+
+const noopProbes = (): Probe.ProbeCapabilities => ({
+  screenOn: () => TE.right(true),
+  keyguardShowing: () => TE.right(false),
+  activityResumed: () => TE.right(true),
+  orientation: () => TE.right(true),
 });
 
 describe("workflow interpreter", () => {
@@ -116,12 +125,12 @@ describe("workflow interpreter", () => {
     expect(E.isLeft(result)).toBe(true);
   });
 
-  it("awaitPredicate resolves immediately when the expression is already true", async () => {
+  it("await resolves immediately when the condition is already true", async () => {
     const env: Interpreter.WorkflowEnv = { ...noopEnv(), lookup: () => true };
 
     const workflow: Workflow.Workflow = {
       name: "await-wf",
-      commands: [{ type: "awaitPredicate", expr: { type: "ref", name: "camera_connected" }, timeout: "2s" }],
+      commands: [{ type: "await", condition: Predicates.ref("camera_connected"), timeout: "2s" }],
     };
 
     const start = Date.now();
@@ -133,7 +142,7 @@ describe("workflow interpreter", () => {
 
   // Il caso che dà senso al comando: i fatti li aggiorna un tracker, non il workflow - il
   // lookup va quindi riletto ad ogni giro, non catturato all'avvio.
-  it("awaitPredicate re-reads the lookup and resolves when the fact flips while polling", async () => {
+  it("await re-reads the lookup and resolves when the fact flips while polling", async () => {
     let connected = false;
     const env: Interpreter.WorkflowEnv = { ...noopEnv(), lookup: () => connected };
     setTimeout(() => {
@@ -142,19 +151,19 @@ describe("workflow interpreter", () => {
 
     const workflow: Workflow.Workflow = {
       name: "await-wf",
-      commands: [{ type: "awaitPredicate", expr: { type: "ref", name: "camera_connected" }, timeout: "100ms" }],
+      commands: [{ type: "await", condition: Predicates.ref("camera_connected"), timeout: "100ms" }],
     };
 
     const result = await Interpreter.interpretWorkflow(workflow)(env)();
     expect(E.isRight(result)).toBe(true);
   });
 
-  it("awaitPredicate fails when the expression is still false at the timeout", async () => {
+  it("await fails when the condition is still false at the timeout", async () => {
     const env: Interpreter.WorkflowEnv = { ...noopEnv(), lookup: () => false };
 
     const workflow: Workflow.Workflow = {
       name: "await-wf",
-      commands: [{ type: "awaitPredicate", expr: { type: "ref", name: "camera_connected" }, timeout: "60ms" }],
+      commands: [{ type: "await", condition: Predicates.ref("camera_connected"), timeout: "60ms" }],
     };
 
     const start = Date.now();
@@ -164,12 +173,12 @@ describe("workflow interpreter", () => {
     expect(Date.now() - start).toBeGreaterThanOrEqual(60);
   });
 
-  it("awaitPredicate fails fast when the env carries no lookup, instead of waiting out the timeout", async () => {
+  it("await fails fast when the env carries no lookup, instead of waiting out the timeout", async () => {
     const env = noopEnv();
 
     const workflow: Workflow.Workflow = {
       name: "await-wf",
-      commands: [{ type: "awaitPredicate", expr: { type: "ref", name: "camera_connected" }, timeout: "10s" }],
+      commands: [{ type: "await", condition: Predicates.ref("camera_connected"), timeout: "10s" }],
     };
 
     const start = Date.now();
@@ -177,6 +186,166 @@ describe("workflow interpreter", () => {
 
     expect(E.isLeft(result)).toBe(true);
     expect(Date.now() - start).toBeLessThan(500);
+  });
+
+  it("await polls a probe until it flips", async () => {
+    let resumed = false;
+    setTimeout(() => {
+      resumed = true;
+    }, 20);
+
+    const env: Interpreter.WorkflowEnv = {
+      ...noopEnv(),
+      probes: { ...noopProbes(), activityResumed: () => TE.right(resumed) },
+    };
+
+    const workflow: Workflow.Workflow = {
+      name: "await-wf",
+      commands: [
+        { type: "await", condition: Condition.probe("activityResumed", "com.example.Main"), timeout: "100ms" },
+      ],
+    };
+
+    expect(E.isRight(await Interpreter.interpretWorkflow(workflow)(env)())).toBe(true);
+  });
+
+  it("when runs the `then` workflow only if the condition holds, the `else` one otherwise", async () => {
+    const calls: string[] = [];
+    const workflows: readonly Workflow.Workflow[] = [
+      { name: "then-wf", commands: [{ type: "reboot" }] },
+      { name: "else-wf", commands: [{ type: "wakeUp" }] },
+    ];
+
+    const envWith = (connected: boolean): Interpreter.WorkflowEnv => ({
+      ...noopEnv(),
+      workflows,
+      lookup: () => connected,
+      capabilities: {
+        ...noopEnv().capabilities,
+        reboot: () => {
+          calls.push("reboot");
+          return TE.right(undefined);
+        },
+        wakeUp: () => {
+          calls.push("wakeUp");
+          return TE.right(undefined);
+        },
+      },
+    });
+
+    const workflow: Workflow.Workflow = {
+      name: "guard-wf",
+      commands: [
+        { type: "when", condition: Predicates.ref("connected"), thenWorkflow: "then-wf", elseWorkflow: "else-wf" },
+      ],
+    };
+
+    await Interpreter.interpretWorkflow(workflow)(envWith(true))();
+    await Interpreter.interpretWorkflow(workflow)(envWith(false))();
+
+    expect(calls).toEqual(["reboot", "wakeUp"]);
+  });
+
+  it("when without an else branch is a no-op on a false condition", async () => {
+    const calls: string[] = [];
+    const env: Interpreter.WorkflowEnv = {
+      ...noopEnv(),
+      workflows: [{ name: "then-wf", commands: [{ type: "reboot" }] }],
+      lookup: () => false,
+      capabilities: {
+        ...noopEnv().capabilities,
+        reboot: () => {
+          calls.push("reboot");
+          return TE.right(undefined);
+        },
+      },
+    };
+
+    const workflow: Workflow.Workflow = {
+      name: "guard-wf",
+      commands: [{ type: "when", condition: Predicates.ref("connected"), thenWorkflow: "then-wf" }],
+    };
+
+    expect(E.isRight(await Interpreter.interpretWorkflow(workflow)(env)())).toBe(true);
+    expect(calls).toEqual([]);
+  });
+
+  // Un errore di valutazione non deve diventare "condizione falsa": prendere il ramo `else` su
+  // un ADB muto è una decisione presa su niente.
+  it("when fails when the condition cannot be evaluated, instead of taking the else branch", async () => {
+    const calls: string[] = [];
+    const env: Interpreter.WorkflowEnv = {
+      ...noopEnv(),
+      workflows: [{ name: "else-wf", commands: [{ type: "wakeUp" }] }],
+      probes: {
+        ...noopProbes(),
+        screenOn: () => TE.left({ type: "WorkflowError", message: "adb is not answering" }),
+      },
+      capabilities: {
+        ...noopEnv().capabilities,
+        wakeUp: () => {
+          calls.push("wakeUp");
+          return TE.right(undefined);
+        },
+      },
+    };
+
+    const workflow: Workflow.Workflow = {
+      name: "guard-wf",
+      commands: [
+        { type: "when", condition: Condition.probe("screenOn"), thenWorkflow: "then-wf", elseWorkflow: "else-wf" },
+      ],
+    };
+
+    expect(E.isLeft(await Interpreter.interpretWorkflow(workflow)(env)())).toBe(true);
+    expect(calls).toEqual([]);
+  });
+
+  // Con `when` la ricorsione è una cosa che uno vuole scrivere: senza bound, un ciclo in config
+  // girerebbe per sempre invece di fallire.
+  it("bounds nesting depth, so a cyclic run/when fails instead of looping forever", async () => {
+    const env: Interpreter.WorkflowEnv = {
+      ...noopEnv(),
+      workflows: [
+        { name: "ping", commands: [{ type: "run", workflowName: "pong" }] },
+        { name: "pong", commands: [{ type: "run", workflowName: "ping" }] },
+      ],
+    };
+
+    const result = await Interpreter.run(env.workflows, "ping")(env)();
+
+    expect(E.isLeft(result)).toBe(true);
+    if (E.isLeft(result)) expect(result.left.message).toContain("too deep");
+  });
+
+  // Short-circuit: un fatto già vero non deve costare una chiamata ADB
+  it("does not run a probe when the boolean algebra has already decided", async () => {
+    let probeCalls = 0;
+    const env: Interpreter.WorkflowEnv = {
+      ...noopEnv(),
+      lookup: () => true,
+      probes: {
+        ...noopProbes(),
+        screenOn: () => {
+          probeCalls += 1;
+          return TE.right(true);
+        },
+      },
+    };
+
+    const workflow: Workflow.Workflow = {
+      name: "await-wf",
+      commands: [
+        {
+          type: "await",
+          condition: Condition.or([Predicates.ref("connected"), Condition.probe("screenOn")]),
+          timeout: "1s",
+        },
+      ],
+    };
+
+    expect(E.isRight(await Interpreter.interpretWorkflow(workflow)(env)())).toBe(true);
+    expect(probeCalls).toBe(0);
   });
 
   it("sleep pauses for the given duration without touching capabilities", async () => {

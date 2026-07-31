@@ -1,10 +1,11 @@
 import * as E from "fp-ts/Either";
 import * as t from "io-ts";
 import { match } from "ts-pattern";
+import { ConditionCodec } from "./condition-codec";
 import type { Pipeline } from "./pipeline";
 
 // Tuple taggate, coerenti con Command/PolicyStepJson:
-// ["workflow", "name"] | ["and", p, p, ...] | ["or", p, p, ...] | ["not", p]
+// ["workflow", "name"] | ["condition", cond] | ["and", p, p, ...] | ["or", p, p, ...] | ["not", p]
 
 const isPipeline = (u: unknown): u is Pipeline => typeof u === "object" && u !== null && "type" in u;
 
@@ -20,6 +21,12 @@ const validatePipeline = (u: unknown, c: t.Context): t.Validation<Pipeline> => {
       if (typeof workflowName !== "string") return t.failure(u, c, "workflow requires a workflow name");
 
       return t.success({ type: "workflow" as const, workflowName });
+    })
+    .with("condition", () => {
+      const result = ConditionCodec.validate(args[0], [...c, { key: "[1]", type: ConditionCodec, actual: args[0] }]);
+      if (E.isLeft(result)) return result as t.Validation<Pipeline>;
+
+      return t.success({ type: "condition" as const, condition: result.right });
     })
     .with("and", "or", (matchedTag) => {
       if (args.length === 0) return t.failure(u, c, `${matchedTag} requires at least one pipeline`);
@@ -45,6 +52,7 @@ const validatePipeline = (u: unknown, c: t.Context): t.Validation<Pipeline> => {
 const encodePipeline = (pipeline: Pipeline): unknown[] =>
   match(pipeline)
     .with({ type: "workflow" }, ({ workflowName }) => ["workflow", workflowName])
+    .with({ type: "condition" }, ({ condition }) => ["condition", ConditionCodec.encode(condition)])
     .with({ type: "and" }, ({ pipelines }) => ["and", ...pipelines.map(encodePipeline)])
     .with({ type: "or" }, ({ pipelines }) => ["or", ...pipelines.map(encodePipeline)])
     .with({ type: "not" }, ({ pipeline: inner }) => ["not", encodePipeline(inner)])

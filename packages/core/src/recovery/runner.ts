@@ -7,37 +7,34 @@ import type { PolicyDecodeError } from "../retry/codec";
 import type { Policy } from "../retry/retry";
 import * as TaskRunner from "../task-runner";
 import type { CommandCapabilities } from "../workflow/interpreter";
+import type { ProbeCapabilities } from "../workflow/probe";
 import type { Workflow } from "../workflow/workflow";
 import { type CompiledTripwire, compileTripwires } from "./compile";
 import * as EntityRunner from "./entity-runner";
 import type { RecoveryPolicy } from "./model";
 import type * as TripwireMachine from "./tripwire-machine";
 
-// Orchestrazione multi-entità: osserva il PredicateFeed dal vivo, filtra per il dominio della
-// policy, crea un EntityRunner per ogni entityId incontrato e lo guida sia sui cambi di
-// predicato sia su un tick periodico (per rilevare un grace period scaduto anche senza nuovi fatti).
+// Multi-entity orchestration: observes PredicateFeed, filters by policy domain, creates EntityRunner per entity
 
 export interface RecoveryRunnerEnv {
   readonly logger: Logger.Tagged;
   readonly stream: PredicateFeed;
   readonly workflows: readonly Workflow[];
   readonly capabilitiesFor: (entityId: string) => CommandCapabilities;
-  // Cadenza del tick periodico di ri-osservazione (per rilevare grace scaduti senza nuovi fatti)
+  readonly probesFor?: (entityId: string) => ProbeCapabilities;
+  // Tick rate for re-observation (detects grace period expiry without new facts)
   readonly tickPolicy: Policy;
-  // Identità del tick loop per la dashboard (§7): un loop per RecoveryPolicy, non un
-  // aggregato - ognuno il proprio widget, non un merge.
+  // Loop identity for dashboard; one per RecoveryPolicy, not aggregated
   readonly descriptor: TaskRunner.LoopDescriptor;
   readonly loopStream?: TaskRunner.LoopStream;
   readonly now?: () => number;
-  // Notifica opzionale ad ogni transizione di un tripwire, per un'entità - lo stato intero
-  // (incluso l'esito di un tentativo di recovery, non più un side-channel separato)
+  // Optional notification on each tripwire transition (full state, not a side-channel)
   readonly onStatus?: (entityId: string, tripwireIndex: number, state: TripwireMachine.TripwireState) => void;
 }
 
 export interface RecoveryRunnerHandle {
   readonly stop: () => void;
-  // Riarma il tripwire di un'entità dopo un esaurimento dei retry - vedi EntityRunner.reset.
-  // `false` se l'entità non è mai stata osservata da questo runner (nessun EntityRunner creato).
+  // Rearm tripwire after exhaustion (returns false if entity never observed)
   readonly reset: (entityId: string, tripwireIndex: number) => boolean;
 }
 
@@ -60,6 +57,7 @@ export const start = (
           logger: env.logger.child(entityId),
           workflows: env.workflows,
           capabilities: env.capabilitiesFor(entityId),
+          probes: env.probesFor?.(entityId),
           onStatus: env.onStatus && ((tripwireIndex, state) => env.onStatus!(entityId, tripwireIndex, state)),
         });
         runnersByEntity.set(entityId, created);
@@ -75,10 +73,7 @@ export const start = (
         await runnerFor(entityId).observe(lookupFor(entityId), now());
       };
 
-      // Osservazione detached: `observe` resta in volo per tutta la durata di un'eventuale
-      // pipeline di recovery, e nessuno dei due chiamanti (feed e tick) può permettersi di
-      // aspettarla. Il catch non è difensivo per abitudine: una promise rejected qui
-      // ucciderebbe silenziosamente il loop che la lancia.
+      // Detached observation: callers can't wait for recovery pipelines; catch prevents silent loop death
       const observeDetached = (entityId: string): void => {
         void observeEntity(entityId).catch((error) =>
           env.logger.error(`Recovery policy "${policy.label}": observe failed - ${format(error)}`)(),

@@ -2,11 +2,12 @@ import * as Adb from "@supervisor/core/adapters/adb/shell";
 import * as Errors from "@supervisor/core/errors";
 import type * as Logger from "@supervisor/core/logger/logger";
 import * as Network from "@supervisor/core/network";
-import * as Retry from "@supervisor/core/retry/retry";
 import type * as Shell from "@supervisor/core/shell";
 import * as WorkflowInterpreter from "@supervisor/core/workflow/interpreter";
+import type * as WorkflowProbe from "@supervisor/core/workflow/probe";
 import type { Workflow } from "@supervisor/core/workflow/workflow";
 import { pipe } from "fp-ts/function";
+import * as O from "fp-ts/Option";
 import * as TE from "fp-ts/TaskEither";
 import type * as DeviceRegistry from "./registry";
 
@@ -14,19 +15,9 @@ const mapWorkflowError = (
   error: WorkflowInterpreter.WorkflowError | Adb.Error | Shell.ShellSpawnError | DeviceRegistry.SyncError,
 ): WorkflowInterpreter.WorkflowError => ({
   ...WorkflowInterpreter.workflowError(error.message),
-  // Preserva il tag dell'errore originale (es. CommandTimeout) - vedi WorkflowError#cause
+  // Preserve original error tag (e.g., CommandTimeout) in WorkflowError#cause
   cause: error,
 });
-
-// Bound per waitForActivity: Retry.constantDelay da solo non esaurisce mai - senza limitRetries
-// un'activity che non torna mai in foreground farebbe girare il polling per sempre.
-const WAIT_FOR_ACTIVITY_POLL_MS = 1_000;
-const WAIT_FOR_ACTIVITY_TIMEOUT_MS = 30_000;
-
-const waitForActivityPolicy = pipe(
-  Retry.constantDelay(WAIT_FOR_ACTIVITY_POLL_MS),
-  Retry.concat(Retry.limitRetries(Math.ceil(WAIT_FOR_ACTIVITY_TIMEOUT_MS / WAIT_FOR_ACTIVITY_POLL_MS))),
-);
 
 export interface WorkflowRunnerEnv {
   readonly logger: Logger.Tagged;
@@ -48,6 +39,7 @@ export const run =
         logger: env.logger,
         workflows: env.workflows,
         capabilities: makeCapabilities(env, target),
+        probes: makeProbes(env, target),
       }),
 
       TE.tapIO(() => env.logger.info(`Workflow "${workflow}" completed on ${Network.format(target)}`)),
@@ -66,10 +58,7 @@ export const makeCapabilities = (
   };
 
   return {
-    // Restart Application (AM)
     restartApp: (packageId) => pipe(Adb.restartApp(packageId)(target)(adbEnv), TE.mapLeft(mapWorkflowError)),
-
-    // Ensure app is in foreground - launch only if not already resumed
     ensureActivity: (packageId, activity) =>
       pipe(
         Adb.isActivityResumed(activity)(target)(adbEnv),
@@ -78,45 +67,43 @@ export const makeCapabilities = (
           active ? TE.right(undefined) : pipe(Adb.launchApp(packageId)(target)(adbEnv), TE.mapLeft(mapWorkflowError)),
         ),
       ),
-
-    // Open URL in default browser
     openUrl: (url) => pipe(Adb.openUrl(url)(target)(adbEnv), TE.mapLeft(mapWorkflowError)),
-
-    // Open "Wireless debugging" settings screen (System > Developer options)
     openDeveloperSettings: () => pipe(Adb.openDeveloperSettings(target)(adbEnv), TE.mapLeft(mapWorkflowError)),
-
-    // Reboot Device
     reboot: () => pipe(Adb.reboot(target)(adbEnv), TE.mapLeft(mapWorkflowError)),
-
-    // Wake screen + dismiss keyguard (no PIN)
     wakeUp: () =>
       pipe(
         Adb.wakeUp(target)(adbEnv),
         TE.flatMap(() => Adb.dismissKeyguard(target)(adbEnv)),
         TE.mapLeft(mapWorkflowError),
       ),
-
-    // Emulates screen tap
     inputTap: (coords) => pipe(Adb.inputTap(coords.x, coords.y)(target)(adbEnv), TE.mapLeft(mapWorkflowError)),
-
-    // Wait for ADB status "device"
     waitForDevice: () => pipe(Adb.waitForDevice(target)(adbEnv), TE.mapLeft(mapWorkflowError)),
+  };
+};
 
-    // Wait for activity to be foreground
-    waitForActivity: (activity) =>
+// Probes (read-only capability); no AndroidBridge gating (reads are harmless, unlike commands)
+export const makeProbes = (env: WorkflowRunnerEnv, target: Network.Endpoint): WorkflowProbe.ProbeCapabilities => {
+  const adbEnv: Adb.AdbEnv = {
+    logger: env.logger.child("ADB"),
+    spawn: env.spawn,
+  };
+
+  return {
+    screenOn: () => pipe(Adb.isScreenOn(target)(adbEnv), TE.mapLeft(mapWorkflowError)),
+
+    keyguardShowing: () => pipe(Adb.isKeyguardShowing(target)(adbEnv), TE.mapLeft(mapWorkflowError)),
+
+    activityResumed: (activity) => pipe(Adb.isActivityResumed(activity)(target)(adbEnv), TE.mapLeft(mapWorkflowError)),
+
+    // Unreadable orientation is an error, not a mismatch (see probe rules)
+    orientation: (expected) =>
       pipe(
-        Retry.retrying(
-          waitForActivityPolicy,
-          env.logger,
-        )(
-          pipe(
-            Adb.isActivityResumed(activity)(target)(adbEnv),
-            TE.mapLeft(mapWorkflowError),
-            TE.flatMap((active) =>
-              active
-                ? TE.right(undefined)
-                : TE.left(WorkflowInterpreter.workflowError(`Activity "${activity}" not yet resumed`)),
-            ),
+        Adb.getOrientation(target)(adbEnv),
+        TE.mapLeft(mapWorkflowError),
+        TE.flatMap(
+          O.match(
+            () => TE.left(WorkflowInterpreter.workflowError("orientation: device did not report SurfaceOrientation")),
+            (actual) => TE.right(actual === expected),
           ),
         ),
       ),

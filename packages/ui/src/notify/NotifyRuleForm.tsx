@@ -1,7 +1,6 @@
-import { Checkbox, FormControlLabel, MenuItem, Select, type SelectChangeEvent, Stack, TextField } from "@mui/material";
+import { Checkbox, FormControlLabel, MenuItem, Stack, TextField } from "@mui/material";
 import type { NotifyTargetSchema } from "@supervisor/core/notify/codec";
 import type { NotifyLifecycle, NotifyRule } from "@supervisor/core/notify/model";
-import { FieldLabel } from "../misc/FieldLabel";
 
 const LIFECYCLES: readonly NotifyLifecycle[] = ["immediate", "exhausted"];
 
