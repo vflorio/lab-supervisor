@@ -74,15 +74,21 @@ export type ScheduleStepArgKind = "day" | "time" | "duration";
 
 export interface ScheduleStepSchema {
   readonly name: string;
+  readonly description: string;
   readonly args: readonly { label: string; kind: ScheduleStepArgKind }[];
 }
 
 export const SCHEDULE_STEP_SCHEMA: readonly ScheduleStepSchema[] = [
-  { name: "always", args: [] },
-  { name: "never", args: [] },
-  { name: "day", args: [{ label: "day", kind: "day" }] },
+  { name: "always", description: "Sempre visibile, in qualunque giorno e orario.", args: [] },
+  { name: "never", description: "Mai visibile.", args: [] },
+  {
+    name: "day",
+    description: "Visibile per l'intero giorno della settimana indicato.",
+    args: [{ label: "day", kind: "day" }],
+  },
   {
     name: "timeRange",
+    description: "Visibile nella fascia oraria indicata, ogni giorno.",
     args: [
       { label: "from", kind: "time" },
       { label: "to", kind: "time" },
@@ -90,6 +96,7 @@ export const SCHEDULE_STEP_SCHEMA: readonly ScheduleStepSchema[] = [
   },
   {
     name: "duration",
+    description: "Visibile per una durata a partire da un orario di inizio.",
     args: [
       { label: "start", kind: "time" },
       { label: "duration", kind: "duration" },
@@ -97,6 +104,7 @@ export const SCHEDULE_STEP_SCHEMA: readonly ScheduleStepSchema[] = [
   },
   {
     name: "recurring",
+    description: "Visibile per una durata fissa che si ripete a intervalli regolari nell'arco delle 24h.",
     args: [
       { label: "every", kind: "duration" },
       { label: "duration", kind: "duration" },
@@ -104,6 +112,7 @@ export const SCHEDULE_STEP_SCHEMA: readonly ScheduleStepSchema[] = [
   },
   {
     name: "block",
+    description: "Visibile in una fascia oraria, ma solo nel giorno indicato.",
     args: [
       { label: "day", kind: "day" },
       { label: "from", kind: "time" },
@@ -112,6 +121,7 @@ export const SCHEDULE_STEP_SCHEMA: readonly ScheduleStepSchema[] = [
   },
   {
     name: "weekdays",
+    description: "Visibile nella fascia oraria indicata, nei giorni feriali (lun-ven).",
     args: [
       { label: "from", kind: "time" },
       { label: "to", kind: "time" },
@@ -119,6 +129,7 @@ export const SCHEDULE_STEP_SCHEMA: readonly ScheduleStepSchema[] = [
   },
   {
     name: "weekend",
+    description: "Visibile nella fascia oraria indicata, nel weekend (sab-dom).",
     args: [
       { label: "from", kind: "time" },
       { label: "to", kind: "time" },

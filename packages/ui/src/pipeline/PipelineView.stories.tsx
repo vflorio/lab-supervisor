@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import type { Pipeline } from "@supervisor/core/workflow/pipeline";
+import { PIPELINE_TEMPLATES } from "@supervisor/core/workflow/pipeline-templates";
 import { PipelineView } from "./PipelineView";
 
 const meta: Meta<typeof PipelineView> = {
@@ -41,5 +42,28 @@ export const Default: Story = {
 export const Nested: Story = {
   args: {
     value: nestedPipeline,
+  },
+};
+
+// Stessa libreria di riferimento usata da PipelineForm.stories, in sola lettura.
+
+export const ConditionGate: Story = {
+  name: "Composition: condition as gate (and)",
+  args: {
+    value: PIPELINE_TEMPLATES.find((t) => t.label === "Precondizione con gate")!.pipeline,
+  },
+};
+
+export const ThreeLevelEscalation: Story = {
+  name: "Composition: three-level escalation (or)",
+  args: {
+    value: PIPELINE_TEMPLATES.find((t) => t.label === "Scala di recovery a tre livelli")!.pipeline,
+  },
+};
+
+export const InvertedFallback: Story = {
+  name: "Composition: not (run only if the other fails)",
+  args: {
+    value: PIPELINE_TEMPLATES.find((t) => t.label === "Esegui solo se l'altro non ce l'ha fatta")!.pipeline,
   },
 };

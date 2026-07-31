@@ -86,7 +86,7 @@
     - [X] Comando `when`: esegue un workflow solo se la Condition regge, con ramo else opzionale
     - [X] Foglia `condition` nella Pipeline: precondizione di una recovery policy (es. non riavviare mentre registra), scritta dove si legge la policy
     - [X] Bound di profondità su run/when: un ciclo in config fallisce invece di girare per sempre
-- [ ] Comando ensureOrientation: forza uno specifico orientamento (oggi esprimibile come `["when", ["not", ["probe", "orientation", "landscape"]], "..."]`)
+
 - [X] Comando wait/sleep nella config workflow (per tap-scripting e timing)
 - [X] Comando wakeUp dovrebbe controllare lo schermo prima di mandare lo swipe (guard `["probe", "keyguardShowing"]`)
 

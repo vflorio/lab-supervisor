@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { COMMAND_SCHEMA, type Workflow } from "@supervisor/core/workflow/codec";
+import { WORKFLOW_TEMPLATES } from "@supervisor/core/workflow/templates";
 import { useState } from "react";
 import { WorkflowList } from "./WorkflowList";
 
@@ -69,6 +70,22 @@ export const ReadOnly: Story = {
 export const Empty: Story = {
   args: {
     workflows: [],
+    editing: false,
+    schema: COMMAND_SCHEMA,
+  },
+  render: function Render(args) {
+    return <WorkflowList {...args} onChange={() => {}} />;
+  },
+};
+
+// L'intera libreria di riferimento in @supervisor/core/workflow/templates, vista come lista:
+// il ventaglio completo di composizioni di Command che il futuro workflow builder proporrà
+// come punto di partenza (sequenze piatte, await/when su Condition, run nidificato).
+const templateWorkflows: readonly Workflow[] = WORKFLOW_TEMPLATES.map((t) => t.workflow);
+
+export const TemplateLibrary: Story = {
+  args: {
+    workflows: templateWorkflows,
     editing: false,
     schema: COMMAND_SCHEMA,
   },

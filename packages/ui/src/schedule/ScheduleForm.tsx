@@ -12,7 +12,7 @@ import type {
 import { match } from "ts-pattern";
 import { DurationForm } from "../duration/DurationForm";
 import { DomainSortable } from "../misc/DomainSortable";
-import { moveAt, removeAt } from "../misc/sortable";
+import { reorderableList } from "../misc/sortable";
 
 const DAYS: readonly DayOfWeek[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const DAY_SHORT: Record<DayOfWeek, string> = {
@@ -51,11 +51,9 @@ const verbFor = (schema: readonly ScheduleStepSchema[], name: string): ScheduleV
 };
 
 export function ScheduleForm({ value, onChange, schema }: ScheduleFormProps) {
-  const updateStep = (index: number, step: ScheduleStepJson) => onChange(value.map((s, i) => (i === index ? step : s)));
-  const removeStep = (index: number) => onChange(removeAt<ScheduleStepJson>(index)(value));
-  const moveStep = (index: number, delta: number) => onChange(moveAt<ScheduleStepJson>(index, delta)(value));
+  const steps = reorderableList<ScheduleStepJson>(value, onChange);
 
-  const addStep = () => schema[0] && onChange([...value, ["union", verbFor(schema, schema[0].name)]]);
+  const addStep = () => schema[0] && steps.add(["union", verbFor(schema, schema[0].name)]);
 
   return (
     <Stack sx={{ gap: 1 }}>
@@ -73,7 +71,7 @@ export function ScheduleForm({ value, onChange, schema }: ScheduleFormProps) {
               <Select
                 size="small"
                 value={op}
-                onChange={(event: SelectChangeEvent) => updateStep(index, [event.target.value as ScheduleOp, verb])}
+                onChange={(event: SelectChangeEvent) => steps.update(index, [event.target.value as ScheduleOp, verb])}
                 sx={{ minWidth: 130 }}
               >
                 {OPS.map((o) => (
@@ -86,11 +84,11 @@ export function ScheduleForm({ value, onChange, schema }: ScheduleFormProps) {
             <Select
               size="small"
               value={verb[0]}
-              onChange={(event: SelectChangeEvent) => updateStep(index, [op, verbFor(schema, event.target.value)])}
+              onChange={(event: SelectChangeEvent) => steps.update(index, [op, verbFor(schema, event.target.value)])}
               sx={{ minWidth: 140 }}
             >
               {schema.map((s) => (
-                <MenuItem key={s.name} value={s.name}>
+                <MenuItem key={s.name} value={s.name} title={s.description}>
                   {s.name}
                 </MenuItem>
               ))}
@@ -100,7 +98,7 @@ export function ScheduleForm({ value, onChange, schema }: ScheduleFormProps) {
               const setArg = (next: ScheduleStepArg) => {
                 const nextArgs = [...args];
                 nextArgs[argIndex] = next;
-                updateStep(index, [op, [verb[0], ...nextArgs] as unknown as ScheduleVerbJson]);
+                steps.update(index, [op, [verb[0], ...nextArgs] as unknown as ScheduleVerbJson]);
               };
 
               if (argSchema.kind === "day") {
@@ -151,8 +149,8 @@ export function ScheduleForm({ value, onChange, schema }: ScheduleFormProps) {
             <DomainSortable
               index={index}
               length={value.length}
-              onMove={(delta) => moveStep(index, delta)}
-              onRemove={() => removeStep(index)}
+              onMove={(delta) => steps.move(index, delta)}
+              onRemove={() => steps.remove(index)}
             />
           </Stack>
         );

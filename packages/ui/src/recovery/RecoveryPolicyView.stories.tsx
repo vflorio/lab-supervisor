@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import type { RecoveryPolicy } from "@supervisor/core/recovery/model";
+import { RECOVERY_POLICY_TEMPLATES } from "@supervisor/core/recovery/templates";
 import { RecoveryPolicyView } from "./RecoveryPolicyView";
 
 const meta: Meta<typeof RecoveryPolicyView> = {
@@ -43,5 +44,13 @@ export const WithTripwire: Story = {
 export const Empty: Story = {
   args: {
     value: emptyPolicy,
+  },
+};
+
+// Stessa libreria di riferimento usata da RecoveryPolicyForm.stories, in sola lettura.
+export const ThreeLevelEscalationPolicy: Story = {
+  name: "Composition: three-tripwire escalation ladder",
+  args: {
+    value: RECOVERY_POLICY_TEMPLATES.find((t) => t.label === "Escalation a tre livelli")!.policy,
   },
 };
