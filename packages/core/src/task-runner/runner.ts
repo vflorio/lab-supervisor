@@ -58,11 +58,18 @@ export const create = ({ logger, descriptor, policy, onTick, loopStream }: Deps)
   // (es. Idle/Exhausted non portano un `previousDelay` significativo).
   let retryStatus: Retry.Status = { iteration: 0, previousDelay: null };
 
+  // Un onTick che *rigetta* (un throw non catturato, non un Left) è un tick fallito come gli
+  // altri, non la fine del loop: lasciato risalire, uscirebbe da runLoop, verrebbe assorbito
+  // dal TE.tryCatch di `start` e scartato da `detach` - loop morto in silenzio, per giunta
+  // senza evento StopRequested, quindi con la dashboard che continua a mostrarlo in esecuzione.
+  const runTick = (): Promise<E.Either<Errors.AppError, string | undefined>> =>
+    onTick().catch((error: unknown) => E.left(Errors.fromUnknown("TickError")(error)));
+
   const runLoop = async (): Promise<void> => {
     while (!controller.signal.aborted) {
       applyEvent({ _tag: "TickStarted", at: Date.now() });
 
-      const result = await onTick();
+      const result = await runTick();
       const delayMs = policy(retryStatus);
       const at = Date.now();
 

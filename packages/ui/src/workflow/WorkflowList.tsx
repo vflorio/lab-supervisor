@@ -4,6 +4,7 @@ import type { CommandSchema } from "@supervisor/core/workflow/codec";
 import type { Workflow } from "@supervisor/core/workflow/workflow";
 import { useEffect, useState } from "react";
 import { DomainCardAccordion } from "../misc/DomainCardAccordion";
+import type { PredicateOption } from "../predicates/PredicateRefPicker";
 import { CommandView } from "./CommandView";
 import { WorkflowForm } from "./WorkflowForm";
 
@@ -14,9 +15,18 @@ export interface WorkflowListProps {
   readonly onChange: (next: Workflow) => void;
   readonly onCreate?: () => void;
   readonly focusName?: string;
+  readonly predicateOptions?: readonly PredicateOption[];
 }
 
-export function WorkflowList({ workflows, editing, schema, onChange, onCreate, focusName }: WorkflowListProps) {
+export function WorkflowList({
+  workflows,
+  editing,
+  schema,
+  onChange,
+  onCreate,
+  focusName,
+  predicateOptions,
+}: WorkflowListProps) {
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
 
   useEffect(() => {
@@ -48,19 +58,17 @@ export function WorkflowList({ workflows, editing, schema, onChange, onCreate, f
         <DomainCardAccordion
           key={workflow.name}
           icon={<Bolt sx={{ fontSize: 13, color: "primary.main" }} />}
-          title={<Typography variant="monoTitle" sx={{ fontWeight: 600 }}>{workflow.name}</Typography>}
-          trailing={
-            <Chip
-              label={`${workflow.commands.length} steps`}
-              size="small"
-              sx={{ height: 18 }}
-            />
+          title={
+            <Typography variant="monoTitle" sx={{ fontWeight: 600 }}>
+              {workflow.name}
+            </Typography>
           }
+          trailing={<Chip label={`${workflow.commands.length} steps`} size="small" sx={{ height: 18 }} />}
           expanded={expanded.has(workflow.name)}
           onToggle={() => toggle(workflow.name)}
         >
           {editing ? (
-            <WorkflowForm value={workflow} onChange={onChange} schema={schema} />
+            <WorkflowForm value={workflow} onChange={onChange} schema={schema} predicateOptions={predicateOptions} />
           ) : workflow.commands.length === 0 ? (
             <Typography variant="caption" color="textSecondary">
               Nessuno step

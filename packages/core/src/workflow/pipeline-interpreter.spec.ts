@@ -175,6 +175,62 @@ describe("pipeline interpreter", () => {
     expect(calls.length).toBe(2);
   });
 
+  // Lo scenario di produzione: riavvio l'app, se non basta riavvio il device. Senza
+  // awaitPredicate il primo ramo uscirebbe pulito (i comandi ADB non falliscono) e l'`or` non
+  // escalerebbe mai - l'esito del ramo direbbe "comandi eseguiti", non "problema risolto".
+  it("or: escalates when the first branch runs clean but its predicate never comes back", async () => {
+    const calls: string[] = [];
+    let connected = false;
+
+    const workflows: readonly Workflow.Workflow[] = [
+      {
+        name: "restart-app",
+        commands: [
+          { type: "restartApp", packageId: "app" },
+          { type: "awaitPredicate", expr: { type: "ref", name: "connected" }, timeout: "40ms" },
+        ],
+      },
+      {
+        name: "reboot-device",
+        commands: [
+          { type: "reboot" },
+          { type: "awaitPredicate", expr: { type: "ref", name: "connected" }, timeout: "100ms" },
+        ],
+      },
+    ];
+
+    const env: Interpreter.WorkflowEnv = {
+      ...envWith(workflows, calls),
+      // Il riavvio dell'app non risolve; solo il reboot rimette online il device
+      capabilities: {
+        ...noopCapabilities(),
+        restartApp: (pkg) => {
+          calls.push(`restartApp:${pkg}`);
+          return TE.right(undefined);
+        },
+        reboot: () => {
+          calls.push("reboot");
+          setTimeout(() => {
+            connected = true;
+          }, 20);
+          return TE.right(undefined);
+        },
+      },
+      lookup: () => connected,
+    };
+
+    const result = await PipelineInterpreter.interpretPipeline({
+      type: "or",
+      pipelines: [
+        { type: "workflow", workflowName: "restart-app" },
+        { type: "workflow", workflowName: "reboot-device" },
+      ],
+    })(env)();
+
+    expect(result).toStrictEqual(E.right(true));
+    expect(calls).toEqual(["restartApp:app", "reboot"]);
+  });
+
   it("not: negates the inner pipeline's result", async () => {
     const workflows: readonly Workflow.Workflow[] = [
       { name: "ok-workflow", commands: [{ type: "restartApp", packageId: "com.example" }] },

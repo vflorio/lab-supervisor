@@ -97,7 +97,7 @@ const createAdbReconciler = (env: Env, androidBridge: AndroidBridgeOrchestrator.
     logger: reconcileLog,
     descriptor: {
       id: "android-bridge:reconcile",
-      label: "AndroidBridge reconcile",
+      label: "Android Bridge Reconcile",
       policyLabel: RECONCILE_POLICY.label,
     },
     policy: RECONCILE_POLICY.policy,
@@ -131,6 +131,7 @@ const createRecovery = (
           workflows: env.config.workflows,
           capabilitiesEnv: recovery.capabilitiesEnv,
           activityStream: env.activityStream,
+          predicateStream: env.predicateStream,
         }),
       }),
     ),

@@ -1,9 +1,11 @@
 {
   "suitest": {
+    "baseUrl": "https://the.suite.st/api/public/v4",
     "tokenId": "dev-suitest-token-id",
     "tokenPassword": "dev-suitest-token-password"
   },
   "slack": {
+    "active": false,
     "botToken": "dev-slack-token"
   },
   "trpc": {
@@ -19,10 +21,10 @@
     "to": "18:00"
   },
   "tracking": {
-    "adb": { "polling": [["constantDelay", "5s"]] }, // poll locale, nessun costo esterno
-    "suitestCamera": { "polling": [["constantDelay", "20s"]] },
-    "suitestControlUnit": { "polling": [["constantDelay", "20s"]] },
-    "suitestDevice": { "polling": [["constantDelay", "20s"]] }
+    "adb": { "policy": [["constantDelay", "5s"]] }, // poll locale, nessun costo esterno
+    "suitestCamera": { "policy": [["constantDelay", "20s"]] },
+    "suitestControlUnit": { "policy": [["constantDelay", "20s"]] },
+    "suitestDevice": { "policy": [["constantDelay", "20s"]] }
   },
   "log": {
     "level": "debug" // "error" | "warn" | "info" | "debug"
@@ -78,6 +80,51 @@
         ["run", "suitest-set-experimental-profile"],
         ["run", "suitest-connect"]
       ]
+    ],
+
+    // Varianti "verified" per le pipeline di recovery: stesso workflow + attesa della conferma
+    // dai predicati. Un ramo di `or` che si limita a eseguire comandi "riesce" anche quando
+    // l'app non si riconnette (restartApp/ensureActivity non falliscono), e l'escalation al
+    // reboot non scatterebbe mai. Il timeout deve superare tracking.suitestCamera (20s).
+    [
+      "android-suitest-camera-verified",
+      [["run", "android-suitest-camera"], ["awaitPredicate", ["ref", "suitest_camera_connected"], "45s"]]
+    ],
+    [
+      "android-suitest-camera-reboot-verified",
+      [["run", "android-suitest-camera-reboot"], ["awaitPredicate", ["ref", "suitest_camera_connected"], "60s"]]
     ]
+  ],
+
+  "recovery": [
+    {
+      "domain": "suitest-camera",
+      "label": "suitest-camera-recovery",
+      "tripwires": [
+        {
+          // Quanto la camera deve restare disconnessa prima di intervenire: sopra un giro di
+          // polling (20s), così un singolo poll andato a vuoto non fa scattare nulla.
+          "grace": "60s",
+          "predicate": ["ref", "suitest_camera_connected"],
+          // Escalation: riavvio dell'app, e solo se non basta reboot del device
+          "pipeline": [
+            "or",
+            ["workflow", "android-suitest-camera-verified"],
+            ["workflow", "android-suitest-camera-reboot-verified"]
+          ],
+          // Respiro tra due escalation complete: ogni tentativo attende già la conferma al
+          // proprio interno (awaitPredicate) e il reboot attende il device (90s).
+          "retry": [["constantDelay", "2m"], ["limitRetries", 2]],
+          "notify": [
+            {
+              "type": ["slack"],
+              "channel": "#lab-supervisor",
+              "message": "{{label}} ({{ip}}) suitest camera offline, recovery esaurita: intervento manuale richiesto",
+              "policy": ["exhausted"]
+            }
+          ]
+        }
+      ]
+    }
   ]
 }

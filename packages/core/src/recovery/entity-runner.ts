@@ -17,6 +17,10 @@ import * as TripwireMachine from "./tripwire-machine";
 // stati e al proprio logger. Ogni cambio di stato (incluso l'esito di un tentativo di
 // recovery) passa da un solo canale, il `TransitionHook` passato a TripwireMachine.make -
 // niente diffing "prima/dopo" fatto a mano, niente side-channel che può arrivare fuori ordine.
+// Lo stato di ogni tripwire avanza appena il reducer decide, non a pipeline conclusa
+// (Machine.dispatchTo): un'osservazione che arriva durante un recovery vede `recovering` e
+// non ne lancia un secondo, e un esito tardivo non sovrascrive più quello che è successo nel
+// frattempo (predicate tornato sano, o reset manuale) - a deciderlo resta il reducer.
 
 export interface EntityRunnerEnv {
   readonly logger: Logger.Tagged;
@@ -43,7 +47,10 @@ interface TripwireInstance {
     TripwireMachine.RunRecovery
   >;
   readonly logger: Logger.Tagged;
-  state: TripwireMachine.TripwireState;
+  // Lo stato vive in una StateRef, non nel fold del dispatch: una pipeline di recovery dura
+  // minuti e nel frattempo arrivano altre osservazioni - devono vedere `recovering`, non lo
+  // stato di partenza (vedi Machine.dispatchTo).
+  readonly state: Machine.StateRef<TripwireMachine.TripwireState>;
 }
 
 // Messaggio leggibile per ogni transizione - solo per il log di servizio, non alimenta lo
@@ -71,14 +78,22 @@ export const create = (compiledTripwires: readonly CompiledTripwire[], env: Enti
     // i comandi sono stati eseguiti senza errori, non che il device sia di nuovo sano (es. reboot
     // inviato con successo ma device non ancora tornato raggiungibile) - per questo il lookup, con
     // cui si rivaluta il predicate, arriva ad ogni tentativo invece di essere catturato una volta sola.
+    // Vale anche il verso opposto: a decidere se il tentativo è riuscito è solo il predicate, mai
+    // l'esito dei comandi. Se il device è tornato sano - da solo, o per mano dell'operatore mentre
+    // la pipeline girava - continuare a ritentare fino a `exhausted` significherebbe allarmare per
+    // un device che nel frattempo è online. `ranOk` resta solo per distinguere il caso da segnalare:
+    // pipeline eseguita pulita e predicate ancora falso.
     const runRecoveryFor = (lookup: PredicateLookup): TE.TaskEither<AppError, boolean> =>
       Retry.retryingUntil(
         tripwire.retryPolicy,
         tripwireLogger,
       )(
         pipe(
-          interpretPipeline(tripwire.pipeline)(workflowEnv),
-          TE.map((ranOk) => ({ ranOk, recovered: ranOk && tripwire.predicate(lookup) })),
+          // Il lookup entra nell'env, non solo nel check finale: è quello che permette a un
+          // workflow di attendere il fix (`awaitPredicate`) e quindi a un ramo di `or` di
+          // significare "ha guarito" invece di "i comandi sono andati a buon fine".
+          interpretPipeline(tripwire.pipeline)({ ...workflowEnv, lookup }),
+          TE.map((ranOk) => ({ ranOk, recovered: tripwire.predicate(lookup) })),
           TE.tapIO(({ ranOk, recovered }) =>
             ranOk && !recovered
               ? tripwireLogger.warn("recovery pipeline completed successfully, but predicate is still false")
@@ -99,36 +114,47 @@ export const create = (compiledTripwires: readonly CompiledTripwire[], env: Enti
 
     const machine = TripwireMachine.make(tripwire.graceMs, runRecoveryFor, onTransition);
 
-    return { predicate: tripwire.predicate, machine, logger: tripwireLogger, state: TripwireMachine.initial };
+    let state: TripwireMachine.TripwireState = TripwireMachine.initial;
+    const ref: Machine.StateRef<TripwireMachine.TripwireState> = {
+      get: () => state,
+      set: (next) => {
+        state = next;
+      },
+    };
+
+    return { predicate: tripwire.predicate, machine, logger: tripwireLogger, state: ref };
   });
 
-  const observe = async (lookup: PredicateLookup, now: number): Promise<void> => {
-    for (const instance of instances) {
-      const healthy = instance.predicate(lookup);
-      const result = await Machine.dispatch(instance.machine)(instance.state, {
-        tag: "observe",
-        healthy,
-        now,
-        lookup,
-      })(undefined)();
+  const observeInstance = async (instance: TripwireInstance, lookup: PredicateLookup, now: number): Promise<void> => {
+    const healthy = instance.predicate(lookup);
+    const result = await Machine.dispatchTo(instance.machine)(instance.state)({
+      tag: "observe",
+      healthy,
+      now,
+      lookup,
+    })(undefined)();
 
-      // Err = never per la macchina del tripwire: un vero errore della pipeline è oggi una
-      // transizione fatalError (un Right), non più un Left del dispatch - questo ramo non
-      // dovrebbe più essere raggiungibile, resta solo come rete di sicurezza.
-      if (E.isRight(result)) {
-        instance.state = result.right;
-      } else {
-        instance.logger.error(`dispatch failed unexpectedly: ${format(result.left)}`)();
-      }
-    }
+    // Err = never per la macchina del tripwire: un vero errore della pipeline è oggi una
+    // transizione fatalError (un Right), non più un Left del dispatch - questo ramo non
+    // dovrebbe più essere raggiungibile, resta solo come rete di sicurezza. Lo stato lo
+    // scrive `dispatchTo`, qui non c'è nulla da assegnare.
+    if (E.isLeft(result)) instance.logger.error(`dispatch failed unexpectedly: ${format(result.left)}`)();
+  };
+
+  // I tripwire di una stessa entità sono indipendenti: osservati insieme, mai in sequenza -
+  // aspettare il primo significherebbe congelare gli altri per tutta la durata della sua
+  // pipeline di recovery. La promise si risolve a quiescenza (pipeline incluse); chi non può
+  // permettersi di aspettarla - il tick loop - non la attende (vedi ./runner.ts).
+  const observe = async (lookup: PredicateLookup, now: number): Promise<void> => {
+    await Promise.all(instances.map((instance) => observeInstance(instance, lookup, now)));
   };
 
   const reset = (tripwireIndex: number): boolean => {
     const instance = instances[tripwireIndex];
     if (!instance) return false;
 
-    const previous = instance.state;
-    instance.state = TripwireMachine.initial;
+    const previous = instance.state.get();
+    instance.state.set(TripwireMachine.initial);
     if (previous.tag !== "healthy") env.onStatus?.(tripwireIndex, TripwireMachine.initial);
     return true;
   };

@@ -24,7 +24,6 @@
 
 ### Candybox
 - [X] Suitest Public API client (auth, reboot, power on/off)
-- [ ] Candybox recovery workflow: detect -> wait grace period -> reboot (smartplug) -> verify reachability
 
 ### Android Camera
 - [X] ADB over TCP client
@@ -68,16 +67,20 @@
 ## v0.2.0
 
 ### Service
+- [X] Web: Dashboard, Controls & Settings 
 - [ ] Docker/PM2 per ambiente production
 
 ### Candybox
 - [ ] Shared-host failure detection: se tutti i device appartenenti allo stesso Candybox risultano OFFLINE, riavvia del Candybox
+- [ ] Candybox recovery workflow: detect -> wait grace period -> reboot (smartplug) -> verify reachability
 
 ### Android Camera
 
 - [ ] Workflow / scripting engine
   - [ ] Coordinate relative per inputTap: supportare coordinate normalizzate (`0.0–1.0`) oltre a quelle assolute
   - [ ] Sistema di predicati/guard per l'esecuzione condizionale dei comandi in un workflow
+    - [X] Comando awaitPredicate: attende che un'espressione di predicati diventi vera (timeout = comando fallito), così l'esito di un ramo di pipeline significa "ha guarito" e non "i comandi sono andati a buon fine" - senza, un `or` non escala mai
+    - [ ] Guard veri e propri: eseguire/saltare un blocco di comandi in base a un'espressione di predicati
 - [ ] Comando ensureOrientation: forza uno specifico orientamento (es. ensureOrientation(Landscape))
 - [X] Comando wait/sleep nella config workflow (per tap-scripting e timing)
 - [ ] Comando wakeUp dovrebbe controllare lo schermo prima di mandare lo swipe

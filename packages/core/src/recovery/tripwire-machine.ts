@@ -12,11 +12,20 @@ import * as Machine from "../state-machine/machine";
 // così ogni cambio di stato passa dallo stesso canale (`onTransition`), mai un side-channel
 // che può arrivare fuori ordine. `exhausted`/`fatalError` sono terminali finché il predicate
 // non torna vero da solo o non arriva un reset esplicito (intervento manuale).
+//
+// `recovering` significa "un tentativo è in volo", non "il predicate è falso": è l'unico stato
+// che descrive un effetto in corso invece di una constatazione, e per questo nessuna
+// osservazione lo interrompe - nemmeno una sana. Solo l'esito del tentativo chiude l'episodio.
+// Senza questa regola un predicate che flappa durante una pipeline lunga (recovering ->
+// healthy -> pending -> grace scaduta -> recovering) lancerebbe un secondo tentativo mentre il
+// primo è ancora in esecuzione: due reboot veri sullo stesso device.
 
 export type TripwireState =
   | { readonly tag: "healthy" }
   | { readonly tag: "pending"; readonly since: number }
-  | { readonly tag: "recovering" }
+  // `since` è l'istante di avvio del tentativo e, insieme, la sua identità: l'esito che arriva
+  // deve dichiarare a quale tentativo si riferisce (vedi `RecoveryOutcome.attempt`).
+  | { readonly tag: "recovering"; readonly since: number }
   | { readonly tag: "exhausted" }
   | { readonly tag: "fatalError"; readonly error: AppError };
 
@@ -31,37 +40,54 @@ export interface Observe {
 
 // Esito di un tentativo di recovery, ridispatchato come evento (mai un side-channel): un
 // `Left` vero della pipeline (errore di configurazione/bug, non un tentativo fallito) diventa
-// `fatalError` invece di essere silenziosamente inghiottito.
+// `fatalError` invece di essere silenziosamente inghiottito. `attempt` è l'identità del
+// tentativo che l'ha prodotto (= `recovering.since`): un esito che non corrisponde al tentativo
+// in corso è l'eco di un episodio già chiuso - tipicamente da un reset manuale arrivato mentre
+// la pipeline era ancora in volo - e va ignorato, non applicato allo stato attuale.
 export type RecoveryOutcome =
-  | { readonly tag: "recoveryOutcome"; readonly outcome: "succeeded" }
-  | { readonly tag: "recoveryOutcome"; readonly outcome: "exhausted" }
-  | { readonly tag: "recoveryOutcome"; readonly outcome: "fatalError"; readonly error: AppError };
+  | { readonly tag: "recoveryOutcome"; readonly attempt: number; readonly outcome: "succeeded" }
+  | { readonly tag: "recoveryOutcome"; readonly attempt: number; readonly outcome: "exhausted" }
+  | {
+      readonly tag: "recoveryOutcome";
+      readonly attempt: number;
+      readonly outcome: "fatalError";
+      readonly error: AppError;
+    };
 
 export type Event = Observe | RecoveryOutcome;
 
 export interface RunRecovery {
   readonly tag: "runRecovery";
+  readonly attempt: number;
   readonly lookup: PredicateLookup;
 }
+
+// Traduce l'esito nello stato che ne consegue - separato dal match principale, che ha già il
+// suo lavoro: decidere *se* questo esito è ancora pertinente.
+const applyOutcome = (outcome: RecoveryOutcome): Machine.Transition<TripwireState, RunRecovery> =>
+  match<RecoveryOutcome, Machine.Transition<TripwireState, RunRecovery>>(outcome)
+    .with({ outcome: "succeeded" }, () => Machine.transition(initial))
+    .with({ outcome: "exhausted" }, () => Machine.transition({ tag: "exhausted" }))
+    .with({ outcome: "fatalError", error: P.select() }, (error) => Machine.transition({ tag: "fatalError", error }))
+    .exhaustive();
 
 export const reduce =
   (graceMs: number): Machine.Reducer<TripwireState, Event, RunRecovery> =>
   (state, event) =>
     match<[TripwireState, Event], Machine.Transition<TripwireState, RunRecovery>>([state, event])
-      // Esito di un tentativo - solo da `recovering` (unico stato da cui parte `runRecovery`);
-      // l'arm jolly sotto copre un `recoveryOutcome` da un altro stato (non dovrebbe accadere,
-      // ma tiene il match totale senza indebolire i tre casi sopra).
-      .with([{ tag: "recovering" }, { tag: "recoveryOutcome", outcome: "succeeded" }], () =>
-        Machine.transition(initial),
-      )
-      .with([{ tag: "recovering" }, { tag: "recoveryOutcome", outcome: "exhausted" }], () =>
-        Machine.transition({ tag: "exhausted" }),
-      )
-      .with([{ tag: "recovering" }, { tag: "recoveryOutcome", outcome: "fatalError", error: P.select() }], (error) =>
-        Machine.transition({ tag: "fatalError", error }),
+      // Esito di un tentativo, applicato solo se è quello in corso: `recovering` è l'unico stato
+      // da cui parte un `runRecovery`, e l'identità distingue il tentativo attuale da uno
+      // precedente il cui esito arriva in ritardo.
+      .with([{ tag: "recovering" }, { tag: "recoveryOutcome" }], ([current, outcome]) =>
+        current.since === outcome.attempt ? applyOutcome(outcome) : Machine.transition(current),
       )
       .with([P._, { tag: "recoveryOutcome" }], ([current]) => Machine.transition(current))
-      // Un'osservazione sana riporta sempre a healthy, da qualunque stato (self-healing)
+      // Nessuna osservazione interrompe un tentativo in volo, nemmeno una sana: l'episodio lo
+      // chiude il suo esito, e la pipeline rivaluta comunque il predicate ad ogni tentativo -
+      // quindi un predicate tornato sano nel frattempo torna come "succeeded", non come un
+      // secondo `runRecovery` in parallelo.
+      .with([{ tag: "recovering" }, { tag: "observe" }], ([current]) => Machine.transition(current))
+      // Un'osservazione sana riporta sempre a healthy, da qualunque altro stato (self-healing)
       .with([P._, { tag: "observe", healthy: true }], () => Machine.transition(initial))
       .with([{ tag: "healthy" }, { tag: "observe", healthy: false, now: P.select() }], (now) =>
         Machine.transition({ tag: "pending", since: now }),
@@ -73,11 +99,8 @@ export const reduce =
         ],
         ({ since, now, lookup }) =>
           now - since >= graceMs
-            ? Machine.transition({ tag: "recovering" }, [{ tag: "runRecovery", lookup }])
+            ? Machine.transition({ tag: "recovering", since: now }, [{ tag: "runRecovery", attempt: now, lookup }])
             : Machine.transition({ tag: "pending", since }),
-      )
-      .with([{ tag: "recovering" }, { tag: "observe", healthy: false }], () =>
-        Machine.transition({ tag: "recovering" }),
       )
       .with([{ tag: "exhausted" }, { tag: "observe", healthy: false }], () => Machine.transition({ tag: "exhausted" }))
       .with(
@@ -103,8 +126,12 @@ export const makeHandler =
       pipe(
         runRecovery(command.lookup),
         TE.match(
-          (error): readonly Event[] => [{ tag: "recoveryOutcome", outcome: "fatalError", error }],
-          (succeeded): readonly Event[] => [{ tag: "recoveryOutcome", outcome: succeeded ? "succeeded" : "exhausted" }],
+          (error): readonly Event[] => [
+            { tag: "recoveryOutcome", attempt: command.attempt, outcome: "fatalError", error },
+          ],
+          (succeeded): readonly Event[] => [
+            { tag: "recoveryOutcome", attempt: command.attempt, outcome: succeeded ? "succeeded" : "exhausted" },
+          ],
         ),
       ),
     );

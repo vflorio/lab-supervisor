@@ -14,11 +14,7 @@ export const Default: Story = {
   args: {
     value: {
       name: "wake_and_check",
-      commands: [
-        { type: "wakeUp" },
-        { type: "waitForDevice" },
-        { type: "sleep", duration: "2s" },
-      ],
+      commands: [{ type: "wakeUp" }, { type: "waitForDevice" }, { type: "sleep", duration: "2s" }],
     } as Workflow,
     schema: COMMAND_SCHEMA,
   },

@@ -75,6 +75,16 @@ export const start = (
         await runnerFor(entityId).observe(lookupFor(entityId), now());
       };
 
+      // Osservazione detached: `observe` resta in volo per tutta la durata di un'eventuale
+      // pipeline di recovery, e nessuno dei due chiamanti (feed e tick) può permettersi di
+      // aspettarla. Il catch non è difensivo per abitudine: una promise rejected qui
+      // ucciderebbe silenziosamente il loop che la lancia.
+      const observeDetached = (entityId: string): void => {
+        void observeEntity(entityId).catch((error) =>
+          env.logger.error(`Recovery policy "${policy.label}": observe failed - ${format(error)}`)(),
+        );
+      };
+
       const applyEntry = (entry: PredicateEntry): void => {
         if (entry.domain !== policy.domain) return;
 
@@ -89,9 +99,7 @@ export const start = (
         if (entry.domain !== policy.domain) return;
 
         applyEntry(entry);
-        void observeEntity(entry.entityId).catch((error) =>
-          env.logger.error(`Recovery policy "${policy.label}": observe failed - ${format(error)}`)(),
-        );
+        observeDetached(entry.entityId);
       });
 
       const tickLoop = TaskRunner.create({
@@ -99,8 +107,14 @@ export const start = (
         descriptor: env.descriptor,
         policy: env.tickPolicy,
         loopStream: env.loopStream,
+        // Il tick è l'unico meccanismo che fa scattare un grace ormai scaduto: il predicate
+        // feed emette solo sui cambi di valore, quindi un predicate rimasto falso non produce
+        // più nulla dopo il primo fatto. Per questo le osservazioni non vengono attese -
+        // attenderle bloccherebbe il tick per tutta la durata di una pipeline di recovery
+        // (minuti), congelando proprio il timer che deve farla scattare, oltre alle altre
+        // entità della stessa policy. Ri-osservare un tripwire già in `recovering` è un no-op.
         onTick: async () => {
-          for (const entityId of factsByEntity.keys()) await observeEntity(entityId);
+          for (const entityId of factsByEntity.keys()) observeDetached(entityId);
           return E.right(undefined);
         },
       });

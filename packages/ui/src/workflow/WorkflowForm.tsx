@@ -1,31 +1,27 @@
 import { Add } from "@mui/icons-material";
 import { Button, Stack, TextField } from "@mui/material";
-import type { DurationString } from "@supervisor/core/date-time";
 import type { CommandSchema } from "@supervisor/core/workflow/codec";
 import type { Command, Workflow } from "@supervisor/core/workflow/workflow";
 import { DomainSortable } from "../misc/DomainSortable";
 import { moveAt, removeAt } from "../misc/sortable";
-import { CommandForm } from "./CommandForm";
+import type { PredicateOption } from "../predicates/PredicateRefPicker";
+import { CommandForm, commandFor } from "./CommandForm";
 
 export interface WorkflowFormProps {
   readonly value: Workflow;
   readonly onChange: (next: Workflow) => void;
   readonly schema: readonly CommandSchema[];
+  readonly predicateOptions?: readonly PredicateOption[];
 }
 
 const defaultCommand = (schema: readonly CommandSchema[]): Command => {
   const first = schema[0];
   if (!first) return { type: "reboot" } as unknown as Command; // unreachable con schema non vuoto
 
-  const record: Record<string, unknown> = { type: first.type };
-  for (const field of first.fields) {
-    record[field.key] =
-      field.kind === "coords" ? { x: 0, y: 0 } : field.kind === "duration" ? ("0ms" as DurationString) : "";
-  }
-  return record as unknown as Command;
+  return commandFor(schema, first.type);
 };
 
-export function WorkflowForm({ value, onChange, schema }: WorkflowFormProps) {
+export function WorkflowForm({ value, onChange, schema, predicateOptions }: WorkflowFormProps) {
   const updateCommand = (index: number, command: Command) =>
     onChange({ ...value, commands: value.commands.map((c, i) => (i === index ? command : c)) });
 
@@ -62,7 +58,12 @@ export function WorkflowForm({ value, onChange, schema }: WorkflowFormProps) {
               py: 2,
             }}
           >
-            <CommandForm value={command} schema={schema} onChange={(next) => updateCommand(index, next)} />
+            <CommandForm
+              value={command}
+              schema={schema}
+              predicateOptions={predicateOptions}
+              onChange={(next) => updateCommand(index, next)}
+            />
             <DomainSortable
               index={index}
               length={value.commands.length}

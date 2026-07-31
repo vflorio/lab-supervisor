@@ -171,6 +171,64 @@ describe("recovery/runner", () => {
     expect(fired).toEqual([]);
   });
 
+  // Il tick è l'unico a poter far scattare un grace scaduto (il predicate feed emette solo sui
+  // cambi di valore): se aspettasse le osservazioni, una pipeline di recovery in corso su e1 lo
+  // congelerebbe, e il grace di e2 - già scaduto - non scatterebbe mai.
+  it("keeps ticking for the other entities while a recovery pipeline is in flight", async () => {
+    const fired: string[] = [];
+    const stream = createPredicateStream();
+    let releaseE1: () => void = () => {};
+    const e1Blocked = new Promise<void>((resolve) => {
+      releaseE1 = resolve;
+    });
+
+    const policy: RecoveryPolicy = {
+      label: "test-policy",
+      domain: "test-domain",
+      tripwires: [
+        {
+          grace: "10ms",
+          predicate: { type: "ref", name: "healthy" },
+          pipeline: { type: "workflow", workflowName: "fix" },
+          retry: [
+            ["constantDelay", "1ms"],
+            ["limitRetries", 1],
+          ],
+        },
+      ],
+    };
+
+    const result = Runner.start(policy, {
+      logger: noopLogger as any,
+      stream,
+      workflows: [{ name: "fix", commands: [{ type: "wakeUp" }] }],
+      capabilitiesFor: (entityId) => ({
+        ...noopCapabilities(),
+        wakeUp: () =>
+          TE.fromTask(async () => {
+            fired.push(entityId);
+            if (entityId === "e1") await e1Blocked; // la recovery di e1 non finisce mai, da sola
+          }),
+      }),
+      tickPolicy: Retry.constantDelay(5),
+      descriptor: { id: "recovery-test", label: "recovery-test", policyLabel: "constant 5ms" },
+    });
+
+    expect(E.isRight(result)).toBe(true);
+    if (E.isLeft(result)) return;
+
+    stream.emit({ domain: "test-domain", entityId: "e1", name: "healthy", value: false });
+    await sleep(30); // e1 è ora appesa dentro la propria pipeline
+
+    stream.emit({ domain: "test-domain", entityId: "e2", name: "healthy", value: false });
+    await sleep(60); // il fatto porta e2 solo a `pending`: a farla scattare deve essere il tick
+
+    releaseE1();
+    result.right.stop();
+
+    expect(fired).toContain("e2");
+  });
+
   it("fails fast when the policy's retry config is malformed", () => {
     const stream = createPredicateStream();
     const policy: RecoveryPolicy = {

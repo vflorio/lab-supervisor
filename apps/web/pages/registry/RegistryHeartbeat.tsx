@@ -29,7 +29,12 @@ export function RegistryHeartbeatView() {
 
   return (
     <Box sx={{ maxHeight: "calc(100vh - 64px)", overflowY: "auto" }}>
-      <ServiceStrip connection={loops.status} loops={Array.from(loops.table.values()).map(toLoopWidgetProps)} />
+      <ServiceStrip
+        connection={loops.status}
+        loops={Array.from(loops.table.values())
+          .toSorted((a, b) => a.label.localeCompare(b.label))
+          .map(toLoopWidgetProps)}
+      />
       {match(registry)
         .with({ ok: true }, ({ data }) => <RegistryBody db={data} adbDevices={liveAdbDevices} workflows={workflows} />)
         .with({ ok: false }, ({ error }) => <Alert severity="error">Registry error: {error.message}</Alert>)

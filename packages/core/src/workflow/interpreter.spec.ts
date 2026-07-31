@@ -116,6 +116,69 @@ describe("workflow interpreter", () => {
     expect(E.isLeft(result)).toBe(true);
   });
 
+  it("awaitPredicate resolves immediately when the expression is already true", async () => {
+    const env: Interpreter.WorkflowEnv = { ...noopEnv(), lookup: () => true };
+
+    const workflow: Workflow.Workflow = {
+      name: "await-wf",
+      commands: [{ type: "awaitPredicate", expr: { type: "ref", name: "camera_connected" }, timeout: "2s" }],
+    };
+
+    const start = Date.now();
+    const result = await Interpreter.interpretWorkflow(workflow)(env)();
+
+    expect(E.isRight(result)).toBe(true);
+    expect(Date.now() - start).toBeLessThan(500);
+  });
+
+  // Il caso che dà senso al comando: i fatti li aggiorna un tracker, non il workflow - il
+  // lookup va quindi riletto ad ogni giro, non catturato all'avvio.
+  it("awaitPredicate re-reads the lookup and resolves when the fact flips while polling", async () => {
+    let connected = false;
+    const env: Interpreter.WorkflowEnv = { ...noopEnv(), lookup: () => connected };
+    setTimeout(() => {
+      connected = true;
+    }, 20);
+
+    const workflow: Workflow.Workflow = {
+      name: "await-wf",
+      commands: [{ type: "awaitPredicate", expr: { type: "ref", name: "camera_connected" }, timeout: "100ms" }],
+    };
+
+    const result = await Interpreter.interpretWorkflow(workflow)(env)();
+    expect(E.isRight(result)).toBe(true);
+  });
+
+  it("awaitPredicate fails when the expression is still false at the timeout", async () => {
+    const env: Interpreter.WorkflowEnv = { ...noopEnv(), lookup: () => false };
+
+    const workflow: Workflow.Workflow = {
+      name: "await-wf",
+      commands: [{ type: "awaitPredicate", expr: { type: "ref", name: "camera_connected" }, timeout: "60ms" }],
+    };
+
+    const start = Date.now();
+    const result = await Interpreter.interpretWorkflow(workflow)(env)();
+
+    expect(E.isLeft(result)).toBe(true);
+    expect(Date.now() - start).toBeGreaterThanOrEqual(60);
+  });
+
+  it("awaitPredicate fails fast when the env carries no lookup, instead of waiting out the timeout", async () => {
+    const env = noopEnv();
+
+    const workflow: Workflow.Workflow = {
+      name: "await-wf",
+      commands: [{ type: "awaitPredicate", expr: { type: "ref", name: "camera_connected" }, timeout: "10s" }],
+    };
+
+    const start = Date.now();
+    const result = await Interpreter.interpretWorkflow(workflow)(env)();
+
+    expect(E.isLeft(result)).toBe(true);
+    expect(Date.now() - start).toBeLessThan(500);
+  });
+
   it("sleep pauses for the given duration without touching capabilities", async () => {
     const env = noopEnv();
 

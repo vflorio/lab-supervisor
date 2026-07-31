@@ -1,23 +1,37 @@
 import { Stack, TextField } from "@mui/material";
 import type { DurationString } from "@supervisor/core/date-time";
+import type { PredicateExpression } from "@supervisor/core/predicates/expression";
 import type { CommandSchema } from "@supervisor/core/workflow/codec";
 import type { Command } from "@supervisor/core/workflow/workflow";
 import { match } from "ts-pattern";
 import { DurationForm } from "../duration/DurationForm";
-import { FieldLabel } from "../misc/FieldLabel";
 import { NumberField } from "../misc/number-field/NumberField";
+import { PredicateExpressionForm } from "../predicates/PredicateExpressionForm";
+import type { PredicateOption } from "../predicates/PredicateRefPicker";
 import { CommandTypePicker } from "./CommandTypePicker";
 
 export interface CommandFormProps {
   readonly value: Command;
   readonly onChange: (next: Command) => void;
   readonly schema: readonly CommandSchema[];
+  // Solo per i campi `kind: "predicate"` (awaitPredicate) - assente altrove, resta una lista vuota
+  readonly predicateOptions?: readonly PredicateOption[];
 }
 
-const defaultFieldValue = (kind: CommandSchema["fields"][number]["kind"]): unknown =>
-  kind === "duration" ? ("0ms" as DurationString) : kind === "coords" ? { x: 0, y: 0 } : "";
+const DEFAULT_EXPRESSION: PredicateExpression = { type: "ref", name: "" };
 
-const commandFor = (schema: readonly CommandSchema[], type: string): Command => {
+const defaultFieldValue = (kind: CommandSchema["fields"][number]["kind"]): unknown =>
+  match(kind)
+    .with("duration", () => "0ms" as DurationString)
+    .with("coords", () => ({ x: 0, y: 0 }))
+    .with("predicate", () => DEFAULT_EXPRESSION)
+    .with("string", () => "")
+    .exhaustive();
+
+// Comando vuoto ma valido per un tipo: ogni campo prende il default della propria `kind`.
+// Esportato perché anche WorkflowForm crea comandi (nuovo step) e i default vanno decisi in un
+// posto solo - una `kind` nuova dimenticata da un lato produrrebbe un comando non decodificabile.
+export const commandFor = (schema: readonly CommandSchema[], type: string): Command => {
   const found = schema.find((s) => s.type === type) ?? schema[0];
   if (!found) return { type } as unknown as Command;
 
@@ -26,7 +40,7 @@ const commandFor = (schema: readonly CommandSchema[], type: string): Command => 
   return record as unknown as Command;
 };
 
-export function CommandForm({ value, onChange, schema }: CommandFormProps) {
+export function CommandForm({ value, onChange, schema, predicateOptions = [] }: CommandFormProps) {
   const commandSchema = schema.find((s) => s.type === value.type);
   const record = value as unknown as Record<string, unknown>;
   const setField = (key: string, next: unknown) => onChange({ ...record, [key]: next } as unknown as Command);
@@ -43,6 +57,14 @@ export function CommandForm({ value, onChange, schema }: CommandFormProps) {
               label={field.label}
               value={typeof raw === "string" ? (raw as DurationString) : "0ms"}
               onChange={(next) => setField(field.key, next)}
+            />
+          ))
+          .with({ kind: "predicate" }, () => (
+            <PredicateExpressionForm
+              key={field.key}
+              value={(raw as PredicateExpression | undefined) ?? DEFAULT_EXPRESSION}
+              onChange={(next) => setField(field.key, next)}
+              predicateOptions={predicateOptions}
             />
           ))
           .with({ kind: "coords" }, () => {

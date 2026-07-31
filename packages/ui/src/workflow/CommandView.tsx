@@ -1,8 +1,10 @@
 import { Chip, Stack, Typography } from "@mui/material";
 import type { DurationString } from "@supervisor/core/date-time";
+import type { PredicateExpression } from "@supervisor/core/predicates/expression";
 import type { CommandSchema } from "@supervisor/core/workflow/codec";
 import type { Command } from "@supervisor/core/workflow/workflow";
 import { DurationView } from "../duration/DurationView";
+import { PredicateExpressionView } from "../predicates/PredicateExpressionView";
 
 export interface CommandViewProps {
   readonly value: Command;
@@ -29,16 +31,13 @@ export function CommandView({ value, schema }: CommandViewProps) {
         py: 0.75,
       }}
     >
-      <Chip
-        label={value.type}
-        size="small"
-        color="primary"
-        variant="outlined"
-        sx={{ height: 18 }}
-      />
+      <Chip label={value.type} size="small" color="primary" variant="outlined" sx={{ height: 18 }} />
       {fields.map((field) => {
         const raw = record[field.key];
         if (field.kind === "duration") return <DurationView key={field.key} value={raw as DurationString} />;
+        if (field.kind === "predicate") {
+          return <PredicateExpressionView key={field.key} value={raw as PredicateExpression} />;
+        }
         if (field.kind === "coords") {
           const coords = raw as { x: number; y: number };
           return (

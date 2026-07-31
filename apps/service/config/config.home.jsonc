@@ -45,7 +45,8 @@
       [
         // TODO: Questa dovrebbe controllare perché altrimenti manda uno scroll
         ["wakeUp"],
-        ["ensureActivity", "com.android.chrome", "com.google.android.apps.chrome.Main"]
+        ["ensureActivity", "com.android.chrome", "com.google.android.apps.chrome.Main"],
+        ["run", "open-developer-settings"]
       ]
     ],
     [
@@ -57,7 +58,17 @@
         ["ensureActivity", "com.android.chrome", "com.google.android.apps.chrome.Main"]
       ]
     ],
-    ["open-developer-settings", [["wakeUp"], ["openDeveloperSettings"]]]
+    ["open-developer-settings", [["wakeUp"], ["openDeveloperSettings"]]],
+
+    // Varianti "verified" per le pipeline di recovery: stesso workflow + attesa della conferma
+    // dai predicati. Senza, l'esito di un ramo direbbe solo "i comandi ADB non hanno fallito" e
+    // l'`or` non escalerebbe mai (ensureActivity riesce anche con l'app che non si connette).
+    // Il timeout deve superare tracking.suitestCamera (30s), altrimenti si giudica su dati stale.
+    ["open-chrome-verified", [["run", "open-chrome"], ["awaitPredicate", ["ref", "suitest_camera_connected"], "45s"]]],
+    [
+      "open-chrome-reboot-verified",
+      [["run", "open-chrome-reboot"], ["awaitPredicate", ["ref", "suitest_camera_connected"], "60s"]]
+    ]
   ],
 
   "recovery": [
@@ -70,13 +81,16 @@
           "grace": "10s",
           // Cosa osservare
           "predicate": ["ref", "suitest_camera_connected"],
-          // Cosa fare quando il predicate resta falso per >= grace
-          //"pipeline": ["workflow", "open-chrome-reboot"],
-          "pipeline": ["or", ["workflow", "open-chrome"], ["workflow", "open-chrome-reboot"]],
-          // Cosa fare se la pipeline fallisce (es. crash, timeout, ecc.) il delay deve superare:
-          // - adb.waitForDeviceTimeout (attesa massima di reboot)
-          // - tracking.suitestCamera.polling (polling di aggiornamento dei predicati)
-          "retry": [["constantDelay", "3m"], ["limitRetries", 3]],
+          // Cosa fare quando il predicate resta falso per >= grace. Escalation: prima il
+          // rimedio leggero, poi il reboot - `or` prova il secondo ramo solo se il primo non ha
+          // riportato il predicate a true (è il compito di `awaitPredicate` dentro i workflow
+          // "verified": senza, un ramo "riesce" appena i comandi ADB non falliscono).
+          "pipeline": ["or", ["workflow", "open-chrome-verified"], ["workflow", "open-chrome-reboot-verified"]],
+          // Cosa fare se l'intera escalation non risolve. Ogni tentativo ora aspetta già la
+          // conferma dai predicati al proprio interno (awaitPredicate) e il reboot attende il
+          // device (adb.waitForDeviceTimeout): questo delay è solo respiro tra due escalation
+          // complete, non serve più a coprire il tempo di propagazione dei fatti.
+          "retry": [["constantDelay", "2m"], ["limitRetries", 2]],
           "notify": [
             {
               "type": ["slack"],

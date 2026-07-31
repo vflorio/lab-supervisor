@@ -106,4 +106,34 @@ describe("task-runner", () => {
     expect(statuses).toContain("error");
     expect(statuses).toContain("running");
   });
+
+  // Un throw non catturato dentro onTick usciva da runLoop e finiva assorbito dal TE.tryCatch
+  // di `start`: il loop moriva senza evento Stopped, quindi restava "running" sulla dashboard.
+  it("survives a rejecting tick, reporting it as a failed tick instead of dying", async () => {
+    let ticks = 0;
+    const statuses: string[] = [];
+    const loopStream = createLoopStream();
+    loopStream.subscribe((entry) => statuses.push(entry.status));
+
+    const loop = TaskRunner.create({
+      logger: noopLogger,
+      descriptor,
+      policy: Retry.constantDelay(10),
+      loopStream,
+      onTick: async () => {
+        ticks++;
+        if (ticks === 1) throw new Error("boom");
+        return E.right(undefined);
+      },
+    });
+
+    const done = loop.start();
+    await sleep(25);
+    loop.stop();
+    const result = await done;
+
+    expect(E.isRight(result)).toBe(true);
+    expect(ticks).toBeGreaterThanOrEqual(2);
+    expect(statuses).toContain("error");
+  });
 });

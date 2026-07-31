@@ -1,6 +1,7 @@
 import * as E from "fp-ts/Either";
 import type { DurationString } from "../date-time";
 import { type AppError, of } from "../errors";
+import type { PredicateExpression } from "../predicates/expression";
 
 // Workflow: una sequenza piatta e nominata di comandi. Nessuna policy di retry, nessuna
 // escalation: quella logica vive nel Recovery Model e nella Pipeline che compone più workflow.
@@ -23,7 +24,13 @@ export type Command =
   | { readonly type: "run"; readonly workflowName: string }
   // Pausa fissa, indipendente da qualunque condizione del device (a differenza di wait*) - utile
   // per dare respiro tra due comandi (es. dopo un tap, prima che l'UI finisca di animare)
-  | { readonly type: "sleep"; readonly duration: DurationString };
+  | { readonly type: "sleep"; readonly duration: DurationString }
+  // Attende che un'espressione di predicati applicativi diventi vera. È l'unico comando il cui
+  // esito non dipende dal device ma dai fatti osservati dai tracker: serve a far significare a
+  // un workflow "ha guarito" invece di "i comandi sono andati a buon fine" - senza, l'esito di
+  // un ramo di Pipeline non dice nulla sul problema che doveva risolvere (vedi ./pipeline.ts).
+  // Timeout scaduto = comando fallito, cioè ramo `or` che escala.
+  | { readonly type: "awaitPredicate"; readonly expr: PredicateExpression; readonly timeout: DurationString };
 
 // Un workflow è un nome + una sequenza ordinata di comandi.
 // JSON: ["nome", [command, command, ...]]

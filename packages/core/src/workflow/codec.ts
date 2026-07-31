@@ -2,12 +2,13 @@ import * as E from "fp-ts/Either";
 import * as t from "io-ts";
 import { match } from "ts-pattern";
 import { DurationString } from "../date-time";
+import { PredicateExpressionCodec } from "../predicates/expression-codec";
 import type { Command, Workflow } from "./workflow";
 
 const TapCoordsCodec = t.type({ x: t.number, y: t.number });
 
 // Metadata per la UI: quali comandi esistono e che campi hanno, senza duplicare l'union.
-export type CommandFieldKind = "string" | "duration" | "coords";
+export type CommandFieldKind = "string" | "duration" | "coords" | "predicate";
 
 export interface CommandFieldSchema {
   readonly key: string;
@@ -63,6 +64,14 @@ export const COMMAND_SCHEMA: readonly CommandSchema[] = [
     type: "sleep",
     description: "Attende per la durata indicata",
     fields: [{ key: "duration", label: "duration", kind: "duration" }],
+  },
+  {
+    type: "awaitPredicate",
+    description: "Attende che i predicati osservati confermino il fix (fallisce allo scadere del timeout)",
+    fields: [
+      { key: "expr", label: "predicate", kind: "predicate" },
+      { key: "timeout", label: "timeout", kind: "duration" },
+    ],
   },
 ];
 
@@ -125,6 +134,20 @@ const validateCommand = (u: unknown, c: t.Context): t.Validation<Command> => {
 
       return t.success({ type: "sleep" as const, duration });
     })
+    .with("awaitPredicate", () => {
+      const expr = PredicateExpressionCodec.validate(args[0], [
+        ...c,
+        { key: "[1]", type: PredicateExpressionCodec, actual: args[0] },
+      ]);
+      if (E.isLeft(expr)) return expr as t.Validation<Command>;
+
+      const timeout = args[1];
+      if (!DurationString.is(timeout)) {
+        return t.failure(u, c, "awaitPredicate requires a human-readable timeout (e.g. 30s, 2m)");
+      }
+
+      return t.success({ type: "awaitPredicate" as const, expr: expr.right, timeout });
+    })
     .otherwise(() => t.failure(u, c, `Unknown command: "${name}"`));
 };
 
@@ -141,6 +164,11 @@ const encodeCommand = (cmd: Command): unknown[] =>
     .with({ type: "waitForActivity" }, ({ activity }) => ["waitForActivity", activity])
     .with({ type: "run" }, ({ workflowName }) => ["run", workflowName])
     .with({ type: "sleep" }, ({ duration }) => ["sleep", duration])
+    .with({ type: "awaitPredicate" }, ({ expr, timeout }) => [
+      "awaitPredicate",
+      PredicateExpressionCodec.encode(expr),
+      timeout,
+    ])
     .exhaustive();
 
 // JSON: ["commandName", ...args] -> Command

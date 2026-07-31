@@ -5,6 +5,8 @@ import { match } from "ts-pattern";
 import { durationToMs } from "../date-time";
 import { type AppError, format, of } from "../errors";
 import type { Logger } from "../logger/logger";
+import { compile as compileExpression, type PredicateExpression, type PredicateLookup } from "../predicates/expression";
+import { PredicateExpressionCodec } from "../predicates/expression-codec";
 import type { Command, TapCoords, Workflow } from "../workflow/workflow";
 import { findWorkflow } from "../workflow/workflow";
 
@@ -12,6 +14,11 @@ export interface WorkflowEnv {
   readonly logger: Logger;
   readonly capabilities: CommandCapabilities;
   readonly workflows: readonly Workflow[];
+  // Vista sui fatti applicativi correnti, per il solo comando `awaitPredicate`. Opzionale
+  // perché non ogni contesto ne ha una da offrire: senza, il comando fallisce con un messaggio
+  // esplicito invece di attendere a vuoto un predicate che nessuno aggiornerà mai.
+  // Va letta ad ogni chiamata, non catturata: `awaitPredicate` aspetta proprio che cambi.
+  readonly lookup?: PredicateLookup;
 }
 
 export interface CommandCapabilities {
@@ -48,6 +55,10 @@ const logError =
   ({ logger }) =>
     TE.fromIO(logger.error(message));
 
+// Riusa l'encoder del codec invece di un formatter dedicato: nel log l'espressione appare
+// esattamente come è scritta in config.
+const expressionToString = (expr: PredicateExpression): string => JSON.stringify(PredicateExpressionCodec.encode(expr));
+
 const commandToString = (cmd: Command): string =>
   match(cmd)
     .with({ type: "restartApp" }, ({ packageId }) => `restartApp(${packageId})`)
@@ -61,6 +72,7 @@ const commandToString = (cmd: Command): string =>
     .with({ type: "waitForActivity" }, ({ activity }) => `waitForActivity(${activity})`)
     .with({ type: "run" }, ({ workflowName }) => `run(${workflowName})`)
     .with({ type: "sleep" }, ({ duration }) => `sleep(${duration})`)
+    .with({ type: "awaitPredicate" }, ({ expr, timeout }) => `awaitPredicate(${expressionToString(expr)}, ${timeout})`)
     .exhaustive();
 
 const liftCommand =
@@ -68,9 +80,45 @@ const liftCommand =
   ({ capabilities }) =>
     effect(capabilities);
 
+const delay = (ms: number): TE.TaskEither<never, void> =>
+  TE.fromTask(() => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+
 // Pausa pura: a differenza degli altri comandi, non passa da CommandCapabilities (nessuna
 // interazione col device), non fallisce mai.
-const sleep = (ms: number): Effect<void> => RTE.fromTask(() => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+const sleep = (ms: number): Effect<void> => RTE.fromTaskEither(delay(ms));
+
+// Cadenza di ricontrollo dei fatti: rileggere il lookup è in-memory e non costa nulla (chi
+// aggiorna i fatti è il tracker, al proprio polling) - il bound reale è il timeout del comando,
+// che va quindi dimensionato sul polling del tracker, non su questa costante.
+const AWAIT_PREDICATE_POLL_MS = 1_000;
+
+// A differenza di wait*, non interroga il device: attende che i tracker osservino il mondo
+// cambiato. `deadline` è assoluta, così il tempo speso a valutare non erode il timeout.
+const awaitPredicate =
+  (expr: PredicateExpression, timeoutMs: number): Effect<void> =>
+  ({ lookup }) => {
+    if (!lookup) {
+      return TE.left(
+        workflowError(`awaitPredicate(${expressionToString(expr)}): no predicate lookup available in this context`),
+      );
+    }
+
+    const satisfied = compileExpression(expr);
+    const deadline = Date.now() + timeoutMs;
+
+    const poll = (): TE.TaskEither<WorkflowError, void> => {
+      if (satisfied(lookup)) return TE.right(undefined);
+
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) {
+        return TE.left(workflowError(`awaitPredicate(${expressionToString(expr)}): still false after ${timeoutMs}ms`));
+      }
+
+      return pipe(delay(Math.min(AWAIT_PREDICATE_POLL_MS, remaining)), TE.flatMap(poll));
+    };
+
+    return poll();
+  };
 
 const interpretCommand = (cmd: Command): Effect<void> =>
   pipe(
@@ -97,6 +145,7 @@ const interpretCommand = (cmd: Command): Effect<void> =>
           ),
         )
         .with({ type: "sleep" }, ({ duration }) => sleep(durationToMs(duration)))
+        .with({ type: "awaitPredicate" }, ({ expr, timeout }) => awaitPredicate(expr, durationToMs(timeout)))
         .exhaustive(),
     ),
     RTE.tapError((error) => logError(`  X ${commandToString(cmd)} failed: ${format(error)}`)),

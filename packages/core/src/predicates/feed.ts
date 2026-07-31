@@ -1,3 +1,4 @@
+import type { PredicateLookup } from "./expression";
 import { factKey, type PredicateEntry, type PredicateFact } from "./model";
 
 // In-memory predicate broadcast (fatti di dominio -> subscriber live + tabella corrente).
@@ -17,6 +18,15 @@ export interface PredicateStream extends PredicateFeed {
   // questo è solo un guard difensivo.
   readonly emit: (fact: PredicateFact) => void;
 }
+
+// Vista PredicateLookup su una singola entità del feed. Rilegge lo snapshot ad ogni chiamata
+// invece di catturarne uno: chi la usa (es. il comando `awaitPredicate`) sta proprio aspettando
+// che i fatti cambino sotto di sé.
+export const lookupFor =
+  (feed: PredicateFeed, domain: string, entityId: string): PredicateLookup =>
+  (name) =>
+    feed.snapshot().find((entry) => entry.domain === domain && entry.entityId === entityId && entry.name === name)
+      ?.value;
 
 export const createPredicateStream = (bufferSize = 1000): PredicateStream => {
   const buffer: PredicateEntry[] = [];

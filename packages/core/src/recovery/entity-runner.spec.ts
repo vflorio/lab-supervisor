@@ -1,4 +1,5 @@
 import * as E from "fp-ts/Either";
+import { pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";
 import { describe, expect, it } from "vitest";
 import type * as Interpreter from "../workflow/interpreter";
@@ -51,6 +52,34 @@ const compileOrThrow = (tripwires: readonly RecoveryTripwire[]): readonly Compil
 };
 
 const GRACE = "1s"; // 1000ms
+
+// Gate manuale per tenere una pipeline "in volo" per tutta la durata che serve al test, senza
+// timer: è l'unico modo per esercitare cosa succede *durante* un recovery.
+const gate = () => {
+  let open: () => void = () => {};
+  const opened = new Promise<void>((resolve) => {
+    open = resolve;
+  });
+  return { opened, open: () => open() };
+};
+
+// Lascia avanzare la catena RTE fino al primo punto di attesa reale della pipeline: solo
+// microtask, nessun timer, così il test resta deterministico.
+const flushMicrotasks = async (): Promise<void> => {
+  for (let i = 0; i < 50; i++) await Promise.resolve();
+};
+
+const singleTripwire = (): readonly RecoveryTripwire[] => [
+  {
+    grace: GRACE,
+    predicate: { type: "ref", name: "connected" },
+    pipeline: { type: "workflow", workflowName: "reconnect" },
+    retry: [
+      ["constantDelay", "1ms"],
+      ["limitRetries", 1],
+    ],
+  },
+];
 
 describe("recovery/entity-runner", () => {
   it("does not run recovery before grace has elapsed", async () => {
@@ -252,6 +281,157 @@ describe("recovery/entity-runner", () => {
       tag: "fatalError",
       error: { type: "WorkflowError", message: 'Workflow not found: "does-not-exist"' },
     });
+  });
+
+  // Una pipeline di recovery dura minuti: se lo stato del tripwire avanzasse solo a pipeline
+  // conclusa, ogni osservazione che arriva nel frattempo ripartirebbe da `pending` e, trovando
+  // la grace di nuovo scaduta, lancerebbe un secondo tentativo in parallelo (due reboot veri).
+  it("stays in `recovering` while the pipeline is in flight, instead of starting a second attempt", async () => {
+    const inFlightGate = gate();
+    const calls: string[] = [];
+    const states: string[] = [];
+
+    const runner = EntityRunner.create(compileOrThrow(singleTripwire()), {
+      logger: noopLogger as any,
+      workflows: [{ name: "reconnect", commands: [{ type: "reboot" }] }],
+      capabilities: capabilitiesWith({
+        reboot: () =>
+          TE.fromTask(async () => {
+            calls.push("reboot");
+            await inFlightGate.opened; // il primo tentativo resta appeso finché non lo sblocca il test
+          }),
+      }),
+      onStatus: (_index, state) => states.push(state.tag),
+    });
+
+    const lookup = () => false; // il predicate non torna mai vero
+
+    await runner.observe(lookup, 0); // -> pending
+    const inFlight = runner.observe(lookup, 1000); // -> recovering, la pipeline si blocca sul gate
+    await flushMicrotasks();
+
+    await runner.observe(lookup, 2000); // durante il recovery: no-op, non un secondo tentativo
+    await runner.observe(lookup, 3000);
+    expect(calls).toEqual(["reboot"]);
+    expect(states).toEqual(["pending", "recovering"]);
+
+    inFlightGate.open();
+    await inFlight;
+
+    expect(calls).toEqual(["reboot", "reboot"]); // 1 tentativo + 1 retry: un solo episodio
+    expect(states).toEqual(["pending", "recovering", "exhausted"]);
+  });
+
+  // Un predicate che flappa durante una pipeline lunga: sano, di nuovo falso, grace di nuovo
+  // scaduta. Se un'osservazione sana potesse chiudere l'episodio, il tripwire ripartirebbe da
+  // `healthy` e lancerebbe un secondo tentativo mentre il primo è ancora in esecuzione.
+  it("does not start a second attempt when the predicate flaps during a long recovery", async () => {
+    const inFlightGate = gate();
+    const calls: string[] = [];
+    const states: string[] = [];
+    let connected = false;
+
+    const runner = EntityRunner.create(compileOrThrow(singleTripwire()), {
+      logger: noopLogger as any,
+      workflows: [{ name: "reconnect", commands: [{ type: "reboot" }] }],
+      capabilities: capabilitiesWith({
+        reboot: () =>
+          TE.fromTask(async () => {
+            calls.push("reboot");
+            await inFlightGate.opened;
+          }),
+      }),
+      onStatus: (_index, state) => states.push(state.tag),
+    });
+
+    const lookup = () => connected;
+
+    await runner.observe(lookup, 0); // -> pending
+    const inFlight = runner.observe(lookup, 1000); // -> recovering, pipeline bloccata
+    await flushMicrotasks();
+
+    connected = true;
+    await runner.observe(lookup, 1500); // torna sano...
+    connected = false;
+    await runner.observe(lookup, 2000); // ...e subito dopo di nuovo falso
+    await runner.observe(lookup, 4000); // grace ampiamente scaduta
+
+    expect(calls).toEqual(["reboot"]); // un solo tentativo in volo, non due in parallelo
+    expect(states).toEqual(["pending", "recovering"]);
+
+    inFlightGate.open();
+    await inFlight;
+  });
+
+  // Lo scenario riportato dal campo: il problema viene risolto mentre la pipeline è ancora in
+  // corso. L'episodio deve chiudersi come sano - a decidere è il predicate, non l'esito dei
+  // comandi - e non lasciare il tripwire in uno stato terminale con il device di nuovo online.
+  it("closes the episode as healthy when the predicate heals while the pipeline is in flight", async () => {
+    const inFlightGate = gate();
+    const states: string[] = [];
+    let connected = false;
+
+    const runner = EntityRunner.create(compileOrThrow(singleTripwire()), {
+      logger: noopLogger as any,
+      workflows: [{ name: "reconnect", commands: [{ type: "reboot" }] }],
+      capabilities: capabilitiesWith({
+        // La pipeline resta appesa e poi fallisce: da sola porterebbe a `exhausted`.
+        reboot: () =>
+          pipe(
+            TE.fromTask(() => inFlightGate.opened),
+            TE.flatMap(() => TE.left({ type: "WorkflowError", message: "boom" } as const)),
+          ),
+      }),
+      onStatus: (_index, state) => states.push(state.tag),
+    });
+
+    const lookup = () => connected;
+
+    await runner.observe(lookup, 0); // -> pending
+    const inFlight = runner.observe(lookup, 1000); // -> recovering, pipeline bloccata
+    await flushMicrotasks();
+
+    connected = true; // l'operatore risolve il problema fisico
+    await runner.observe(lookup, 1500); // resta `recovering`: il tentativo è ancora in volo
+
+    inFlightGate.open();
+    await inFlight; // i comandi falliscono, ma il predicate è tornato vero -> "succeeded"
+
+    expect(states).toEqual(["pending", "recovering", "healthy"]);
+  });
+
+  // L'altro modo di chiudere un episodio mentre la pipeline gira: il riarmo manuale. L'esito
+  // che arriva dopo appartiene a un tentativo che non è più quello corrente e va ignorato,
+  // altrimenti un `exhausted` tardivo disferebbe il reset appena fatto dall'operatore.
+  it("does not let a late recovery outcome undo a manual reset", async () => {
+    const inFlightGate = gate();
+    const states: string[] = [];
+
+    const runner = EntityRunner.create(compileOrThrow(singleTripwire()), {
+      logger: noopLogger as any,
+      workflows: [{ name: "reconnect", commands: [{ type: "reboot" }] }],
+      capabilities: capabilitiesWith({
+        reboot: () =>
+          pipe(
+            TE.fromTask(() => inFlightGate.opened),
+            TE.flatMap(() => TE.left({ type: "WorkflowError", message: "boom" } as const)),
+          ),
+      }),
+      onStatus: (_index, state) => states.push(state.tag),
+    });
+
+    const lookup = () => false; // il predicate resta falso per tutto il test
+
+    await runner.observe(lookup, 0); // -> pending
+    const inFlight = runner.observe(lookup, 1000); // -> recovering, pipeline bloccata
+    await flushMicrotasks();
+
+    expect(runner.reset(0)).toBe(true); // l'operatore riarma il tripwire
+
+    inFlightGate.open();
+    await inFlight; // l'esito ("exhausted") arriva ora, ma riferito a un episodio già chiuso
+
+    expect(states).toEqual(["pending", "recovering", "healthy"]);
   });
 
   it("runs independent tripwires independently, based on each tripwire's own predicate and grace", async () => {
