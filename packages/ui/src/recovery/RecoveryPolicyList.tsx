@@ -6,6 +6,7 @@ import type { PolicyStepSchema } from "@supervisor/core/retry/codec";
 import { useEffect, useState } from "react";
 import type { FactOption } from "../fact/FactRefPicker";
 import { DomainCardAccordion } from "../misc/DomainCardAccordion";
+import { useExpanded } from "../misc/useExpanded";
 import { RecoveryPolicyForm } from "./RecoveryPolicyForm";
 import { TripwireView } from "./TripwireView";
 import { TripwireWizard } from "./TripwireWizard";
@@ -42,20 +43,12 @@ export function RecoveryPolicyList({
   onCreate,
   focusLabel,
 }: RecoveryPolicyListProps) {
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const { isExpanded, toggle, expand } = useExpanded();
   const [wizardFor, setWizardFor] = useState<string | null>(null);
 
   useEffect(() => {
-    if (focusLabel) setExpanded((prev) => new Set(prev).add(focusLabel));
+    if (focusLabel) expand(focusLabel);
   }, [focusLabel]);
-
-  const toggle = (label: string) =>
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(label)) next.delete(label);
-      else next.add(label);
-      return next;
-    });
 
   const wizardPolicy = policies.find((p) => p.label === wizardFor);
 
@@ -88,7 +81,7 @@ export function RecoveryPolicyList({
               </>
             }
             trailing={<Chip label={`${policy.tripwires.length} tripwires`} size="small" sx={{ height: 18 }} />}
-            expanded={expanded.has(policy.label)}
+            expanded={isExpanded(policy.label)}
             onToggle={() => toggle(policy.label)}
           >
             {editing ? (
@@ -108,7 +101,7 @@ export function RecoveryPolicyList({
                     { key: "label", value: policy.label },
                   ].map((field) => (
                     <Box key={field.key} sx={fieldBox}>
-                      <Typography variant="monoLabel" sx={{ color: "textSecondary", mb: 0.5 }}>
+                      <Typography variant="monoLabel" sx={{ color: "textSecondary" }} component="div">
                         {field.key}
                       </Typography>
                       <Typography variant="monoTitle">{field.value}</Typography>

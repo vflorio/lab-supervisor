@@ -1,7 +1,8 @@
 import type { SxProps, Theme } from "@mui/material";
 import { Box } from "@mui/material";
 import type { ElementType, ReactNode, PointerEvent as ReactPointerEvent } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { usePersistedState } from "./usePersistedState";
 
 export interface ResizablePanelProps {
   readonly handleSide: "left" | "right";
@@ -43,26 +44,15 @@ export function ResizablePanel({
   sx,
   children,
 }: ResizablePanelProps) {
-  const [size, setSize] = useState(defaultSize);
+  const [size, resize] = usePersistedState(storageKey, defaultSize, {
+    serialize: (value) => String(value),
+    deserialize: (raw) => {
+      const stored = Number(raw);
+      return Number.isFinite(stored) && stored >= minSize ? stored : undefined;
+    },
+  });
   const dragRef = useRef<DragState | null>(null);
   const [isActive, setIsActive] = useState(false);
-
-  // Idrata la dimensione persistita solo dopo il mount (mai durante l'SSR): il primo render
-  // deve combaciare esattamente con l'HTML del server (defaultSize), altrimenti React segnala
-  // un hydration mismatch - l'eventuale valore salvato viene applicato subito dopo, in un
-  // secondo render.
-  useEffect(() => {
-    const raw = window.localStorage.getItem(storageKey);
-    if (raw === null) return;
-
-    const stored = Number(raw);
-    if (Number.isFinite(stored) && stored >= minSize) setSize(stored);
-  }, [storageKey, minSize]);
-
-  const resize = (next: number) => {
-    setSize(next);
-    window.localStorage.setItem(storageKey, String(next));
-  };
 
   const startDragging = (event: ReactPointerEvent<HTMLElement>) => {
     event.preventDefault();

@@ -14,7 +14,7 @@ export function SuitestDeviceInUseView({ value, by }: SuitestDeviceInUseViewProp
     value === undefined
       ? ["disabled", "unknown"]
       : value
-        ? ["warning", by ? `in use by ${by}` : "in use"]
+        ? ["warning", by ? `${by}` : "in use"]
         : ["disabled", "available"];
 
   return <IndicatorStat label="IN USE" value={text} tone={tone} />;

@@ -10,7 +10,6 @@ import { LogRow } from "./LogRow";
 
 const VIEWPORT_BG = "#0a0c0e";
 const DEFAULT_ROW_HEIGHT = 20;
-const SHOULD_STICK_TO_BOTTOM = true;
 
 export interface LogViewportProps {
   readonly status: ServiceStatus;
@@ -35,17 +34,14 @@ export function LogViewport({
   showTag,
   rowHeightKey,
 }: LogViewportProps) {
-  // useDynamicRowHeight tiene una cache altezza-per-indice, non per entry: quando i filtri
-  // cambiano, l'insieme visibile viene ricomposto e gli stessi indici puntano a entry diverse
-  // (spesso di lunghezza diversa) rispetto a quando sono state misurate, con conseguenti righe
-  // troncate/sovrapposte. `rowHeightKey` forza l'hook a scartare la cache stale ogni volta che
-  // cambia il criterio di filtro (non ad ogni nuovo log, che si limita ad accodare in fondo).
-  const dynamicRowHeight = useDynamicRowHeight({ defaultRowHeight: DEFAULT_ROW_HEIGHT, key: rowHeightKey });
-  const { listRef, stuckToBottom, handleRowsRendered, scrollToBottom } = useStickToBottom(
-    filteredEntries,
-    dynamicRowHeight,
-    SHOULD_STICK_TO_BOTTOM,
-  );
+  // La cache di useDynamicRowHeight è per indice, non per entry: al cambio di filtro gli stessi
+  // indici puntano a entry diverse e le altezze misurate non valgono più. La chiave la scarta.
+  // Timestamp e tag ne fanno parte perché sono prefissi che spostano il punto di a-capo.
+  const dynamicRowHeight = useDynamicRowHeight({
+    defaultRowHeight: DEFAULT_ROW_HEIGHT,
+    key: `${rowHeightKey}|${showTimestamp}|${showTag}`,
+  });
+  const { listRef, stuckToBottom, scrollToBottom } = useStickToBottom();
 
   return (
     <Box sx={{ position: "absolute", inset: 0 }}>
@@ -79,14 +75,16 @@ export function LogViewport({
             rowCount={filteredEntries.length}
             rowHeight={dynamicRowHeight}
             rowComponent={LogRow}
-            rowProps={{ entries: filteredEntries, showTimestamp, showTag }}
+            rowProps={{ entries: filteredEntries, showTimestamp, showTag, setRowHeight: dynamicRowHeight.setRowHeight }}
             rowKey={(index, data) => data.entries[index]!.id}
-            onRowsRendered={handleRowsRendered}
-            style={{ height: "100%", scrollbarGutter: "stable" }}
+            // Senza, i tasti di navigazione non raggiungono la lista.
+            tabIndex={0}
+            // Lo scroll anchoring del browser sposta scrollTop da solo quando il contenuto cresce.
+            style={{ height: "100%", scrollbarGutter: "stable", overflowAnchor: "none" }}
           />
         )}
       </Box>
-      {SHOULD_STICK_TO_BOTTOM && !stuckToBottom && filteredEntries.length > 0 && (
+      {!stuckToBottom && filteredEntries.length > 0 && (
         <Fab
           size="small"
           onClick={scrollToBottom}

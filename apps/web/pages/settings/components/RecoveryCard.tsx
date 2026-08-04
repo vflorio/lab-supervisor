@@ -20,7 +20,7 @@ export function RecoveryCard({ config, onSaved }: { config: Config; onSaved: (ne
     () =>
       Array.from(table.values()).map((entry) => ({
         domain: entry.domain,
-        entityId: entry.entityId, //FIXME: ???
+        entityId: entry.entityId,
         name: entry.name,
       })),
     [table],

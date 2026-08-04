@@ -11,9 +11,9 @@ import { match } from "ts-pattern";
 import { useData } from "vike-react/useData";
 import { type AdbDevice, useAdbDevices } from "../../hooks/useAdbDevices";
 import type { Data } from "../index/+data";
-import { CameraRowContainer } from "./CameraRowContainer";
-import { ControlUnitCardContainer } from "./ControlUnitCardContainer";
-import { TvRowContainer } from "./TvRowContainer";
+import { CameraRowContainer } from "./containers/CameraRowContainer";
+import { ControlUnitCardContainer } from "./containers/ControlUnitCardContainer";
+import { TvRowContainer } from "./containers/TvRowContainer";
 import type { Database } from "./types";
 import { useRegistryController } from "./useRegistryController";
 

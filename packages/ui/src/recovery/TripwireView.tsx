@@ -2,9 +2,9 @@ import { NotificationsActive } from "@mui/icons-material";
 import { Box, Chip, Stack, Typography } from "@mui/material";
 import type { Condition } from "@supervisor/core/fact/condition";
 import type { RecoveryTripwire } from "@supervisor/core/recovery/model";
-import { useState } from "react";
 import { FactExpressionView } from "../fact/FactExpressionView";
 import { DomainCardAccordion } from "../misc/DomainCardAccordion";
+import { useExpanded } from "../misc/useExpanded";
 import { NotifyRuleView } from "../notify/NotifyRuleView";
 import { PipelineView } from "../pipeline/PipelineView";
 import { RetryPolicyView } from "../retry-policy/RetryPolicyView";
@@ -27,7 +27,7 @@ export interface TripwireViewProps {
 }
 
 export function TripwireView({ tripwire, index }: TripwireViewProps) {
-  const [expanded, setExpanded] = useState(false);
+  const { isExpanded, toggle } = useExpanded();
 
   return (
     <DomainCardAccordion
@@ -43,8 +43,8 @@ export function TripwireView({ tripwire, index }: TripwireViewProps) {
           <Chip label={predicateSummary(tripwire.predicate)} size="small" color="success" sx={{ height: 18 }} />
         </>
       }
-      expanded={expanded}
-      onToggle={() => setExpanded((v) => !v)}
+      expanded={isExpanded("tripwire")}
+      onToggle={() => toggle("tripwire")}
     >
       <Stack sx={{ gap: 2 }}>
         <Box>

@@ -1,8 +1,8 @@
 import { TvRow } from "@supervisor/ui/registry/index";
+import { toTvEntry, useTvRowData } from "../rowData";
+import type { TvGroup } from "../types";
+import type { RegistryController } from "../useRegistryController";
 import { CameraRowContainer } from "./CameraRowContainer";
-import { toTvEntry, useTvRowData } from "./rowData";
-import type { TvGroup } from "./types";
-import type { RegistryController } from "./useRegistryController";
 
 type Controller = Pick<
   RegistryController,
@@ -34,7 +34,7 @@ export function TvRowContainer({
       onToggle={() => controller.handleToggle("tv", group.tv.deviceId, group.tv.controlled)}
       onEdit={() => controller.startEdit("tv", group.tv.deviceId, group.tv.label)}
       onDelete={() => controller.handleDelete("tv", group.tv.deviceId)}
-      onLinkCamera={() => controller.setLinkingTv(group.tv)}
+      onLinkCamera={!group.cameras.length ? () => controller.setLinkingTv(group.tv) : undefined}
     >
       {group.cameras.map((camera) => (
         <CameraRowContainer key={camera.id} camera={camera} workflows={workflows} controller={controller} />

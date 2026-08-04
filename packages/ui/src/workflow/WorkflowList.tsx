@@ -2,9 +2,10 @@ import { Add, Bolt } from "@mui/icons-material";
 import { Chip, IconButton, Stack, Typography } from "@mui/material";
 import type { CommandSchema } from "@supervisor/core/workflow/codec";
 import type { Workflow } from "@supervisor/core/workflow/workflow";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import type { FactOption } from "../fact/FactRefPicker";
 import { DomainCardAccordion } from "../misc/DomainCardAccordion";
+import { useExpanded } from "../misc/useExpanded";
 import { CommandView } from "./CommandView";
 import { WorkflowForm } from "./WorkflowForm";
 
@@ -27,19 +28,11 @@ export function WorkflowList({
   focusName,
   factOptions = [],
 }: WorkflowListProps) {
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const { isExpanded, toggle, expand } = useExpanded();
 
   useEffect(() => {
-    if (focusName) setExpanded((prev) => new Set(prev).add(focusName));
+    if (focusName) expand(focusName);
   }, [focusName]);
-
-  const toggle = (name: string) =>
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
-      return next;
-    });
 
   return (
     <Stack sx={{ gap: 1 }}>
@@ -64,7 +57,7 @@ export function WorkflowList({
             </Typography>
           }
           trailing={<Chip label={`${workflow.commands.length} steps`} size="small" sx={{ height: 18 }} />}
-          expanded={expanded.has(workflow.name)}
+          expanded={isExpanded(workflow.name)}
           onToggle={() => toggle(workflow.name)}
         >
           {editing ? (

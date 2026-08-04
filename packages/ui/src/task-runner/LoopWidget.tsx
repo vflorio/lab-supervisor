@@ -127,29 +127,6 @@ export function LoopWidget({
           {detail}
         </Typography>
       )}
-
-      {state === "running" && (
-        <Stack direction="row" sx={{ gap: 0.75, alignItems: "center" }}>
-          <Box
-            sx={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              bgcolor: "primary.main",
-              "@media (prefers-reduced-motion: no-preference)": {
-                animation: "loop-widget-pulse 2s ease-in-out infinite",
-              },
-              "@keyframes loop-widget-pulse": {
-                "0%, 100%": { opacity: 1 },
-                "50%": { opacity: 0.35 },
-              },
-            }}
-          />
-          <Typography variant="monoLabel" sx={{ color: "primary.main" }}>
-            LIVE
-          </Typography>
-        </Stack>
-      )}
     </Stack>
   );
 }

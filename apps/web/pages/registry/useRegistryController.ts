@@ -107,7 +107,7 @@ export function useRegistryController(
   // dallo stream live di recovery/activity già sottoscritto (vedi RecoveryIntervention.tsx).
   const handleResetRecovery = (policy: string, entityId: string, tripwireIndex: number) => {
     log(`User reset recovery tripwire for ${entityId} (policy "${policy}")`, "warn");
-    void trpc.recovery.reset.mutate({ policy, entityId, tripwireIndex }).then((succeeded) => {
+    trpc.recovery.reset.mutate({ policy, entityId, tripwireIndex }).then((succeeded) => {
       if (!succeeded) setError(`Reset failed: no active recovery runner for "${entityId}"`);
     });
   };
@@ -116,7 +116,7 @@ export function useRegistryController(
   // il registry su disco - l'esito arriva dallo stream live di activity (source "manual-workflow").
   const handleRunWorkflow = (cameraId: string, workflowName: string) => {
     log(`User launched workflow "${workflowName}" on camera ${cameraId}`);
-    void trpc.workflow.run.mutate({ cameraId, workflowName }).then((result) => {
+    trpc.workflow.run.mutate({ cameraId, workflowName }).then((result) => {
       if (!result.ok) setError(`Workflow failed: ${result.error.message}`);
     });
   };

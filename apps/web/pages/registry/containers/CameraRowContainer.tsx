@@ -1,7 +1,7 @@
 import { CameraRow } from "@supervisor/ui/registry/index";
-import { toCameraEntry, useCameraRowData } from "./rowData";
-import type { CameraView } from "./types";
-import type { RegistryController } from "./useRegistryController";
+import { toCameraEntry, useCameraRowData } from "../rowData";
+import type { CameraView } from "../types";
+import type { RegistryController } from "../useRegistryController";
 
 type Controller = Pick<
   RegistryController,

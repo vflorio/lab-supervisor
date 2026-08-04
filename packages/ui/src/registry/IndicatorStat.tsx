@@ -25,7 +25,18 @@ export function IndicatorStat({ label, value, tone }: IndicatorStatProps) {
       <Typography variant="monoEyebrow" sx={{ color: "textSecondary", display: "block" }}>
         {label}
       </Typography>
-      <Typography variant="monoLabel" sx={{ fontWeight: 700, color: tone ? TONE_TEXT_COLOR[tone] : "text.primary" }}>
+      <Typography
+        variant="monoLabel"
+        sx={{
+          fontWeight: 700,
+          color: tone ? TONE_TEXT_COLOR[tone] : "text.primary",
+          maxWidth: 110,
+          display: "inline-block",
+          textOverflow: "ellipsis",
+          overflow: "hidden",
+          whiteSpace: "nowrap",
+        }}
+      >
         {value}
       </Typography>
     </Box>

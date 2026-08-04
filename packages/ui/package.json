@@ -24,6 +24,7 @@
     "./*": "./src/*.tsx",
     "./theme": "./src/theme.ts",
     "./domain/types": "./src/domain/types.ts",
+    "./misc/usePersistedState": "./src/misc/usePersistedState.ts",
     "./schedule": "./src/schedule/index.tsx",
     "./activation-schedule": "./src/activation-schedule/index.tsx",
     "./duration": "./src/duration/index.tsx",

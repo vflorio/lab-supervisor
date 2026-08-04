@@ -1,8 +1,8 @@
 import { ControlUnitCard } from "@supervisor/ui/registry/index";
-import { toControlUnitEntry, useControlUnitRowData } from "./rowData";
+import { toControlUnitEntry, useControlUnitRowData } from "../rowData";
+import type { CuGroup } from "../types";
+import type { RegistryController } from "../useRegistryController";
 import { TvRowContainer } from "./TvRowContainer";
-import type { CuGroup } from "./types";
-import type { RegistryController } from "./useRegistryController";
 
 type Controller = Pick<
   RegistryController,

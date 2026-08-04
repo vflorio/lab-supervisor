@@ -24,7 +24,7 @@ export function DeviceRegistryHeader({
   return (
     <PageHeader
       eyebrow="Registry"
-      title="Device Registry"
+      title="Devices"
       actions={
         <>
           <StatusPill

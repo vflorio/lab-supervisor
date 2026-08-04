@@ -86,15 +86,9 @@ export function LogPanel() {
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Clear logs">
-                    <span>
-                      <IconButton
-                        size="small"
-                        onClick={filters.clearLogs}
-                        disabled={filters.visibleEntries.length === 0}
-                      >
-                        <ClearAll fontSize="small" />
-                      </IconButton>
-                    </span>
+                    <IconButton size="small" onClick={filters.clearLogs} disabled={filters.visibleEntries.length === 0}>
+                      <ClearAll fontSize="small" />
+                    </IconButton>
                   </Tooltip>
                 </>
               )}
