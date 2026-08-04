@@ -1,9 +1,9 @@
 import { Stack, Typography } from "@mui/material";
 import type { RecoveryTripwire } from "@supervisor/core/recovery/model";
 import { DurationView } from "../duration/DurationView";
+import { FactExpressionView } from "../fact/FactExpressionView";
 import { NotifyRuleView } from "../notify/NotifyRuleView";
 import { PipelineView } from "../pipeline/PipelineView";
-import { PredicateExpressionView } from "../predicates/PredicateExpressionView";
 import { RetryPolicyView } from "../retry-policy/RetryPolicyView";
 
 // Readonly: grace + predicate + pipeline + retry + notify, sempre espansa (il collapse
@@ -25,7 +25,7 @@ export function RecoveryTripwireView({ value }: RecoveryTripwireViewProps) {
         <Typography variant="overline" color="textSecondary">
           Predicate
         </Typography>
-        <PredicateExpressionView value={value.predicate} />
+        <FactExpressionView value={value.predicate} />
       </Stack>
       <Stack sx={{ gap: 0.5 }}>
         <Typography variant="overline" color="textSecondary">

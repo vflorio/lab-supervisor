@@ -81,7 +81,7 @@ export const makeCapabilities = (
   };
 };
 
-// Probes (read-only capability); no AndroidBridge gating (reads are harmless, unlike commands)
+// Probes (read-only capability); il gating non serve nelle letture
 export const makeProbes = (env: WorkflowRunnerEnv, target: Network.Endpoint): WorkflowProbe.ProbeCapabilities => {
   const adbEnv: Adb.AdbEnv = {
     logger: env.logger.child("ADB"),

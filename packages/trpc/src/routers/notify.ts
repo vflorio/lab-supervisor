@@ -30,7 +30,7 @@ const HISTORY_REPLAY_SIZE = 200;
 export const notifyRouter = router({
   // Id dell'ultima notifica nota, usato dal client per sottoscrivere `tail` passando questo
   // come `lastEventId` e ricevere solo notifiche nuove (senza rigiocare il backlog storico
-  // come toast) - stesso principio di usePredicates.tsx che attende la snapshot prima di
+  // come toast) - stesso principio di useFacts.tsx che attende la snapshot prima di
   // avviare la subscription.
   latest: publicProcedure.query(({ ctx }): string | undefined => {
     const history = ctx.services.notifications.history();

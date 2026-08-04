@@ -1,24 +1,24 @@
 import { ArrowBack, ArrowForward, Check, Close } from "@mui/icons-material";
 import { Box, Button, Drawer, IconButton, Step, StepLabel, Stepper, Typography } from "@mui/material";
 import type { DurationString } from "@supervisor/core/date-time";
+import * as Facts from "@supervisor/core/fact/condition";
 import type { NotifyTargetSchema } from "@supervisor/core/notify/codec";
 import type { NotifyRule } from "@supervisor/core/notify/model";
-import * as Predicates from "@supervisor/core/predicates/expression";
 import type { RecoveryTripwire } from "@supervisor/core/recovery/model";
 import type { PolicyJson, PolicyStepSchema } from "@supervisor/core/retry/codec";
 import { useState } from "react";
 import { DurationForm } from "../duration/DurationForm";
+import { type FactOption, FactRefPicker } from "../fact/FactRefPicker";
 import { JsonView } from "../misc/JsonView";
 import { NotifyRuleListForm } from "../notify/NotifyRuleListForm";
 import { buildPipeline, PipelineWorkflowPicker } from "../pipeline/PipelineWorkflowPicker";
-import { type PredicateOption, PredicateRefPicker } from "../predicates/PredicateRefPicker";
 import { RetryPolicyForm } from "../retry-policy/RetryPolicyForm";
 import { RecoveryTripwireView } from "./RecoveryTripwireView";
 
-const STEPS = ["Predicate", "Grace", "Pipeline", "Retry", "Notify", "Review"] as const;
+const STEPS = ["Fact", "Grace", "Pipeline", "Retry", "Notify", "Review"] as const;
 
 interface WizardState {
-  readonly predicateName: string;
+  readonly factName: string;
   readonly grace: DurationString;
   readonly selectedWorkflows: readonly string[];
   readonly pipelineOp: "or" | "and";
@@ -27,7 +27,7 @@ interface WizardState {
 }
 
 const INITIAL_STATE: WizardState = {
-  predicateName: "",
+  factName: "",
   grace: "10s" as DurationString,
   selectedWorkflows: [],
   pipelineOp: "or",
@@ -37,14 +37,14 @@ const INITIAL_STATE: WizardState = {
 
 const buildTripwire = (state: WizardState): RecoveryTripwire => ({
   grace: state.grace,
-  predicate: Predicates.ref(state.predicateName),
+  predicate: Facts.ref(state.factName),
   pipeline: buildPipeline(state.selectedWorkflows, state.pipelineOp) ?? { type: "workflow", workflowName: "" },
   retry: state.retry,
   notify: state.notify.length > 0 ? state.notify : undefined,
 });
 
 const CAN_NEXT: readonly ((state: WizardState) => boolean)[] = [
-  (s) => !!s.predicateName,
+  (s) => !!s.factName,
   (s) => !!s.grace,
   (s) => s.selectedWorkflows.length > 0,
   (s) => s.retry.length > 0,
@@ -57,7 +57,7 @@ export interface TripwireWizardProps {
   readonly onClose: () => void;
   readonly onSave: (tripwire: RecoveryTripwire) => void;
   readonly workflowNames: readonly string[];
-  readonly predicateOptions: readonly PredicateOption[];
+  readonly factOptions: readonly FactOption[];
   readonly retrySchema: readonly PolicyStepSchema[];
   readonly notifyTargetSchema: readonly NotifyTargetSchema[];
 }
@@ -68,7 +68,7 @@ export function TripwireWizard({
   onClose,
   onSave,
   workflowNames,
-  predicateOptions,
+  factOptions,
   retrySchema,
   notifyTargetSchema,
 }: TripwireWizardProps) {
@@ -145,10 +145,10 @@ export function TripwireWizard({
 
       <Box sx={{ flex: 1, overflowY: "auto", px: 3, py: 3 }}>
         {step === 0 && (
-          <PredicateRefPicker
-            options={predicateOptions}
-            value={state.predicateName}
-            onChange={(predicateName) => patch({ predicateName })}
+          <FactRefPicker
+            options={factOptions}
+            value={state.factName}
+            onChange={(predicateName) => patch({ factName: predicateName })}
           />
         )}
         {step === 1 && <DurationForm label="grace" value={state.grace} onChange={(grace) => patch({ grace })} />}

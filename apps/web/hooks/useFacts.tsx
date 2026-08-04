@@ -1,20 +1,20 @@
-import { factKey, type PredicateEntry } from "@supervisor/core/predicates/model";
+import { type FactEntry, factKey } from "@supervisor/core/fact/model";
 import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from "react";
 import { trpc } from "../trpc/client";
 
 export type ServiceStatus = "connecting" | "online" | "reconnecting";
 
-interface PredicatesContextValue {
+interface FactsContextValue {
   readonly status: ServiceStatus;
-  // Tabella corrente dei predicati di monitoring, chiave = factKey(domain, entityId, name)
-  readonly table: ReadonlyMap<string, PredicateEntry>;
+  // Tabella corrente dei fatti di monitoring, chiave = factKey(domain, entityId, name)
+  readonly table: ReadonlyMap<string, FactEntry>;
 }
 
-const PredicatesContext = createContext<PredicatesContextValue | null>(null);
+const FactsContext = createContext<FactsContextValue | null>(null);
 
-export function PredicatesProvider({ children }: { children: ReactNode }) {
+export function FactsProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<ServiceStatus>("connecting");
-  const [table, setTable] = useState<ReadonlyMap<string, PredicateEntry>>(new Map());
+  const [table, setTable] = useState<ReadonlyMap<string, FactEntry>>(new Map());
   const wasOnline = useRef(false);
 
   useEffect(() => {
@@ -63,11 +63,11 @@ export function PredicatesProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  return <PredicatesContext.Provider value={{ status, table }}>{children}</PredicatesContext.Provider>;
+  return <FactsContext.Provider value={{ status, table }}>{children}</FactsContext.Provider>;
 }
 
-export function usePredicates(): PredicatesContextValue {
-  const ctx = useContext(PredicatesContext);
-  if (!ctx) throw new Error("usePredicates must be used within a PredicatesProvider");
+export function useFacts(): FactsContextValue {
+  const ctx = useContext(FactsContext);
+  if (!ctx) throw new Error("useFacts must be used within a FactsProvider");
   return ctx;
 }

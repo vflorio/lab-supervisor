@@ -1,14 +1,14 @@
 import { Add } from "@mui/icons-material";
 import { Box, IconButton, MenuItem, Select, type SelectChangeEvent, Stack, TextField } from "@mui/material";
 import type { DurationString } from "@supervisor/core/date-time";
+import * as Facts from "@supervisor/core/fact/condition";
+import { TRACKED_DOMAINS } from "@supervisor/core/fact/model";
 import type { NotifyTargetSchema } from "@supervisor/core/notify/codec";
-import * as Predicates from "@supervisor/core/predicates/expression";
-import { TRACKED_DOMAINS } from "@supervisor/core/predicates/model";
 import type { RecoveryPolicy, RecoveryTripwire } from "@supervisor/core/recovery/model";
 import type { PolicyStepSchema } from "@supervisor/core/retry/codec";
+import type { FactOption } from "../fact/FactRefPicker";
 import { DomainSortable } from "../misc/DomainSortable";
 import { moveAt, removeAt } from "../misc/sortable";
-import type { PredicateOption } from "../predicates/PredicateRefPicker";
 import { RecoveryTripwireForm } from "./RecoveryTripwireForm";
 
 export interface RecoveryPolicyFormProps {
@@ -17,12 +17,12 @@ export interface RecoveryPolicyFormProps {
   readonly retrySchema: readonly PolicyStepSchema[];
   readonly notifyTargetSchema: readonly NotifyTargetSchema[];
   readonly workflowNames: readonly string[];
-  readonly predicateOptions: readonly PredicateOption[];
+  readonly factOptions: readonly FactOption[];
 }
 
 const defaultTripwire = (): RecoveryTripwire => ({
   grace: "30s" as DurationString,
-  predicate: Predicates.ref(""),
+  predicate: Facts.ref(""),
   pipeline: { type: "workflow", workflowName: "" },
   retry: [],
   notify: [],
@@ -34,7 +34,7 @@ export function RecoveryPolicyForm({
   retrySchema,
   notifyTargetSchema,
   workflowNames,
-  predicateOptions,
+  factOptions,
 }: RecoveryPolicyFormProps) {
   const updateTripwire = (index: number, next: RecoveryTripwire) =>
     onChange({ ...value, tripwires: value.tripwires.map((t, i) => (i === index ? next : t)) });
@@ -92,7 +92,7 @@ export function RecoveryPolicyForm({
                 retrySchema={retrySchema}
                 notifyTargetSchema={notifyTargetSchema}
                 workflowNames={workflowNames}
-                predicateOptions={predicateOptions}
+                factOptions={factOptions}
               />
             </Box>
             <DomainSortable

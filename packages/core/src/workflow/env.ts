@@ -1,8 +1,8 @@
 import type * as RTE from "fp-ts/ReaderTaskEither";
 import type * as TE from "fp-ts/TaskEither";
 import { type AppError, of } from "../errors";
+import type { FactLookup } from "../fact/condition";
 import type { Logger } from "../logger/logger";
-import type { PredicateLookup } from "../predicates/expression";
 import type { ProbeCapabilities } from "./probe";
 import type { TapCoords, Workflow } from "./workflow";
 
@@ -40,7 +40,7 @@ export interface WorkflowEnv {
   // perché non ogni contesto ne ha una da offrire: senza, la condizione fallisce con un
   // messaggio esplicito invece di decidere su un `false` che non distingue "falso" da "ignoto".
   // Va letta ad ogni chiamata, non catturata: `await` aspetta proprio che cambi.
-  readonly lookup?: PredicateLookup;
+  readonly lookup?: FactLookup;
   // Letture dal vivo del device, per le foglie `probe`. Opzionale con la stessa logica.
   readonly probes?: ProbeCapabilities;
   // Profondità di annidamento corrente (`run`, `when`): i workflow si richiamano per nome e

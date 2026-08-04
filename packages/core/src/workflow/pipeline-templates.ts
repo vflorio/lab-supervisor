@@ -1,4 +1,3 @@
-import * as Predicates from "../predicates/expression";
 import * as Condition from "./condition";
 import type { Pipeline } from "./pipeline";
 
@@ -39,7 +38,7 @@ export const PIPELINE_TEMPLATES: readonly PipelineTemplate[] = [
     pipeline: {
       type: "and",
       pipelines: [
-        { type: "condition", condition: Condition.not(Predicates.ref("recording_active")) },
+        { type: "condition", condition: Condition.not(Condition.ref("recording_active")) },
         {
           type: "or",
           pipelines: [

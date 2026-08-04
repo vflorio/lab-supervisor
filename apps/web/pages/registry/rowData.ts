@@ -1,6 +1,6 @@
 import { activityKey } from "@supervisor/core/activity/model";
+import { factKey } from "@supervisor/core/fact/model";
 import * as Network from "@supervisor/core/network";
-import { factKey } from "@supervisor/core/predicates/model";
 import type {
   CameraEntry as DomainCameraEntry,
   ControlUnitEntry as DomainControlUnitEntry,
@@ -8,7 +8,7 @@ import type {
 } from "@supervisor/ui/domain/types";
 import * as O from "fp-ts/Option";
 import { useActivity } from "../../hooks/useActivity";
-import { usePredicates } from "../../hooks/usePredicates";
+import { useFacts } from "../../hooks/useFacts";
 import { useRecoveryIntervention } from "../../hooks/useRecovery";
 import type { CameraView, ControlUnitView, TvView } from "./types";
 
@@ -57,7 +57,7 @@ export interface CameraRowData {
 }
 
 export function useCameraRowData(camera: CameraView, onResetRecovery: ResetRecovery): CameraRowData {
-  const { table: predicates } = usePredicates();
+  const { table: predicates } = useFacts();
   const { table: activity } = useActivity();
   const videoCaptureDeviceId = O.toUndefined(camera.videoCaptureDeviceId) ?? "";
   const adbAddress = camera.adb ? Network.format(camera.adb.target) : "";
@@ -89,7 +89,7 @@ export interface TvRowData {
 }
 
 export function useTvRowData(tv: TvView, onResetRecovery: ResetRecovery): TvRowData {
-  const { table: predicates } = usePredicates();
+  const { table: predicates } = useFacts();
   const { table: activity } = useActivity();
 
   return {
@@ -111,7 +111,7 @@ export interface ControlUnitRowData {
 }
 
 export function useControlUnitRowData(cu: ControlUnitView, onResetRecovery: ResetRecovery): ControlUnitRowData {
-  const { table: predicates } = usePredicates();
+  const { table: predicates } = useFacts();
   const { table: activity } = useActivity();
 
   return {

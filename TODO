@@ -79,7 +79,7 @@
 - [ ] Workflow / scripting engine
   - [ ] Coordinate relative per inputTap: supportare coordinate normalizzate (`0.0–1.0`) oltre a quelle assolute
   - [X] Sistema di predicati/guard per l'esecuzione condizionale dei comandi in un workflow
-    - [X] `BooleanTree<Leaf>` generico nel core: PredicateExpression e Condition sono due istanze, non due copie - un predicate di tripwire è già una Condition valida
+    - [X] `BooleanTree<Leaf>` generico nel core: FactExpression e Condition sono due istanze, non due copie - un predicate di tripwire è già una Condition valida
     - [X] `Condition` = fatti tracciati + probe sul device, stessa algebra and/or/not, valutazione effettuale in short-circuit
     - [X] Probe (letture del device): screenOn, keyguardShowing, activityResumed, orientation
     - [X] Comando `await`: attende che una Condition diventi vera (timeout = comando fallito), così l'esito di un ramo di pipeline significa "ha guarito" e non "i comandi sono andati a buon fine" - senza, un `or` non escala mai

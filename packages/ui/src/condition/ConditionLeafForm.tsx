@@ -1,18 +1,18 @@
 import { MenuItem, Select, type SelectChangeEvent, Stack, TextField } from "@mui/material";
 import type { ConditionLeaf, ProbeLeaf } from "@supervisor/core/workflow/condition";
 import { PROBE_SCHEMA, type ProbeName } from "@supervisor/core/workflow/probe";
+import { FactLeafForm } from "../fact/FactLeafForm";
+import type { FactOption } from "../fact/FactRefPicker";
 import { FieldLabel } from "../misc/FieldLabel";
-import { PredicateLeafForm } from "../predicates/PredicateLeafForm";
-import type { PredicateOption } from "../predicates/PredicateRefPicker";
 
 // Una foglia di Condition è un fatto tracciato o un probe sul device. Il selettore in testa
-// sceglie quale delle due: sotto, un fatto riusa PredicateLeafForm (stesso editor dei tripwire),
+// sceglie quale delle due: sotto, un fatto riusa FactLeafForm (stesso editor dei tripwire),
 // un probe mostra il proprio nome e i propri argomenti presi da PROBE_SCHEMA.
 
 export interface ConditionLeafFormProps {
   readonly value: ConditionLeaf;
   readonly onChange: (next: ConditionLeaf) => void;
-  readonly predicateOptions: readonly PredicateOption[];
+  readonly factOptions: readonly FactOption[];
 }
 
 const DEFAULT_PROBE: ProbeLeaf = { type: "probe", name: "screenOn", args: [] };
@@ -73,7 +73,7 @@ function ProbeForm({ value, onChange }: { value: ProbeLeaf; onChange: (next: Con
   );
 }
 
-export function ConditionLeafForm({ value, onChange, predicateOptions }: ConditionLeafFormProps) {
+export function ConditionLeafForm({ value, onChange, factOptions }: ConditionLeafFormProps) {
   const source = value.type === "probe" ? "probe" : "fact";
 
   return (
@@ -96,7 +96,7 @@ export function ConditionLeafForm({ value, onChange, predicateOptions }: Conditi
       {value.type === "probe" ? (
         <ProbeForm value={value} onChange={onChange} />
       ) : (
-        <PredicateLeafForm value={value} onChange={onChange} predicateOptions={predicateOptions} />
+        <FactLeafForm value={value} onChange={onChange} factOptions={factOptions} />
       )}
     </Stack>
   );

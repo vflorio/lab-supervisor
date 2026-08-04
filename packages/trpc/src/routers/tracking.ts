@@ -1,4 +1,4 @@
-import type { PredicateEntry } from "@supervisor/core/predicates/model";
+import type { FactEntry } from "@supervisor/core/fact/model";
 import { type TrackedEnvelope, tracked } from "@trpc/server";
 import { publicProcedure, router } from "../instance";
 
@@ -34,7 +34,7 @@ export const trackingRouter = router({
     ctx,
     input,
     signal,
-  }): AsyncGenerator<TrackedEnvelope<PredicateEntry>> {
+  }): AsyncGenerator<TrackedEnvelope<FactEntry>> {
     const abortSignal = signal ?? new AbortController().signal;
     const feed = ctx.services.tracking;
     const history = feed.history();
@@ -47,7 +47,7 @@ export const trackingRouter = router({
       yield tracked(String(entry.id), entry);
     }
 
-    const queue: PredicateEntry[] = [];
+    const queue: FactEntry[] = [];
     let wake: (() => void) | null = null;
 
     const unsubscribe = feed.subscribe((entry) => {

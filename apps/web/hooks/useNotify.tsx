@@ -4,7 +4,7 @@ import { type ReactNode, useEffect } from "react";
 import { trpc } from "../trpc/client";
 
 // -------------------------------------------------------------------------------------
-// Notify toaster - stesso pattern di usePredicates.tsx (interrogare lo stato iniziale
+// Notify toaster - stesso pattern di useFacts.tsx (interrogare lo stato iniziale
 // PRIMA di avviare la subscription), ma qui l'interrogazione iniziale serve solo a
 // scoprire `lastEventId`: passarlo a `tail` fa sì che il backlog storico non venga rigiocato
 // come toast al primo mount, mostrando solo notifiche realmente nuove.

@@ -4,9 +4,9 @@ import { theme } from "@supervisor/ui/theme";
 import { closeSnackbar, SnackbarProvider } from "notistack";
 import { LogPanel } from "../components/LogPanel";
 import { ActivityProvider } from "../hooks/useActivity";
+import { FactsProvider } from "../hooks/useFacts";
 import { LogFeedProvider } from "../hooks/useLogFeed";
 import { NotifyToaster } from "../hooks/useNotify";
-import { PredicatesProvider } from "../hooks/usePredicates";
 import { RecoveryProvider } from "../hooks/useRecovery";
 import { Sidebar } from "../layout/Sidebar";
 import "./Layout.css";
@@ -28,7 +28,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         )}
       >
         <LogFeedProvider>
-          <PredicatesProvider>
+          <FactsProvider>
             <ActivityProvider>
               <RecoveryProvider>
                 <NotifyToaster />
@@ -50,7 +50,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </Box>
               </RecoveryProvider>
             </ActivityProvider>
-          </PredicatesProvider>
+          </FactsProvider>
         </LogFeedProvider>
       </SnackbarProvider>
     </ThemeProvider>

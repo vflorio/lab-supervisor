@@ -1,19 +1,19 @@
 import { Chip } from "@mui/material";
 import { Picker } from "../picker/Picker";
 
-export interface PredicateOption {
+export interface FactOption {
   readonly domain: string;
   readonly entityId: string;
   readonly name: string;
 }
 
-export interface PredicateRefPickerProps {
-  readonly options: readonly PredicateOption[];
+export interface FactRefPickerProps {
+  readonly options: readonly FactOption[];
   readonly value: string;
   readonly onChange: (name: string) => void;
 }
 
-export function PredicateRefPicker({ options, value, onChange }: PredicateRefPickerProps) {
+export function FactRefPicker({ options, value, onChange }: FactRefPickerProps) {
   const uniqueByName = Array.from(new Map(options.map((option) => [option.name, option])).values());
 
   return (
@@ -26,8 +26,8 @@ export function PredicateRefPicker({ options, value, onChange }: PredicateRefPic
       }))}
       value={value || null}
       onChange={(name) => onChange(name ?? "")}
-      label="predicate"
-      placeholder="Cerca predicate..."
+      label="fact"
+      placeholder="Cerca fact..."
     />
   );
 }

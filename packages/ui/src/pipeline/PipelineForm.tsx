@@ -2,8 +2,8 @@ import { Box, MenuItem, Select, type SelectChangeEvent, Stack } from "@mui/mater
 import type { Pipeline } from "@supervisor/core/workflow/pipeline";
 import { BooleanTreeForm } from "../boolean-tree/BooleanTreeForm";
 import { ConditionForm } from "../condition/ConditionForm";
+import type { FactOption } from "../fact/FactRefPicker";
 import { Picker } from "../picker/Picker";
-import type { PredicateOption } from "../predicates/PredicateRefPicker";
 import { type PipelineLeaf, pipelineTreeOps } from "./ops";
 
 const DEFAULT_LEAF: PipelineLeaf = { type: "workflow", workflowName: "" };
@@ -17,10 +17,10 @@ export interface PipelineFormProps {
   readonly value: Pipeline;
   readonly onChange: (next: Pipeline) => void;
   readonly workflowNames: readonly string[];
-  readonly predicateOptions?: readonly PredicateOption[];
+  readonly factOptions?: readonly FactOption[];
 }
 
-export function PipelineForm({ value, onChange, workflowNames, predicateOptions = [] }: PipelineFormProps) {
+export function PipelineForm({ value, onChange, workflowNames, factOptions = [] }: PipelineFormProps) {
   return (
     <BooleanTreeForm
       value={value}
@@ -48,7 +48,7 @@ export function PipelineForm({ value, onChange, workflowNames, predicateOptions 
             <ConditionForm
               value={leaf.condition}
               onChange={(condition) => onLeafChange({ type: "condition", condition })}
-              predicateOptions={predicateOptions}
+              factOptions={factOptions}
             />
           ) : (
             <Box sx={{ width: 200 }}>

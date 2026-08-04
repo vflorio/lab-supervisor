@@ -2,16 +2,16 @@ import { Add } from "@mui/icons-material";
 import { Button, Stack, TextField } from "@mui/material";
 import type { CommandSchema } from "@supervisor/core/workflow/codec";
 import type { Command, Workflow } from "@supervisor/core/workflow/workflow";
+import type { FactOption } from "../fact/FactRefPicker";
 import { DomainSortable } from "../misc/DomainSortable";
 import { moveAt, removeAt } from "../misc/sortable";
-import type { PredicateOption } from "../predicates/PredicateRefPicker";
 import { CommandForm, commandFor } from "./CommandForm";
 
 export interface WorkflowFormProps {
   readonly value: Workflow;
   readonly onChange: (next: Workflow) => void;
   readonly schema: readonly CommandSchema[];
-  readonly predicateOptions?: readonly PredicateOption[];
+  readonly factOptions?: readonly FactOption[];
 }
 
 const defaultCommand = (schema: readonly CommandSchema[]): Command => {
@@ -21,7 +21,7 @@ const defaultCommand = (schema: readonly CommandSchema[]): Command => {
   return commandFor(schema, first.type);
 };
 
-export function WorkflowForm({ value, onChange, schema, predicateOptions }: WorkflowFormProps) {
+export function WorkflowForm({ value, onChange, schema, factOptions }: WorkflowFormProps) {
   const updateCommand = (index: number, command: Command) =>
     onChange({ ...value, commands: value.commands.map((c, i) => (i === index ? command : c)) });
 
@@ -61,7 +61,7 @@ export function WorkflowForm({ value, onChange, schema, predicateOptions }: Work
             <CommandForm
               value={command}
               schema={schema}
-              predicateOptions={predicateOptions}
+              factOptions={factOptions}
               onChange={(next) => updateCommand(index, next)}
             />
             <DomainSortable

@@ -1,6 +1,6 @@
 import * as E from "fp-ts/Either";
 import { describe, expect, it } from "vitest";
-import * as Predicates from "../predicates/expression";
+import * as Facts from "../fact/condition";
 import { RecoveryPolicyCodec } from "./codec";
 
 describe("recovery/codec", () => {
@@ -43,7 +43,7 @@ describe("recovery/codec", () => {
     expect(E.isRight(result)).toBe(true);
     if (E.isRight(result)) {
       expect(result.right.tripwires).toHaveLength(3);
-      expect(result.right.tripwires[0]?.predicate).toStrictEqual(Predicates.ref("suitest_camera_connected"));
+      expect(result.right.tripwires[0]?.predicate).toStrictEqual(Facts.ref("suitest_camera_connected"));
     }
   });
 

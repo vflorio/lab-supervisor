@@ -5,11 +5,11 @@ import type * as Adb from "./adapters/adb/shell";
 import type * as ConfigModel from "./config";
 import type * as Db from "./db";
 import type * as Errors from "./errors";
+import type { FactStream } from "./fact/stream";
 import type { LogFeed } from "./logger/log-stream";
 import type * as Logger from "./logger/logger";
 import type * as Network from "./network";
 import type { NotifyFeed } from "./notify/stream";
-import type { PredicateFeed } from "./predicates/feed";
 import type * as RecoveryModel from "./recovery/model";
 import type { RecoveryFeed } from "./recovery/status";
 import type { LoopFeed } from "./task-runner/stream";
@@ -112,7 +112,7 @@ export interface Services {
   // Feed dei log di servizio
   readonly logs: LogFeed; // Service -> Web
   // Feed dei predicati di tracking
-  readonly tracking: PredicateFeed; // Service -> Web
+  readonly tracking: FactStream; // Service -> Web
   // Feed delle notifiche
   readonly notifications: NotifyFeed; // Service -> Web
   // Feed di activity tracing (cosa fa l'entità in un dato momento)

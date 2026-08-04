@@ -1,8 +1,8 @@
 import type * as Activity from "@supervisor/core/activity/stream";
 import * as Errors from "@supervisor/core/errors";
+import * as Facts from "@supervisor/core/fact/index";
 import type { CameraEntry } from "@supervisor/core/lab-registry/camera";
 import type * as Logger from "@supervisor/core/logger/logger";
-import * as Predicates from "@supervisor/core/predicates/index";
 import * as WorkflowInterpreter from "@supervisor/core/workflow/interpreter";
 import type { Workflow } from "@supervisor/core/workflow/workflow";
 import { pipe } from "fp-ts/function";
@@ -20,7 +20,7 @@ export interface Env {
   readonly workflows: readonly Workflow[];
   readonly capabilitiesEnv: Capabilities.Env;
   readonly activityStream: Activity.ActivityStream;
-  readonly predicateStream: Predicates.PredicateFeed;
+  readonly factStream: Facts.FactFeed;
 }
 
 export const run =
@@ -30,10 +30,10 @@ export const run =
       env.activityStream.emit({ entityId: cameraId, source: "manual-workflow", status });
 
     // Manual runs can include awaitPredicate; facts keyed by videoCaptureDeviceId not adbId; missing link means no lookup
-    const lookupFor = (camera: CameraEntry): Predicates.PredicateLookup | undefined =>
+    const lookupFor = (camera: CameraEntry): Facts.FactLookup | undefined =>
       pipe(
         camera.videoCaptureDeviceId,
-        O.map((id) => Predicates.lookupFor(env.predicateStream, SuitestCamera.DOMAIN, id)),
+        O.map((id) => Facts.lookupFor(env.factStream, SuitestCamera.DOMAIN, id)),
         O.toUndefined,
       );
 

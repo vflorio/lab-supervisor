@@ -4,7 +4,7 @@ import type { RecoveryPolicy } from "@supervisor/core/recovery/model";
 import { RECOVERY_POLICY_TEMPLATES } from "@supervisor/core/recovery/templates";
 import { POLICY_STEP_SCHEMA } from "@supervisor/core/retry/codec";
 import { useState } from "react";
-import type { PredicateOption } from "../predicates/PredicateRefPicker";
+import type { FactOption } from "../fact/FactRefPicker";
 import { RecoveryPolicyForm } from "./RecoveryPolicyForm";
 
 const meta: Meta<typeof RecoveryPolicyForm> = {
@@ -15,7 +15,7 @@ const meta: Meta<typeof RecoveryPolicyForm> = {
 export default meta;
 type Story = StoryObj<typeof RecoveryPolicyForm>;
 
-const mockPredicateOptions: readonly PredicateOption[] = [
+const mockFactOptions: readonly FactOption[] = [
   { domain: "suitest-camera", entityId: "tablet", name: "suitest_camera_connected" },
   { domain: "adb", entityId: "192.168.1.4:5555", name: "adb_device_online" },
   { domain: "app", entityId: "tablet", name: "device_status" },
@@ -51,7 +51,7 @@ export const Default: Story = {
     retrySchema: POLICY_STEP_SCHEMA,
     notifyTargetSchema: NOTIFY_TARGET_SCHEMA,
     workflowNames: ["wake_and_check", "restart_app", "full_recovery"],
-    predicateOptions: mockPredicateOptions,
+    factOptions: mockFactOptions,
   },
   render: function Render(args) {
     const [value, setValue] = useState<RecoveryPolicy>(args.value);
@@ -70,7 +70,7 @@ export const ThreeLevelEscalationPolicy: Story = {
     retrySchema: POLICY_STEP_SCHEMA,
     notifyTargetSchema: NOTIFY_TARGET_SCHEMA,
     workflowNames: ["wake_and_check", "restart_app", "full_recovery"],
-    predicateOptions: mockPredicateOptions,
+    factOptions: mockFactOptions,
   },
   render: function Render(args) {
     const [value, setValue] = useState<RecoveryPolicy>(args.value);
@@ -84,7 +84,7 @@ export const Empty: Story = {
     retrySchema: POLICY_STEP_SCHEMA,
     notifyTargetSchema: NOTIFY_TARGET_SCHEMA,
     workflowNames: ["wake_and_check", "restart_app", "full_recovery"],
-    predicateOptions: mockPredicateOptions,
+    factOptions: mockFactOptions,
   },
   render: function Render(args) {
     const [value, setValue] = useState<RecoveryPolicy>(args.value);

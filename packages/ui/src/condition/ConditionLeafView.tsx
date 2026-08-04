@@ -1,6 +1,6 @@
 import { Chip, Stack, Typography } from "@mui/material";
 import type { ConditionLeaf } from "@supervisor/core/workflow/condition";
-import { PredicateLeafView } from "../predicates/PredicateLeafView";
+import { FactLeafView } from "../fact/FactLeafView";
 
 // Readonly: un probe si distingue a colpo d'occhio da un fatto - le due cose hanno costo e
 // semantica di fallimento diverse, e chi legge la config deve saperlo senza pensarci.
@@ -9,7 +9,7 @@ export interface ConditionLeafViewProps {
 }
 
 export function ConditionLeafView({ value }: ConditionLeafViewProps) {
-  if (value.type !== "probe") return <PredicateLeafView value={value} />;
+  if (value.type !== "probe") return <FactLeafView value={value} />;
 
   return (
     <Stack direction="row" sx={{ gap: 0.75, alignItems: "center" }}>

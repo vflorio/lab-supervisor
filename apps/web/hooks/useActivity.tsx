@@ -21,7 +21,7 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     let unsubscribe = () => {};
 
-    // Stessa cautela di usePredicates: la snapshot iniziale va attesa prima di avviare la
+    // Stessa cautela di useFacts: la snapshot iniziale va attesa prima di avviare la
     // subscription, altrimenti risolvendo dopo un aggiornamento di `tail` sovrascriverebbe
     // la tabella con dati più vecchi.
     trpc.activity.snapshot.query().then((entries) => {

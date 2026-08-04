@@ -4,8 +4,8 @@ import type { NotifyTargetSchema } from "@supervisor/core/notify/codec";
 import type { RecoveryPolicy } from "@supervisor/core/recovery/model";
 import type { PolicyStepSchema } from "@supervisor/core/retry/codec";
 import { useEffect, useState } from "react";
+import type { FactOption } from "../fact/FactRefPicker";
 import { DomainCardAccordion } from "../misc/DomainCardAccordion";
-import type { PredicateOption } from "../predicates/PredicateRefPicker";
 import { RecoveryPolicyForm } from "./RecoveryPolicyForm";
 import { TripwireView } from "./TripwireView";
 import { TripwireWizard } from "./TripwireWizard";
@@ -25,7 +25,7 @@ export interface RecoveryPolicyListProps {
   readonly retrySchema: readonly PolicyStepSchema[];
   readonly notifyTargetSchema: readonly NotifyTargetSchema[];
   readonly workflowNames: readonly string[];
-  readonly predicateOptions: readonly PredicateOption[];
+  readonly factOptions: readonly FactOption[];
   readonly onChange: (next: RecoveryPolicy) => void;
   readonly onCreate?: () => void;
   readonly focusLabel?: string;
@@ -37,7 +37,7 @@ export function RecoveryPolicyList({
   retrySchema,
   notifyTargetSchema,
   workflowNames,
-  predicateOptions,
+  factOptions,
   onChange,
   onCreate,
   focusLabel,
@@ -98,7 +98,7 @@ export function RecoveryPolicyList({
                 retrySchema={retrySchema}
                 notifyTargetSchema={notifyTargetSchema}
                 workflowNames={workflowNames}
-                predicateOptions={predicateOptions}
+                factOptions={factOptions}
               />
             ) : (
               <Stack sx={{ gap: 1.5 }}>
@@ -148,7 +148,7 @@ export function RecoveryPolicyList({
             setWizardFor(null);
           }}
           workflowNames={workflowNames}
-          predicateOptions={predicateOptions}
+          factOptions={factOptions}
           retrySchema={retrySchema}
           notifyTargetSchema={notifyTargetSchema}
         />

@@ -1,24 +1,24 @@
 import { Box, MenuItem, Select, type SelectChangeEvent, Stack, TextField } from "@mui/material";
-import type { PredicateValue } from "@supervisor/core/predicates/model";
+import type { FactValue } from "@supervisor/core/fact/model";
 import { FieldLabel } from "../misc/FieldLabel";
 import { NumberField } from "../misc/number-field/NumberField";
-import type { PredicateLeaf } from "./ops";
-import { type PredicateOption, PredicateRefPicker } from "./PredicateRefPicker";
+import { type FactOption, FactRefPicker } from "./FactRefPicker";
+import type { FactLeaf } from "./ops";
 
-export interface PredicateLeafFormProps {
-  readonly value: PredicateLeaf;
-  readonly onChange: (next: PredicateLeaf) => void;
-  readonly predicateOptions: readonly PredicateOption[];
+export interface FactLeafFormProps {
+  readonly value: FactLeaf;
+  readonly onChange: (next: FactLeaf) => void;
+  readonly factOptions: readonly FactOption[];
 }
 
 type ValueKind = "boolean" | "string" | "number";
 
-const valueKindOf = (value: PredicateValue): ValueKind =>
+const valueKindOf = (value: FactValue): ValueKind =>
   typeof value === "boolean" ? "boolean" : typeof value === "number" ? "number" : "string";
 
-const defaultForKind = (kind: ValueKind): PredicateValue => (kind === "boolean" ? false : kind === "number" ? 0 : "");
+const defaultForKind = (kind: ValueKind): FactValue => (kind === "boolean" ? false : kind === "number" ? 0 : "");
 
-function ValueEditor({ value, onChange }: { value: PredicateValue; onChange: (next: PredicateValue) => void }) {
+function ValueEditor({ value, onChange }: { value: FactValue; onChange: (next: FactValue) => void }) {
   const kind = valueKindOf(value);
 
   return (
@@ -63,14 +63,14 @@ function ValueEditor({ value, onChange }: { value: PredicateValue; onChange: (ne
 
 const KINDS = ["ref", "equals", "includes"] as const;
 
-const leafFor = (kind: (typeof KINDS)[number], name: string): PredicateLeaf =>
+const leafFor = (kind: (typeof KINDS)[number], name: string): FactLeaf =>
   kind === "ref"
     ? { type: "ref", name }
     : kind === "equals"
       ? { type: "equals", name, value: false }
       : { type: "includes", name, value: "" };
 
-export function PredicateLeafForm({ value, onChange, predicateOptions }: PredicateLeafFormProps) {
+export function FactLeafForm({ value, onChange, factOptions }: FactLeafFormProps) {
   return (
     <Stack direction="row" sx={{ gap: 1, alignItems: "center", flexWrap: "wrap" }}>
       <Select
@@ -88,11 +88,7 @@ export function PredicateLeafForm({ value, onChange, predicateOptions }: Predica
         ))}
       </Select>
       <Box sx={{ minWidth: 340 }}>
-        <PredicateRefPicker
-          options={predicateOptions}
-          value={value.name}
-          onChange={(name) => onChange({ ...value, name })}
-        />
+        <FactRefPicker options={factOptions} value={value.name} onChange={(name) => onChange({ ...value, name })} />
       </Box>
       {value.type === "equals" && (
         <ValueEditor value={value.value} onChange={(next) => onChange({ ...value, value: next })} />

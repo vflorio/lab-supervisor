@@ -29,7 +29,7 @@
     "./duration": "./src/duration/index.tsx",
     "./retry-policy": "./src/retry-policy/index.tsx",
     "./workflow": "./src/workflow/index.tsx",
-    "./predicates": "./src/predicates/index.tsx",
+    "./fact": "./src/predicates/index.tsx",
     "./pipeline": "./src/pipeline/index.tsx",
     "./picker": "./src/picker/index.tsx",
     "./notify": "./src/notify/index.tsx",

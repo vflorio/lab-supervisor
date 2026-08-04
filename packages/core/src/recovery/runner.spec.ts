@@ -1,8 +1,8 @@
 import * as E from "fp-ts/Either";
 import * as TE from "fp-ts/TaskEither";
 import { describe, expect, it } from "vitest";
-import * as Predicates from "../predicates/expression";
-import { createPredicateStream } from "../predicates/feed";
+import * as Condition from "../fact/condition";
+import { createFactStream } from "../fact/stream";
 import * as Retry from "../retry/retry";
 import type * as Interpreter from "../workflow/interpreter";
 import type { RecoveryPolicy } from "./model";
@@ -33,7 +33,7 @@ const noopCapabilities = (): Interpreter.CommandCapabilities => ({
 describe("recovery/runner", () => {
   it("discovers a new entity from the stream and fires recovery once its grace elapses", async () => {
     const fired: string[] = [];
-    const stream = createPredicateStream();
+    const stream = createFactStream();
 
     const policy: RecoveryPolicy = {
       label: "test-policy",
@@ -41,7 +41,7 @@ describe("recovery/runner", () => {
       tripwires: [
         {
           grace: "10ms",
-          predicate: Predicates.ref("healthy"),
+          predicate: Condition.ref("healthy"),
           pipeline: { type: "workflow", workflowName: "fix" },
           retry: [
             ["constantDelay", "1ms"],
@@ -79,7 +79,7 @@ describe("recovery/runner", () => {
 
   it("tracks two entities in the same domain independently", async () => {
     const fired: string[] = [];
-    const stream = createPredicateStream();
+    const stream = createFactStream();
 
     const policy: RecoveryPolicy = {
       label: "test-policy",
@@ -87,7 +87,7 @@ describe("recovery/runner", () => {
       tripwires: [
         {
           grace: "10ms",
-          predicate: Predicates.ref("healthy"),
+          predicate: Condition.ref("healthy"),
           pipeline: { type: "workflow", workflowName: "fix" },
           retry: [
             ["constantDelay", "1ms"],
@@ -127,7 +127,7 @@ describe("recovery/runner", () => {
 
   it("ignores facts from other domains", async () => {
     const fired: string[] = [];
-    const stream = createPredicateStream();
+    const stream = createFactStream();
 
     const policy: RecoveryPolicy = {
       label: "test-policy",
@@ -135,7 +135,7 @@ describe("recovery/runner", () => {
       tripwires: [
         {
           grace: "10ms",
-          predicate: Predicates.ref("healthy"),
+          predicate: Condition.ref("healthy"),
           pipeline: { type: "workflow", workflowName: "fix" },
           retry: [
             ["constantDelay", "1ms"],
@@ -176,7 +176,7 @@ describe("recovery/runner", () => {
   // congelerebbe, e il grace di e2 - già scaduto - non scatterebbe mai.
   it("keeps ticking for the other entities while a recovery pipeline is in flight", async () => {
     const fired: string[] = [];
-    const stream = createPredicateStream();
+    const stream = createFactStream();
     let releaseE1: () => void = () => {};
     const e1Blocked = new Promise<void>((resolve) => {
       releaseE1 = resolve;
@@ -188,7 +188,7 @@ describe("recovery/runner", () => {
       tripwires: [
         {
           grace: "10ms",
-          predicate: Predicates.ref("healthy"),
+          predicate: Condition.ref("healthy"),
           pipeline: { type: "workflow", workflowName: "fix" },
           retry: [
             ["constantDelay", "1ms"],
@@ -230,14 +230,14 @@ describe("recovery/runner", () => {
   });
 
   it("fails fast when the policy's retry config is malformed", () => {
-    const stream = createPredicateStream();
+    const stream = createFactStream();
     const policy: RecoveryPolicy = {
       label: "broken",
       domain: "test-domain",
       tripwires: [
         {
           grace: "10ms",
-          predicate: Predicates.ref("healthy"),
+          predicate: Condition.ref("healthy"),
           pipeline: { type: "workflow", workflowName: "fix" },
           retry: [],
         },

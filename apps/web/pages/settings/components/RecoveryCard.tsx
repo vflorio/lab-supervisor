@@ -8,15 +8,15 @@ import { DomainCardHeader } from "@supervisor/ui/misc/DomainCardHeader";
 import { JsonView } from "@supervisor/ui/misc/JsonView";
 import { RecoveryPolicyList } from "@supervisor/ui/recovery";
 import { useMemo, useState } from "react";
-import { usePredicates } from "../../../hooks/usePredicates";
+import { useFacts } from "../../../hooks/useFacts";
 import { trpc } from "../../../trpc/client";
 import type { Config } from "../Settings";
 import { EditActions } from "./EditActions";
 
 export function RecoveryCard({ config, onSaved }: { config: Config; onSaved: (next: Config) => void }) {
-  const { table } = usePredicates();
+  const { table } = useFacts();
 
-  const predicateOptions = useMemo(
+  const factOptions = useMemo(
     () =>
       Array.from(table.values()).map((entry) => ({
         domain: entry.domain,
@@ -105,7 +105,7 @@ export function RecoveryCard({ config, onSaved }: { config: Config; onSaved: (ne
           retrySchema={POLICY_STEP_SCHEMA}
           notifyTargetSchema={NOTIFY_TARGET_SCHEMA}
           workflowNames={workflowNames}
-          predicateOptions={predicateOptions}
+          factOptions={factOptions}
           onChange={updatePolicy}
           onCreate={createPolicy}
           focusLabel={focusLabel}

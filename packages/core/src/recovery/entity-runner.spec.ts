@@ -2,7 +2,6 @@ import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";
 import { describe, expect, it } from "vitest";
-import * as Predicates from "../predicates/expression";
 import type * as Interpreter from "../workflow/interpreter";
 import * as Compile from "./compile";
 import * as EntityRunner from "./entity-runner";
@@ -67,7 +66,7 @@ const flushMicrotasks = async (): Promise<void> => {
 const singleTripwire = (): readonly RecoveryTripwire[] => [
   {
     grace: GRACE,
-    predicate: Predicates.ref("connected"),
+    predicate: { type: "leaf", leaf: { type: "ref", name: "connected" } },
     pipeline: { type: "workflow", workflowName: "reconnect" },
     retry: [
       ["constantDelay", "1ms"],
@@ -82,7 +81,7 @@ describe("recovery/entity-runner", () => {
     const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: GRACE,
-        predicate: Predicates.ref("connected"),
+        predicate: { type: "leaf", leaf: { type: "ref", name: "connected" } },
         pipeline: { type: "workflow", workflowName: "reconnect" },
         retry: [
           ["constantDelay", "1ms"],
@@ -114,7 +113,7 @@ describe("recovery/entity-runner", () => {
     const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: GRACE,
-        predicate: Predicates.ref("connected"),
+        predicate: { type: "leaf", leaf: { type: "ref", name: "connected" } },
         pipeline: { type: "workflow", workflowName: "reconnect" },
         retry: [
           ["constantDelay", "1ms"],
@@ -163,7 +162,7 @@ describe("recovery/entity-runner", () => {
     const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: GRACE,
-        predicate: Predicates.ref("connected"),
+        predicate: { type: "leaf", leaf: { type: "ref", name: "connected" } },
         pipeline: { type: "workflow", workflowName: "reconnect" },
         retry: [
           ["constantDelay", "1ms"],
@@ -198,7 +197,7 @@ describe("recovery/entity-runner", () => {
     const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: GRACE,
-        predicate: Predicates.ref("connected"),
+        predicate: { type: "leaf", leaf: { type: "ref", name: "connected" } },
         pipeline: { type: "workflow", workflowName: "reconnect" },
         retry: [
           ["constantDelay", "1ms"],
@@ -251,7 +250,7 @@ describe("recovery/entity-runner", () => {
     const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: GRACE,
-        predicate: Predicates.ref("connected"),
+        predicate: { type: "leaf", leaf: { type: "ref", name: "connected" } },
         pipeline: { type: "workflow", workflowName: "does-not-exist" },
         retry: [
           ["constantDelay", "1ms"],
@@ -434,7 +433,7 @@ describe("recovery/entity-runner", () => {
     const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: "1s",
-        predicate: Predicates.ref("connected"),
+        predicate: { type: "leaf", leaf: { type: "ref", name: "connected" } },
         pipeline: { type: "workflow", workflowName: "tripwire-1" },
         retry: [
           ["constantDelay", "1ms"],
@@ -443,7 +442,7 @@ describe("recovery/entity-runner", () => {
       },
       {
         grace: "2s",
-        predicate: Predicates.ref("recording"),
+        predicate: { type: "leaf", leaf: { type: "ref", name: "recording" } },
         pipeline: { type: "workflow", workflowName: "tripwire-2" },
         retry: [
           ["constantDelay", "1ms"],

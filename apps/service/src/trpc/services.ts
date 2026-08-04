@@ -3,11 +3,11 @@ import * as Adb from "@supervisor/core/adapters/adb/shell";
 import * as Config from "@supervisor/core/config";
 import * as Db from "@supervisor/core/db";
 import * as Errors from "@supervisor/core/errors";
+import type * as Facts from "@supervisor/core/fact/index";
 import type * as LogStream from "@supervisor/core/logger/log-stream";
 import type * as Logger from "@supervisor/core/logger/logger";
 import * as Network from "@supervisor/core/network";
 import type * as Notify from "@supervisor/core/notify/stream";
-import type * as Predicates from "@supervisor/core/predicates/index";
 import type * as Recovery from "@supervisor/core/recovery/index";
 import type * as TaskRunner from "@supervisor/core/task-runner/index";
 import type * as Trpc from "@supervisor/core/trpc";
@@ -16,7 +16,7 @@ import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
 import * as RA from "fp-ts/ReadonlyArray";
 import * as TE from "fp-ts/TaskEither";
-import type * as AndroidBridge from "../android-bridge/android-bridge";
+import type * as AndroidBridge from "../android-bridge/runner";
 import * as Node from "../node";
 
 const toDeviceSnapshot = (devices: readonly Adb.Device[]): readonly Trpc.AndroidDeviceSnapshot[] =>
@@ -35,7 +35,7 @@ export type Deps = {
   readonly trpcLog: Logger.Tagged;
   readonly logStream: LogStream.LogStream;
   readonly adbDeviceStream: AndroidBridge.AdbDeviceStream;
-  readonly predicateStream: Predicates.PredicateFeed;
+  readonly factStream: Facts.FactStream;
   readonly recoveryStream: Recovery.RecoveryFeed;
   readonly notifyStream: Notify.NotifyFeed;
   readonly activityStream: Activity.ActivityFeed;
@@ -53,7 +53,7 @@ export const create = ({
   trpcLog,
   adbDeviceStream,
   logStream,
-  predicateStream,
+  factStream,
   recoveryStream,
   notifyStream,
   activityStream,
@@ -112,7 +112,7 @@ export const create = ({
     },
 
     logs: logStream,
-    tracking: predicateStream,
+    tracking: factStream,
     recovery: recoveryStream,
     recoveryReset: resetRecovery,
     runWorkflow: runManualWorkflow,

@@ -1,14 +1,14 @@
 import * as E from "fp-ts/Either";
 import * as TE from "fp-ts/TaskEither";
 import { describe, expect, it } from "vitest";
-import type { PredicateLookup } from "../predicates/expression";
+import type { FactLookup } from "../fact";
 import * as Machine from "../state-machine/machine";
 import * as TripwireMachine from "./tripwire-machine";
 
 const GRACE = 1000;
 
 // Non usato dal reducer (pura logica di stato): serve solo a soddisfare il tipo di Observe/RunRecovery.
-const lookup: PredicateLookup = () => undefined;
+const lookup: FactLookup = () => undefined;
 
 describe("recovery/tripwire-machine reduce", () => {
   const reduce = TripwireMachine.reduce(GRACE);

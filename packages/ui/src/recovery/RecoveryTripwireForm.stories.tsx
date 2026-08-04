@@ -4,7 +4,7 @@ import type { RecoveryTripwire } from "@supervisor/core/recovery/model";
 import { RECOVERY_TRIPWIRE_TEMPLATES } from "@supervisor/core/recovery/templates";
 import { POLICY_STEP_SCHEMA } from "@supervisor/core/retry/codec";
 import { useState } from "react";
-import type { PredicateOption } from "../predicates/PredicateRefPicker";
+import type { FactOption } from "../fact/FactRefPicker";
 import { RecoveryTripwireForm } from "./RecoveryTripwireForm";
 
 const meta: Meta<typeof RecoveryTripwireForm> = {
@@ -15,7 +15,7 @@ const meta: Meta<typeof RecoveryTripwireForm> = {
 export default meta;
 type Story = StoryObj<typeof RecoveryTripwireForm>;
 
-const mockPredicateOptions: readonly PredicateOption[] = [
+const mockFactOptions: readonly FactOption[] = [
   { domain: "suitest-camera", entityId: "tablet", name: "suitest_camera_connected" },
   { domain: "adb", entityId: "192.168.1.4:5555", name: "adb_device_online" },
 ];
@@ -32,7 +32,7 @@ export const Default: Story = {
     retrySchema: POLICY_STEP_SCHEMA,
     notifyTargetSchema: NOTIFY_TARGET_SCHEMA,
     workflowNames: ["wake_and_check", "restart_app"],
-    predicateOptions: mockPredicateOptions,
+    factOptions: mockFactOptions,
   },
   render: function Render(args) {
     const [value, setValue] = useState<RecoveryTripwire>(args.value);
@@ -52,7 +52,7 @@ export const ComposedPredicateWithGate: Story = {
     retrySchema: POLICY_STEP_SCHEMA,
     notifyTargetSchema: NOTIFY_TARGET_SCHEMA,
     workflowNames: ["wake_and_check", "restart_app", "full_recovery"],
-    predicateOptions: mockPredicateOptions,
+    factOptions: mockFactOptions,
   },
   render: function Render(args) {
     const [value, setValue] = useState<RecoveryTripwire>(args.value);
@@ -68,7 +68,7 @@ export const NestedPipelineWithExhaustedNotify: Story = {
     retrySchema: POLICY_STEP_SCHEMA,
     notifyTargetSchema: NOTIFY_TARGET_SCHEMA,
     workflowNames: ["wake_and_check", "restart_app", "full_recovery"],
-    predicateOptions: mockPredicateOptions,
+    factOptions: mockFactOptions,
   },
   render: function Render(args) {
     const [value, setValue] = useState<RecoveryTripwire>(args.value);

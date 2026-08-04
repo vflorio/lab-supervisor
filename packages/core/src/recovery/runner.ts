@@ -1,8 +1,9 @@
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import { format } from "../errors";
+import type { FactEntry, FactValue } from "../fact/model";
+import type { FactFeed } from "../fact/stream";
 import * as Logger from "../logger/logger";
-import type { PredicateEntry, PredicateFeed, PredicateValue } from "../predicates/index";
 import type { PolicyDecodeError } from "../retry/codec";
 import type { Policy } from "../retry/retry";
 import * as TaskRunner from "../task-runner";
@@ -18,7 +19,7 @@ import type * as TripwireMachine from "./tripwire-machine";
 
 export interface RecoveryRunnerEnv {
   readonly logger: Logger.Tagged;
-  readonly stream: PredicateFeed;
+  readonly stream: FactFeed;
   readonly workflows: readonly Workflow[];
   readonly capabilitiesFor: (entityId: string) => CommandCapabilities;
   readonly probesFor?: (entityId: string) => ProbeCapabilities;
@@ -46,7 +47,7 @@ export const start = (
     compileTripwires(policy.tripwires),
     E.map((compiledTripwires: readonly CompiledTripwire[]) => {
       const now = env.now ?? Date.now;
-      const factsByEntity = new Map<string, Map<string, PredicateValue>>();
+      const factsByEntity = new Map<string, Map<string, FactValue>>();
       const runnersByEntity = new Map<string, EntityRunner.EntityRunner>();
 
       const runnerFor = (entityId: string): EntityRunner.EntityRunner => {
@@ -66,7 +67,7 @@ export const start = (
 
       const lookupFor =
         (entityId: string) =>
-        (name: string): PredicateValue | undefined =>
+        (name: string): FactValue | undefined =>
           factsByEntity.get(entityId)?.get(name);
 
       const observeEntity = async (entityId: string): Promise<void> => {
@@ -80,10 +81,10 @@ export const start = (
         );
       };
 
-      const applyEntry = (entry: PredicateEntry): void => {
+      const applyEntry = (entry: FactEntry): void => {
         if (entry.domain !== policy.domain) return;
 
-        const facts = factsByEntity.get(entry.entityId) ?? new Map<string, PredicateValue>();
+        const facts = factsByEntity.get(entry.entityId) ?? new Map<string, FactValue>();
         facts.set(entry.name, entry.value);
         factsByEntity.set(entry.entityId, facts);
       };

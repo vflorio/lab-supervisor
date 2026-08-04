@@ -6,16 +6,16 @@ import { DomainCardHeader } from "@supervisor/ui/misc/DomainCardHeader";
 import { JsonView } from "@supervisor/ui/misc/JsonView";
 import { WorkflowList } from "@supervisor/ui/workflow";
 import { useMemo, useState } from "react";
-import { usePredicates } from "../../../hooks/usePredicates";
+import { useFacts } from "../../../hooks/useFacts";
 import { trpc } from "../../../trpc/client";
 import type { Config } from "../Settings";
 import { EditActions } from "./EditActions";
 
 export function WorkflowsCard({ config, onSaved }: { config: Config; onSaved: (next: Config) => void }) {
   // Per il comando awaitPredicate: gli stessi nomi offerti ai tripwire (vedi RecoveryCard)
-  const { table } = usePredicates();
+  const { table } = useFacts();
 
-  const predicateOptions = useMemo(
+  const factOptions = useMemo(
     () => Array.from(table.values()).map(({ domain, entityId, name }) => ({ domain, entityId, name })),
     [table],
   );
@@ -90,7 +90,7 @@ export function WorkflowsCard({ config, onSaved }: { config: Config; onSaved: (n
           workflows={workflows}
           editing={editing}
           schema={COMMAND_SCHEMA}
-          predicateOptions={predicateOptions}
+          factOptions={factOptions}
           onChange={updateWorkflow}
           onCreate={createWorkflow}
           focusName={focusName}

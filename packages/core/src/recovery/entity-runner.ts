@@ -3,8 +3,8 @@ import { pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
 import { type AppError, format } from "../errors";
+import type { FactLookup } from "../fact/condition";
 import type * as Logger from "../logger/logger";
-import type { PredicateLookup } from "../predicates/expression";
 import * as Retry from "../retry/retry";
 import * as Machine from "../state-machine/machine";
 import type { CommandCapabilities, WorkflowEnv } from "../workflow/interpreter";
@@ -25,7 +25,7 @@ export interface EntityRunnerEnv {
 }
 
 export interface EntityRunner {
-  readonly observe: (lookup: PredicateLookup, now: number) => Promise<void>;
+  readonly observe: (lookup: FactLookup, now: number) => Promise<void>;
   // Rearm exhausted/fatalError tripwire (returns false if index out of bounds)
   readonly rearm: (tripwireIndex: number) => boolean;
 }
@@ -66,7 +66,7 @@ export const create = (compiledTripwires: readonly CompiledTripwire[], env: Enti
     const tripwireLogger = env.logger.child(`Recovery-Tripwire:${index}`);
 
     // Recheck predicate after pipeline (success ≠ healing); retries stop if device recovers mid-pipeline
-    const runRecoveryFor = (lookup: PredicateLookup): TE.TaskEither<AppError, boolean> =>
+    const runRecoveryFor = (lookup: FactLookup): TE.TaskEither<AppError, boolean> =>
       Retry.retryingUntil(
         tripwire.retryPolicy,
         tripwireLogger,
@@ -106,7 +106,7 @@ export const create = (compiledTripwires: readonly CompiledTripwire[], env: Enti
     return { predicate: tripwire.predicate, machine, logger: tripwireLogger, state: ref };
   });
 
-  const observeInstance = async (instance: TripwireInstance, lookup: PredicateLookup, now: number): Promise<void> => {
+  const observeInstance = async (instance: TripwireInstance, lookup: FactLookup, now: number): Promise<void> => {
     const healthy = instance.predicate(lookup);
     const result = await Machine.dispatchTo(instance.machine)(instance.state)({
       tag: "observe",
@@ -120,7 +120,7 @@ export const create = (compiledTripwires: readonly CompiledTripwire[], env: Enti
   };
 
   // Tripwires observed in parallel, not sequentially (avoids blocking one by another's pipeline)
-  const observe = async (lookup: PredicateLookup, now: number): Promise<void> => {
+  const observe = async (lookup: FactLookup, now: number): Promise<void> => {
     await Promise.all(instances.map((instance) => observeInstance(instance, lookup, now)));
   };
 

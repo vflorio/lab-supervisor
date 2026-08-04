@@ -1,17 +1,17 @@
 import { NotificationsActive } from "@mui/icons-material";
 import { Box, Chip, Stack, Typography } from "@mui/material";
-import type { PredicateExpression } from "@supervisor/core/predicates/expression";
+import type { Condition } from "@supervisor/core/fact/condition";
 import type { RecoveryTripwire } from "@supervisor/core/recovery/model";
 import { useState } from "react";
+import { FactExpressionView } from "../fact/FactExpressionView";
 import { DomainCardAccordion } from "../misc/DomainCardAccordion";
 import { NotifyRuleView } from "../notify/NotifyRuleView";
 import { PipelineView } from "../pipeline/PipelineView";
-import { PredicateExpressionView } from "../predicates/PredicateExpressionView";
 import { RetryPolicyView } from "../retry-policy/RetryPolicyView";
 
 const darkBox = { bgcolor: "#0a0c0e", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 1.25 } as const;
 
-const predicateSummary = (expr: PredicateExpression): string => (expr.type === "leaf" ? expr.leaf.name : expr.type);
+const predicateSummary = (expr: Condition): string => (expr.type === "leaf" ? expr.leaf.name : expr.type);
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -50,7 +50,7 @@ export function TripwireView({ tripwire, index }: TripwireViewProps) {
         <Box>
           <FieldLabel>Predicate</FieldLabel>
           <Box sx={darkBox}>
-            <PredicateExpressionView value={tripwire.predicate} />
+            <FactExpressionView value={tripwire.predicate} />
           </Box>
         </Box>
         <Box>

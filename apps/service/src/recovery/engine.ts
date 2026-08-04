@@ -2,11 +2,11 @@ import type * as Activity from "@supervisor/core/activity/stream";
 import type { SlackConfig } from "@supervisor/core/adapters/slack";
 import type * as ConfigModel from "@supervisor/core/config";
 import * as DateTime from "@supervisor/core/date-time";
+import type * as Fact from "@supervisor/core/fact/index";
 import type * as Logger from "@supervisor/core/logger/logger";
 import * as NotifyDispatch from "@supervisor/core/notify/dispatch";
 import type { NotifyLifecycle, NotifyRule } from "@supervisor/core/notify/model";
 import type * as NotifyStream from "@supervisor/core/notify/stream";
-import type * as Predicates from "@supervisor/core/predicates/index";
 import * as Recovery from "@supervisor/core/recovery/index";
 import * as RetryCodec from "@supervisor/core/retry/codec";
 import type * as TaskRunner from "@supervisor/core/task-runner/index";
@@ -16,7 +16,7 @@ import * as O from "fp-ts/Option";
 import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
-import type * as AndroidBridge from "../android-bridge/android-bridge";
+import type * as AndroidBridge from "../android-bridge/runner";
 import * as Node from "../node";
 import * as Registry from "../registry";
 import type * as Workflow from "../workflow";
@@ -30,7 +30,7 @@ const TICK_POLICY = RetryCodec.describedConstant(DateTime.durationToMs("1s"));
 export interface Env {
   readonly logger: Logger.Tagged;
   readonly config: ConfigModel.Service;
-  readonly predicateStream: Predicates.PredicateFeed;
+  readonly factStream: Fact.FactFeed;
   readonly recoveryStream: Recovery.RecoveryStream;
   readonly notifyStream: NotifyStream.NotifyStream;
   readonly activityStream: Activity.ActivityStream;
@@ -131,7 +131,7 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
       pipe(
         Recovery.start(policy, {
           logger: env.logger.child(`RecoveryPolicy:${policy.label}`),
-          stream: env.predicateStream,
+          stream: env.factStream,
           workflows: env.config.workflows,
           capabilitiesFor: Capabilities.capabilitiesFor(policy.domain, capabilitiesEnv),
           probesFor: Capabilities.probesFor(policy.domain, capabilitiesEnv),

@@ -1,6 +1,6 @@
 import * as t from "io-ts";
 import { booleanTreeCodec } from "../boolean-tree/codec";
-import { FactLeafCodec } from "../predicates/expression-codec";
+import { FactLeafCodec } from "../fact/condition-codec";
 import type { Condition, ConditionLeaf, ProbeLeaf } from "./condition";
 import { findProbeSchema } from "./probe";
 

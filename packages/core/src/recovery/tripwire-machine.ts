@@ -3,7 +3,7 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import { match, P } from "ts-pattern";
 import type { AppError } from "../errors";
-import type { PredicateLookup } from "../predicates/expression";
+import type { FactLookup } from "../fact/condition";
 import * as Machine from "../state-machine/machine";
 
 // Macchina a stati di un singolo RecoveryTripwire: osserva solo il proprio predicate, se
@@ -35,7 +35,7 @@ export interface Observe {
   readonly tag: "observe";
   readonly healthy: boolean;
   readonly now: number;
-  readonly lookup: PredicateLookup;
+  readonly lookup: FactLookup;
 }
 
 // Esito di un tentativo di recovery, ridispatchato come evento (mai un side-channel): un
@@ -59,7 +59,7 @@ export type Event = Observe | RecoveryOutcome;
 export interface RunRecovery {
   readonly tag: "runRecovery";
   readonly attempt: number;
-  readonly lookup: PredicateLookup;
+  readonly lookup: FactLookup;
 }
 
 // Traduce l'esito nello stato che ne consegue - separato dal match principale, che ha già il
@@ -119,7 +119,7 @@ export const reduce =
 // rivalutato ad ogni tentativo, non catturato una volta sola.
 export const makeHandler =
   <Err extends AppError>(
-    runRecovery: (lookup: PredicateLookup) => TE.TaskEither<Err, boolean>,
+    runRecovery: (lookup: FactLookup) => TE.TaskEither<Err, boolean>,
   ): Machine.CommandHandler<unknown, never, Event, RunRecovery> =>
   (command) =>
     RTE.fromTask(
@@ -138,7 +138,7 @@ export const makeHandler =
 
 export const make = <Err extends AppError>(
   graceMs: number,
-  runRecovery: (lookup: PredicateLookup) => TE.TaskEither<Err, boolean>,
+  runRecovery: (lookup: FactLookup) => TE.TaskEither<Err, boolean>,
   onTransition?: Machine.TransitionHook<unknown, never, TripwireState, Event>,
 ): Machine.Machine<unknown, never, TripwireState, Event, RunRecovery> =>
   Machine.make(reduce(graceMs), makeHandler(runRecovery), onTransition);

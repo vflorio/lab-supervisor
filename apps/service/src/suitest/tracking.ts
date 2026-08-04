@@ -1,6 +1,6 @@
 import type * as Config from "@supervisor/core/config";
+import * as Fact from "@supervisor/core/fact/index";
 import type * as Logger from "@supervisor/core/logger/logger";
-import * as Predicates from "@supervisor/core/predicates/index";
 import type * as RetryCodec from "@supervisor/core/retry/codec";
 import * as TaskRunner from "@supervisor/core/task-runner/index";
 import { flow, pipe } from "fp-ts/function";
@@ -20,12 +20,12 @@ export interface Deps {
   readonly logger: Logger.Tagged;
   readonly suitestConfig: Config.Suitest;
   readonly policies: SuitestTrackingPolicies;
-  readonly stream: Predicates.PredicateStream;
+  readonly stream: Fact.FactStream;
   readonly loopStream?: TaskRunner.LoopStream;
 }
 
 export const create = ({ logger, stream, policies, suitestConfig, loopStream }: Deps) => {
-  const camera = Predicates.create({
+  const camera = Fact.create({
     logger,
     stream,
     policy: policies.suitestCamera.policy,
@@ -34,7 +34,7 @@ export const create = ({ logger, stream, policies, suitestConfig, loopStream }: 
     loopStream,
   })({ suitestConfig, logger: logger.child("Tracker-Suitest:camera") });
 
-  const controlUnit = Predicates.create({
+  const controlUnit = Fact.create({
     logger,
     stream,
     policy: policies.suitestControlUnit.policy,
@@ -47,7 +47,7 @@ export const create = ({ logger, stream, policies, suitestConfig, loopStream }: 
     loopStream,
   })({ suitestConfig, logger: logger.child("Tracker-Suitest:control-unit") });
 
-  const device = Predicates.create({
+  const device = Fact.create({
     logger,
     stream,
     policy: policies.suitestDevice.policy,

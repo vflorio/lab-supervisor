@@ -3,10 +3,10 @@ import * as ActivationSchedule from "@supervisor/core/activation/schedule";
 import * as Activity from "@supervisor/core/activity/stream";
 import type * as ConfigModel from "@supervisor/core/config";
 import * as Errors from "@supervisor/core/errors";
+import * as Facts from "@supervisor/core/fact/index";
 import * as LogStream from "@supervisor/core/logger/log-stream";
 import * as Logger from "@supervisor/core/logger/logger";
 import * as Notify from "@supervisor/core/notify/stream";
-import * as Predicates from "@supervisor/core/predicates/index";
 import * as Recovery from "@supervisor/core/recovery/index";
 import * as RetryCodec from "@supervisor/core/retry/codec";
 import type * as Schedule from "@supervisor/core/schedule/schedule";
@@ -21,7 +21,7 @@ import * as O from "fp-ts/Option";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
-import * as AndroidBridge from "./android-bridge/android-bridge";
+import * as AndroidBridge from "./android-bridge/runner";
 import * as Config from "./config";
 import * as ServiceLogger from "./logger";
 import type * as Node from "./node";
@@ -87,7 +87,7 @@ export const create: Effect<ServiceHandle> = pipe(
 
     const activationLog = logger.child("Activation");
 
-    const predicateStream = Predicates.createPredicateStream();
+    const factStream = Facts.createFactStream();
     const adbDeviceStream = AndroidBridge.createAdbDeviceStream();
     const recoveryStream = Recovery.createRecoveryStream();
     const notifyStream = Notify.createNotifyStream();
@@ -126,7 +126,7 @@ export const create: Effect<ServiceHandle> = pipe(
         trpcLog,
         logStream,
         adbDeviceStream,
-        predicateStream,
+        factStream,
         recoveryStream,
         notifyStream,
         activityStream,
@@ -150,7 +150,7 @@ export const create: Effect<ServiceHandle> = pipe(
           logger: activationLog,
           config,
           policies,
-          predicateStream,
+          factStream,
           adbDeviceStream,
           recoveryStream,
           notifyStream,

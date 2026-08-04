@@ -1,7 +1,7 @@
 import * as E from "fp-ts/Either";
 import * as TE from "fp-ts/TaskEither";
 import { describe, expect, it } from "vitest";
-import * as Predicates from "../predicates/expression";
+
 import * as Condition from "./condition";
 import * as Interpreter from "./interpreter";
 import type * as Probe from "./probe";
@@ -130,7 +130,7 @@ describe("workflow interpreter", () => {
 
     const workflow: Workflow.Workflow = {
       name: "await-wf",
-      commands: [{ type: "await", condition: Predicates.ref("camera_connected"), timeout: "2s" }],
+      commands: [{ type: "await", condition: Condition.ref("camera_connected"), timeout: "2s" }],
     };
 
     const start = Date.now();
@@ -151,7 +151,7 @@ describe("workflow interpreter", () => {
 
     const workflow: Workflow.Workflow = {
       name: "await-wf",
-      commands: [{ type: "await", condition: Predicates.ref("camera_connected"), timeout: "100ms" }],
+      commands: [{ type: "await", condition: Condition.ref("camera_connected"), timeout: "100ms" }],
     };
 
     const result = await Interpreter.interpretWorkflow(workflow)(env)();
@@ -163,7 +163,7 @@ describe("workflow interpreter", () => {
 
     const workflow: Workflow.Workflow = {
       name: "await-wf",
-      commands: [{ type: "await", condition: Predicates.ref("camera_connected"), timeout: "60ms" }],
+      commands: [{ type: "await", condition: Condition.ref("camera_connected"), timeout: "60ms" }],
     };
 
     const start = Date.now();
@@ -178,7 +178,7 @@ describe("workflow interpreter", () => {
 
     const workflow: Workflow.Workflow = {
       name: "await-wf",
-      commands: [{ type: "await", condition: Predicates.ref("camera_connected"), timeout: "10s" }],
+      commands: [{ type: "await", condition: Condition.ref("camera_connected"), timeout: "10s" }],
     };
 
     const start = Date.now();
@@ -236,7 +236,7 @@ describe("workflow interpreter", () => {
     const workflow: Workflow.Workflow = {
       name: "guard-wf",
       commands: [
-        { type: "when", condition: Predicates.ref("connected"), thenWorkflow: "then-wf", elseWorkflow: "else-wf" },
+        { type: "when", condition: Condition.ref("connected"), thenWorkflow: "then-wf", elseWorkflow: "else-wf" },
       ],
     };
 
@@ -263,7 +263,7 @@ describe("workflow interpreter", () => {
 
     const workflow: Workflow.Workflow = {
       name: "guard-wf",
-      commands: [{ type: "when", condition: Predicates.ref("connected"), thenWorkflow: "then-wf" }],
+      commands: [{ type: "when", condition: Condition.ref("connected"), thenWorkflow: "then-wf" }],
     };
 
     expect(E.isRight(await Interpreter.interpretWorkflow(workflow)(env)())).toBe(true);
@@ -338,7 +338,7 @@ describe("workflow interpreter", () => {
       commands: [
         {
           type: "await",
-          condition: Condition.or([Predicates.ref("connected"), Condition.probe("screenOn")]),
+          condition: Condition.or([Condition.ref("connected"), Condition.probe("screenOn")]),
           timeout: "1s",
         },
       ],

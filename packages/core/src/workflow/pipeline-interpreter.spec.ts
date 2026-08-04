@@ -1,7 +1,7 @@
 import * as E from "fp-ts/Either";
 import * as TE from "fp-ts/TaskEither";
 import { describe, expect, it } from "vitest";
-import * as Predicates from "../predicates/expression";
+import * as Condition from "../fact/condition";
 import type * as Interpreter from "./interpreter";
 import * as PipelineInterpreter from "./pipeline-interpreter";
 import type * as Workflow from "./workflow";
@@ -187,12 +187,12 @@ describe("pipeline interpreter", () => {
         name: "restart-app",
         commands: [
           { type: "restartApp", packageId: "app" },
-          { type: "await", condition: Predicates.ref("connected"), timeout: "40ms" },
+          { type: "await", condition: Condition.ref("connected"), timeout: "40ms" },
         ],
       },
       {
         name: "reboot-device",
-        commands: [{ type: "reboot" }, { type: "await", condition: Predicates.ref("connected"), timeout: "100ms" }],
+        commands: [{ type: "reboot" }, { type: "await", condition: Condition.ref("connected"), timeout: "100ms" }],
       },
     ];
 
@@ -237,7 +237,7 @@ describe("pipeline interpreter", () => {
       PipelineInterpreter.interpretPipeline({
         type: "and",
         pipelines: [
-          { type: "condition", condition: { type: "not", node: Predicates.ref("recording") } },
+          { type: "condition", condition: { type: "not", node: Condition.ref("recording") } },
           { type: "workflow", workflowName: "reboot-wf" },
         ],
       })({ ...envWith(workflows, calls), lookup: () => recording })();

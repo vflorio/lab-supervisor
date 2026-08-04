@@ -1,12 +1,12 @@
 import { Stack, Typography } from "@mui/material";
-import type { PredicateLeaf } from "./ops";
+import type { FactLeaf } from "./ops";
 
 // Readonly: "name" (ref) | "name == value" (equals) | "name includes value" (includes).
-export interface PredicateLeafViewProps {
-  readonly value: PredicateLeaf;
+export interface FactLeafViewProps {
+  readonly value: FactLeaf;
 }
 
-export function PredicateLeafView({ value }: PredicateLeafViewProps) {
+export function FactLeafView({ value }: FactLeafViewProps) {
   return (
     <Stack direction="row" sx={{ gap: 1, alignItems: "center" }}>
       <Typography variant="body2" sx={{ fontWeight: 600 }}>

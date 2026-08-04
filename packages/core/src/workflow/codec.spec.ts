@@ -1,7 +1,7 @@
 import * as E from "fp-ts/Either";
 import { describe, expect, it } from "vitest";
 import * as BooleanTree from "../boolean-tree/tree";
-import * as Predicates from "../predicates/expression";
+
 import { CommandCodec } from "./codec";
 import * as Condition from "./condition";
 
@@ -14,7 +14,7 @@ describe("Command codec: await", () => {
 
   it("decodes a fact condition and a duration", () => {
     expect(CommandCodec.decode(json)).toStrictEqual(
-      E.right({ type: "await", condition: Predicates.ref("suitest_camera_connected"), timeout: "60s" }),
+      E.right({ type: "await", condition: Condition.ref("suitest_camera_connected"), timeout: "60s" }),
     );
   });
 
@@ -36,8 +36,8 @@ describe("Command codec: await", () => {
       E.right({
         type: "await",
         condition: BooleanTree.and([
-          Predicates.ref("suitest_camera_connected"),
-          BooleanTree.not(Predicates.ref("suitest_camera_recording")),
+          Condition.ref("suitest_camera_connected"),
+          BooleanTree.not(Condition.ref("suitest_camera_recording")),
         ]),
         timeout: "2m",
       }),
@@ -63,7 +63,7 @@ describe("Command codec: when", () => {
 
     expect(decoded.right).toStrictEqual({
       type: "when",
-      condition: BooleanTree.not(Predicates.ref("connected")),
+      condition: BooleanTree.not(Condition.ref("connected")),
       thenWorkflow: "reconnect",
       elseWorkflow: "verify",
     });

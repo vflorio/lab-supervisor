@@ -6,8 +6,8 @@ import type { Command } from "@supervisor/core/workflow/workflow";
 import { match } from "ts-pattern";
 import { ConditionForm } from "../condition/ConditionForm";
 import { DurationForm } from "../duration/DurationForm";
+import type { FactOption } from "../fact/FactRefPicker";
 import { NumberField } from "../misc/number-field/NumberField";
-import type { PredicateOption } from "../predicates/PredicateRefPicker";
 import { CommandTypePicker } from "./CommandTypePicker";
 
 export interface CommandFormProps {
@@ -15,7 +15,7 @@ export interface CommandFormProps {
   readonly onChange: (next: Command) => void;
   readonly schema: readonly CommandSchema[];
   // Solo per i campi `kind: "condition"` (await/when) - assente altrove, resta una lista vuota
-  readonly predicateOptions?: readonly PredicateOption[];
+  readonly factOptions?: readonly FactOption[];
 }
 
 const DEFAULT_CONDITION: Condition = { type: "leaf", leaf: { type: "ref", name: "" } };
@@ -40,7 +40,7 @@ export const commandFor = (schema: readonly CommandSchema[], type: string): Comm
   return record as unknown as Command;
 };
 
-export function CommandForm({ value, onChange, schema, predicateOptions = [] }: CommandFormProps) {
+export function CommandForm({ value, onChange, schema, factOptions = [] }: CommandFormProps) {
   const commandSchema = schema.find((s) => s.type === value.type);
   const record = value as unknown as Record<string, unknown>;
   const setField = (key: string, next: unknown) => onChange({ ...record, [key]: next } as unknown as Command);
@@ -64,7 +64,7 @@ export function CommandForm({ value, onChange, schema, predicateOptions = [] }: 
               key={field.key}
               value={(raw as Condition | undefined) ?? DEFAULT_CONDITION}
               onChange={(next) => setField(field.key, next)}
-              predicateOptions={predicateOptions}
+              factOptions={factOptions}
             />
           ))
           .with({ kind: "coords" }, () => {

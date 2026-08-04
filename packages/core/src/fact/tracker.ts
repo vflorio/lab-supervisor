@@ -5,22 +5,22 @@ import * as Errors from "../errors";
 import * as Logger from "../logger/logger";
 import type * as Retry from "../retry/retry";
 import * as TaskRunner from "../task-runner";
-import type { PredicateStream } from "./feed";
-import { factKey, type PredicateFact, type PredicateValue } from "./model";
+import { type Fact, type FactValue, factKey } from "./model";
+import type { FactStream } from "./stream";
 
-// Scarica periodicamente un dominio, ne deriva un set di predicati nominati per entità, ed
+// Scarica periodicamente un dominio, ne deriva un set di fatti nominati per entità, ed
 // emette sullo stream solo i fatti il cui valore è realmente cambiato.
 
 export interface TrackerConfig<Env, Err extends Errors.AppError, RawItem> {
   readonly domain: string;
   readonly keyOf: (item: RawItem) => string;
-  readonly toFacts: (item: RawItem) => Readonly<Record<string, PredicateValue>>;
+  readonly toFacts: (item: RawItem) => Readonly<Record<string, FactValue>>;
   readonly fetch: RTE.ReaderTaskEither<Env, Err, readonly RawItem[]>;
 }
 
 export interface DiffResult {
-  readonly changed: readonly PredicateFact[];
-  readonly next: ReadonlyMap<string, PredicateValue>;
+  readonly changed: readonly Fact[];
+  readonly next: ReadonlyMap<string, FactValue>;
 }
 
 // Pura: dato il valore precedente per ogni (entityId, name) e la lista appena scaricata,
@@ -32,11 +32,11 @@ export const diff =
   <RawItem>(
     domain: string,
     keyOf: (item: RawItem) => string,
-    toFacts: (item: RawItem) => Readonly<Record<string, PredicateValue>>,
+    toFacts: (item: RawItem) => Readonly<Record<string, FactValue>>,
   ) =>
-  (previous: ReadonlyMap<string, PredicateValue>, items: readonly RawItem[]): DiffResult => {
+  (previous: ReadonlyMap<string, FactValue>, items: readonly RawItem[]): DiffResult => {
     const next = new Map(previous);
-    const changed: PredicateFact[] = [];
+    const changed: Fact[] = [];
 
     for (const item of items) {
       const entityId = keyOf(item);
@@ -55,7 +55,7 @@ export const diff =
 
 export interface TrackerDeps<Env, Err extends Errors.AppError, RawItem> {
   readonly logger: Logger.Tagged;
-  readonly stream: PredicateStream;
+  readonly stream: FactStream;
   readonly policy: Retry.Policy;
   readonly config: TrackerConfig<Env, Err, RawItem>;
   readonly descriptor: TaskRunner.LoopDescriptor;
@@ -76,7 +76,7 @@ export const create =
   }: TrackerDeps<Env, Err, RawItem>) =>
   (env: Env): TaskRunner.Handle => {
     const diffFor = diff<RawItem>(config.domain, config.keyOf, config.toFacts);
-    let snapshot: ReadonlyMap<string, PredicateValue> = new Map();
+    let snapshot: ReadonlyMap<string, FactValue> = new Map();
 
     const trackerLogger = logger.child("Tracker");
 

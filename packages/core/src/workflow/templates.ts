@@ -1,4 +1,3 @@
-import * as Predicates from "../predicates/expression";
 import * as Condition from "./condition";
 import type { Workflow } from "./workflow";
 
@@ -60,7 +59,7 @@ export const WORKFLOW_TEMPLATES: readonly WorkflowTemplate[] = [
         { type: "wakeUp" },
         {
           type: "await",
-          condition: Condition.or([Predicates.ref("adb_device_online"), Condition.probe("screenOn")]),
+          condition: Condition.or([Condition.ref("adb_device_online"), Condition.probe("screenOn")]),
           timeout: "45s",
         },
         { type: "sleep", duration: "2s" },

@@ -1,14 +1,14 @@
 import * as t from "io-ts";
 import { DurationString } from "../date-time";
+import { ConditionCodec } from "../fact/condition-codec";
 import { NotifyRuleCodec } from "../notify/codec";
-import { PredicateExpressionCodec } from "../predicates/expression-codec";
 import { PolicyJsonCodec } from "../retry/codec";
 import { PipelineCodec } from "../workflow/pipeline-codec";
 
 export const RecoveryTripwireCodec = t.intersection([
   t.type({
     grace: DurationString,
-    predicate: PredicateExpressionCodec,
+    predicate: ConditionCodec,
     pipeline: PipelineCodec,
     retry: PolicyJsonCodec,
   }),

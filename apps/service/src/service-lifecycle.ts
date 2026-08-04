@@ -2,9 +2,9 @@ import type * as Activity from "@supervisor/core/activity/stream";
 import type * as ConfigModel from "@supervisor/core/config";
 import * as DateTime from "@supervisor/core/date-time";
 import * as Errors from "@supervisor/core/errors";
+import type * as Facts from "@supervisor/core/fact/index";
 import type * as Logger from "@supervisor/core/logger/logger";
 import type * as Notify from "@supervisor/core/notify/stream";
-import type * as Predicates from "@supervisor/core/predicates/index";
 import type * as Recovery from "@supervisor/core/recovery/index";
 import * as RetryCodec from "@supervisor/core/retry/codec";
 import * as TaskRunner from "@supervisor/core/task-runner/index";
@@ -12,7 +12,7 @@ import type * as WorkflowInterpreter from "@supervisor/core/workflow/interpreter
 import { flow, pipe } from "fp-ts/function";
 import * as IO from "fp-ts/IO";
 import * as TE from "fp-ts/TaskEither";
-import * as AndroidBridge from "./android-bridge/android-bridge";
+import * as AndroidBridge from "./android-bridge/runner";
 import * as AndroidBridgeTracking from "./android-bridge/tracking";
 import * as Node from "./node";
 import * as RecoveryEngine from "./recovery/engine";
@@ -34,7 +34,7 @@ export interface Env {
   readonly config: ConfigModel.Service;
   readonly policies: TrackingPolicies;
   // Fatti nominati e tipizzati (bool/string/number) sulle entità dei domini tracciati (adb/suitest-*): chiave (domain, entityId, name)
-  readonly predicateStream: Predicates.PredicateStream;
+  readonly factStream: Facts.FactStream;
   // Lista completa dei device ADB correnti ad ogni cambiamento (snapshot intero, non delta)
   readonly adbDeviceStream: AndroidBridge.AdbDeviceStream;
   // Transizioni di stato di ogni tripwire di recovery (healthy/pending/recovering/exhausted/fatalError): chiave (policy, domain, entityId, tripwireIndex), con storico
@@ -107,7 +107,7 @@ const createRecovery = (
     RecoveryEngine.start({
       logger: env.logger.child("Recovery"),
       config: env.config,
-      predicateStream: env.predicateStream,
+      factStream: env.factStream,
       recoveryStream: env.recoveryStream,
       notifyStream: env.notifyStream,
       activityStream: env.activityStream,
@@ -124,7 +124,7 @@ const createRecovery = (
           workflows: env.config.workflows,
           capabilitiesEnv: recovery.capabilitiesEnv,
           activityStream: env.activityStream,
-          predicateStream: env.predicateStream,
+          factStream: env.factStream,
         }),
       }),
     ),
@@ -149,7 +149,7 @@ const createResources =
 
     const androidBridgeTracking = AndroidBridgeTracking.create({
       logger: trackingLog,
-      predicateStream: env.predicateStream,
+      factStream: env.factStream,
       adbDeviceStream: env.adbDeviceStream,
       adbEnv: { logger: trackingLog.child("Tracker-ADB"), spawn: Node.spawn },
       policy: env.policies.androidBridgeTrackingPolicy.policy,
@@ -164,7 +164,7 @@ const createResources =
     const suitestTracking = SuitestTracking.create({
       logger: trackingLog,
       suitestConfig: env.config.suitest,
-      stream: env.predicateStream,
+      stream: env.factStream,
       policies: {
         suitestCamera: env.policies.suitestCameraTrackingPolicy,
         suitestControlUnit: env.policies.suitestControlUnitTrackingPolicy,

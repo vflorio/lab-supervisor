@@ -8,7 +8,7 @@ import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
-import type * as AndroidBridge from "../android-bridge/android-bridge";
+import type * as AndroidBridge from "../android-bridge/runner";
 import * as Registry from "../registry";
 import * as Workflow from "../workflow";
 import * as Target from "./target";

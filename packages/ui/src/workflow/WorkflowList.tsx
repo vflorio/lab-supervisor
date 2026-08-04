@@ -3,8 +3,8 @@ import { Chip, IconButton, Stack, Typography } from "@mui/material";
 import type { CommandSchema } from "@supervisor/core/workflow/codec";
 import type { Workflow } from "@supervisor/core/workflow/workflow";
 import { useEffect, useState } from "react";
+import type { FactOption } from "../fact/FactRefPicker";
 import { DomainCardAccordion } from "../misc/DomainCardAccordion";
-import type { PredicateOption } from "../predicates/PredicateRefPicker";
 import { CommandView } from "./CommandView";
 import { WorkflowForm } from "./WorkflowForm";
 
@@ -15,7 +15,7 @@ export interface WorkflowListProps {
   readonly onChange: (next: Workflow) => void;
   readonly onCreate?: () => void;
   readonly focusName?: string;
-  readonly predicateOptions?: readonly PredicateOption[];
+  readonly factOptions?: readonly FactOption[];
 }
 
 export function WorkflowList({
@@ -25,7 +25,7 @@ export function WorkflowList({
   onChange,
   onCreate,
   focusName,
-  predicateOptions,
+  factOptions = [],
 }: WorkflowListProps) {
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
 
@@ -68,7 +68,7 @@ export function WorkflowList({
           onToggle={() => toggle(workflow.name)}
         >
           {editing ? (
-            <WorkflowForm value={workflow} onChange={onChange} schema={schema} predicateOptions={predicateOptions} />
+            <WorkflowForm value={workflow} onChange={onChange} schema={schema} factOptions={factOptions} />
           ) : workflow.commands.length === 0 ? (
             <Typography variant="caption" color="textSecondary">
               Nessuno step

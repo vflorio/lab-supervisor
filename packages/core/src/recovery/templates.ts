@@ -1,5 +1,5 @@
 import * as BooleanTree from "../boolean-tree/tree";
-import * as Predicates from "../predicates/expression";
+import * as Condition from "../fact/condition";
 import { PIPELINE_TEMPLATES } from "../workflow/pipeline-templates";
 import type { RecoveryPolicy, RecoveryTripwire } from "./model";
 
@@ -21,7 +21,7 @@ export const RECOVERY_TRIPWIRE_TEMPLATES: readonly RecoveryTripwireTemplate[] = 
       "Predicate diretto (un solo fatto negato), pipeline minima, retry con backoff esponenziale limitato: il caso più semplice.",
     tripwire: {
       grace: "30s",
-      predicate: BooleanTree.not(Predicates.ref("suitest_camera_connected")),
+      predicate: BooleanTree.not(Condition.ref("suitest_camera_connected")),
       pipeline: { type: "workflow", workflowName: "wake_and_check" },
       retry: [
         ["exponentialBackoff", "1s"],
@@ -37,8 +37,8 @@ export const RECOVERY_TRIPWIRE_TEMPLATES: readonly RecoveryTripwireTemplate[] = 
     tripwire: {
       grace: "45s",
       predicate: BooleanTree.and([
-        BooleanTree.not(Predicates.ref("adb_device_online")),
-        BooleanTree.not(Predicates.ref("maintenance_mode")),
+        BooleanTree.not(Condition.ref("adb_device_online")),
+        BooleanTree.not(Condition.ref("maintenance_mode")),
       ]),
       pipeline: PIPELINE_TEMPLATES[1]!.pipeline, // escalation a due livelli
       retry: [
@@ -61,7 +61,7 @@ export const RECOVERY_TRIPWIRE_TEMPLATES: readonly RecoveryTripwireTemplate[] = 
       'Riusa il pipeline con gate + escalation ("non riavviare mentre si registra") e notifica solo quando i retry sono esauriti, non ad ogni tentativo.',
     tripwire: {
       grace: "1m",
-      predicate: BooleanTree.not(Predicates.ref("suitest_camera_connected")),
+      predicate: BooleanTree.not(Condition.ref("suitest_camera_connected")),
       pipeline: PIPELINE_TEMPLATES[2]!.pipeline, // precondizione con gate
       retry: [
         ["exponentialBackoff", "2s"],
@@ -100,7 +100,7 @@ export const RECOVERY_POLICY_TEMPLATES: readonly RecoveryPolicyTemplate[] = [
       tripwires: [
         {
           grace: "30s",
-          predicate: BooleanTree.not(Predicates.ref("adb_device_online")),
+          predicate: BooleanTree.not(Condition.ref("adb_device_online")),
           pipeline: { type: "workflow", workflowName: "wake_and_check" },
           retry: [
             ["constantDelay", "2s"],
@@ -109,7 +109,7 @@ export const RECOVERY_POLICY_TEMPLATES: readonly RecoveryPolicyTemplate[] = [
         },
         {
           grace: "2m",
-          predicate: BooleanTree.not(Predicates.ref("adb_device_online")),
+          predicate: BooleanTree.not(Condition.ref("adb_device_online")),
           pipeline: { type: "workflow", workflowName: "restart_app" },
           retry: [
             ["exponentialBackoff", "1s"],
@@ -119,7 +119,7 @@ export const RECOVERY_POLICY_TEMPLATES: readonly RecoveryPolicyTemplate[] = [
         },
         {
           grace: "10m",
-          predicate: BooleanTree.not(Predicates.ref("adb_device_online")),
+          predicate: BooleanTree.not(Condition.ref("adb_device_online")),
           pipeline: { type: "workflow", workflowName: "full_recovery" },
           retry: [
             ["constantDelay", "30s"],

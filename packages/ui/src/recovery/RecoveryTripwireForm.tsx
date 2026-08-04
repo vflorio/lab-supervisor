@@ -5,10 +5,10 @@ import type { RecoveryTripwire } from "@supervisor/core/recovery/model";
 import type { PolicyStepSchema } from "@supervisor/core/retry/codec";
 import { useState } from "react";
 import { DurationForm } from "../duration/DurationForm";
+import { FactExpressionForm } from "../fact/FactExpressionForm";
+import type { FactOption } from "../fact/FactRefPicker";
 import { NotifyRuleListForm } from "../notify/NotifyRuleListForm";
 import { PipelineForm } from "../pipeline/PipelineForm";
-import { PredicateExpressionForm } from "../predicates/PredicateExpressionForm";
-import type { PredicateOption } from "../predicates/PredicateRefPicker";
 import { RetryPolicyForm } from "../retry-policy/RetryPolicyForm";
 
 export interface RecoveryTripwireFormProps {
@@ -17,7 +17,7 @@ export interface RecoveryTripwireFormProps {
   readonly retrySchema: readonly PolicyStepSchema[];
   readonly notifyTargetSchema: readonly NotifyTargetSchema[];
   readonly workflowNames: readonly string[];
-  readonly predicateOptions: readonly PredicateOption[];
+  readonly factOptions: readonly FactOption[];
 }
 
 export function RecoveryTripwireForm({
@@ -26,7 +26,7 @@ export function RecoveryTripwireForm({
   retrySchema,
   notifyTargetSchema,
   workflowNames,
-  predicateOptions,
+  factOptions,
 }: RecoveryTripwireFormProps) {
   const [expanded, setExpanded] = useState(true);
   const notify = value.notify ?? [];
@@ -52,10 +52,10 @@ export function RecoveryTripwireForm({
             <Typography variant="overline" color="textSecondary">
               Predicate
             </Typography>
-            <PredicateExpressionForm
+            <FactExpressionForm
               value={value.predicate}
               onChange={(predicate) => onChange({ ...value, predicate })}
-              predicateOptions={predicateOptions}
+              factOptions={factOptions}
             />
           </Stack>
           <Stack sx={{ gap: 1 }}>
@@ -66,7 +66,7 @@ export function RecoveryTripwireForm({
               value={value.pipeline}
               onChange={(pipeline) => onChange({ ...value, pipeline })}
               workflowNames={workflowNames}
-              predicateOptions={predicateOptions}
+              factOptions={factOptions}
             />
           </Stack>
           <Stack sx={{ gap: 1 }}>

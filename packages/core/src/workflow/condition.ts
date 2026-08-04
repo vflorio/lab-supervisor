@@ -1,7 +1,7 @@
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
 import * as BooleanTree from "../boolean-tree/tree";
-import { compileFactLeaf, type FactLeaf } from "../predicates/expression";
+import { compileFactLeaf, type FactLeaf } from "../fact/condition";
 import { type Effect, type WorkflowEnv, type WorkflowError, workflowError } from "./env";
 import type { Orientation, ProbeCapabilities, ProbeName } from "./probe";
 
@@ -22,6 +22,13 @@ export const { and, or, not } = BooleanTree;
 
 export const probe = (name: ProbeName, ...args: readonly string[]): Condition =>
   BooleanTree.leaf({ type: "probe", name, args });
+
+// Fact constructors
+export const ref = (name: string): Condition => BooleanTree.leaf({ type: "ref", name });
+
+export const equals = (name: string, value: any): Condition => BooleanTree.leaf({ type: "equals", name, value });
+
+export const includes = (name: string, value: string): Condition => BooleanTree.leaf({ type: "includes", name, value });
 
 type ProbeResult = TE.TaskEither<WorkflowError, boolean>;
 
