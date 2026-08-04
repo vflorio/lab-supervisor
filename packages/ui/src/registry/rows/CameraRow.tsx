@@ -1,14 +1,14 @@
 import { Link as LinkIcon, Usb, Videocam } from "@mui/icons-material";
 import { Button, Stack } from "@mui/material";
-import type { CameraEntry } from "../domain/types";
-import { EntryRow } from "../misc/EntryRow";
-import { AdbBridgeActivityView } from "./AdbBridgeActivityView";
-import { AdbDeviceReachableView } from "./AdbDeviceReachableView";
-import { isRecoveryStuck, RecoveryActivityView } from "./RecoveryActivityView";
-import { SuitestCameraConnectedView } from "./SuitestCameraConnectedView";
-import { SuitestCameraRecordingView } from "./SuitestCameraRecordingView";
-import { SuitestCameraStreamingView } from "./SuitestCameraStreamingView";
-import { WorkflowLauncher } from "./WorkflowLauncher";
+import type { CameraEntry } from "../../domain/types";
+import { EntryRow } from "../../misc/EntryRow";
+import { AdbBridgeActivityView } from "../activity/AdbBridgeActivityView";
+import { RearmRecoveryButton, RecoveryActivityView } from "../activity/RecoveryActivityView";
+import { AdbDeviceReachableView } from "../indicators/AdbDeviceReachableView";
+import { SuitestCameraConnectedView } from "../indicators/SuitestCameraConnectedView";
+import { SuitestCameraRecordingView } from "../indicators/SuitestCameraRecordingView";
+import { SuitestCameraStreamingView } from "../indicators/SuitestCameraStreamingView";
+import { WorkflowLauncher } from "../WorkflowLauncher";
 
 export interface CameraRowProps {
   readonly camera: CameraEntry;
@@ -25,7 +25,7 @@ export interface CameraRowProps {
   readonly onAssignAdb: () => void;
   readonly onLinkSuitest?: () => void;
   readonly onRunWorkflow?: (workflowName: string) => void;
-  readonly onResetRecovery?: () => void;
+  readonly onRearmRecovery?: () => void;
 }
 
 // Riga camera: foglia della gerarchia, nessun figlio. "Link Suitest" compare solo finché la
@@ -46,7 +46,7 @@ export function CameraRow({
   onAssignAdb,
   onLinkSuitest,
   onRunWorkflow,
-  onResetRecovery,
+  onRearmRecovery,
 }: CameraRowProps) {
   return (
     <EntryRow
@@ -83,11 +83,7 @@ export function CameraRow({
           {camera.adbId ? "Change ADB" : "Assign ADB"}
         </Button>,
         onRunWorkflow && <WorkflowLauncher key="wf" workflows={workflows} onLaunch={onRunWorkflow} />,
-        isRecoveryStuck(recoveryStatus) && onResetRecovery && (
-          <Button key="reset" size="small" variant="outlined" color="error" onClick={onResetRecovery}>
-            Reset recovery
-          </Button>
-        ),
+        <RearmRecoveryButton key="reset" recoveryStatus={recoveryStatus} onRearmRecovery={onRearmRecovery} />,
       ]}
       onToggle={onToggle}
       onEdit={onEdit}

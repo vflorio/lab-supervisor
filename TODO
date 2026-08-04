@@ -4,10 +4,8 @@ ui
 - icone CUs
 - expanded default
 - toggle hierachy collapse generale o spariche
-- logpanel se chiuso non renderizzare
 - mock solo un mod dev
-- camera-recovery 2s
-- tasto settings sparisce
+- LoopWidget transitions 
 - ManualWorkFlow StatusPill non sempre visibile
 - settings recovery domain ui fixes
 

@@ -1,10 +1,10 @@
 import { Dns } from "@mui/icons-material";
-import { Box, Button } from "@mui/material";
-import type { ControlUnitEntry } from "../domain/types";
-import { EntryRow } from "../misc/EntryRow";
-import { IndicatorStat } from "./IndicatorStat";
-import { isRecoveryStuck, RecoveryActivityView } from "./RecoveryActivityView";
-import { SuitestControlUnitOnlineView } from "./SuitestControlUnitOnlineView";
+import { Box } from "@mui/material";
+import type { ControlUnitEntry } from "../../domain/types";
+import { EntryRow } from "../../misc/EntryRow";
+import { RearmRecoveryButton, RecoveryActivityView } from "../activity/RecoveryActivityView";
+import { IndicatorStat } from "../IndicatorStat";
+import { SuitestControlUnitOnlineView } from "../indicators/SuitestControlUnitOnlineView";
 
 export interface ControlUnitRowProps {
   readonly cu: ControlUnitEntry;
@@ -14,8 +14,7 @@ export interface ControlUnitRowProps {
   readonly onToggle: () => void;
   readonly onEdit: () => void;
   readonly onDelete: () => void;
-  readonly onSettings?: () => void;
-  readonly onResetRecovery?: () => void;
+  readonly onRearmRecovery?: () => void;
 }
 
 // `tvCount` è un numero passato dal chiamante (ControlUnitCard lo deriva dai suoi `children`)
@@ -28,8 +27,7 @@ export function ControlUnitRow({
   onToggle,
   onEdit,
   onDelete,
-  onSettings,
-  onResetRecovery,
+  onRearmRecovery,
 }: ControlUnitRowProps) {
   return (
     <EntryRow
@@ -42,8 +40,6 @@ export function ControlUnitRow({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            bgcolor: "rgba(74,222,128,0.1)",
-            color: "primary.main",
           }}
         >
           <Dns fontSize="small" />
@@ -58,18 +54,7 @@ export function ControlUnitRow({
         <IndicatorStat key="tvs" label="TVS" value={tvCount} />,
       ]}
       context={<RecoveryActivityView status={recoveryStatus} />}
-      actions={[
-        onSettings && (
-          <Button key="settings" size="small" variant="outlined" onClick={onSettings}>
-            Settings
-          </Button>
-        ),
-        isRecoveryStuck(recoveryStatus) && onResetRecovery && (
-          <Button key="reset" size="small" variant="outlined" color="error" onClick={onResetRecovery}>
-            Reset recovery
-          </Button>
-        ),
-      ]}
+      actions={[<RearmRecoveryButton key="reset" recoveryStatus={recoveryStatus} onRearmRecovery={onRearmRecovery} />]}
       onToggle={onToggle}
       onEdit={onEdit}
       onDelete={onDelete}

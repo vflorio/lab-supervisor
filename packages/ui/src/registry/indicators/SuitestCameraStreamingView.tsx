@@ -1,5 +1,5 @@
-import { IndicatorStat } from "./IndicatorStat";
-import type { StatusTone } from "./StatusPill";
+import { IndicatorStat } from "../IndicatorStat";
+import type { StatusTone } from "../StatusPill";
 
 export interface SuitestCameraStreamingViewProps {
   readonly value?: boolean;

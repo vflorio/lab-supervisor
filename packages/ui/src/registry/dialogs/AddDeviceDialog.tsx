@@ -1,19 +1,19 @@
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography } from "@mui/material";
-import type { NewAdbTargetForm } from "./types";
 
-export function AddDeviceDialog({
-  open,
-  device,
-  onChange,
-  onAdd,
-  onClose,
-}: {
-  open: boolean;
-  device: NewAdbTargetForm;
-  onChange: (d: NewAdbTargetForm) => void;
-  onAdd: () => void;
-  onClose: () => void;
-}) {
+export interface AddDeviceForm {
+  readonly label: string;
+  readonly target: string;
+}
+
+export interface AddDeviceDialogProps {
+  readonly open: boolean;
+  readonly device: AddDeviceForm;
+  readonly onChange: (device: AddDeviceForm) => void;
+  readonly onAdd: () => void;
+  readonly onClose: () => void;
+}
+
+export function AddDeviceDialog({ open, device, onChange, onAdd, onClose }: AddDeviceDialogProps) {
   const canSubmit = device.label && device.target;
 
   return (

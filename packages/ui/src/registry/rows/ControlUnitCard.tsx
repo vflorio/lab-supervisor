@@ -1,8 +1,8 @@
 import { Dns } from "@mui/icons-material";
 import { Box, Stack, Typography } from "@mui/material";
 import { Children, type ReactNode } from "react";
-import type { ControlUnitEntry } from "../domain/types";
-import { entryRowGridSx, entryRowSubgridSx } from "../misc/EntryRow";
+import type { ControlUnitEntry } from "../../domain/types";
+import { entryRowGridSx, entryRowSubgridSx } from "../../misc/EntryRow";
 import { ControlUnitRow, type ControlUnitRowProps } from "./ControlUnitRow";
 
 export interface ControlUnitCardProps extends Omit<ControlUnitRowProps, "cu" | "tvCount"> {
@@ -39,8 +39,6 @@ export function ControlUnitCard({ children, ...rowProps }: ControlUnitCardProps)
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            bgcolor: "rgba(74,222,128,0.1)",
-            color: "primary.main",
           }}
         >
           <Dns sx={{ fontSize: 11 }} />

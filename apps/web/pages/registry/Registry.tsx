@@ -1,15 +1,18 @@
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField } from "@mui/material";
-import { DeviceRegistryHeader, UnlinkedSection } from "@supervisor/ui/registry/index";
+import * as Network from "@supervisor/core/network";
+import { SelectDialog } from "@supervisor/ui/misc/SelectDialog";
+import {
+  AddDeviceDialog,
+  AssignCameraDialog,
+  DeviceRegistryHeader,
+  UnlinkedSection,
+} from "@supervisor/ui/registry/index";
 import { match } from "ts-pattern";
 import { useData } from "vike-react/useData";
 import { type AdbDevice, useAdbDevices } from "../../hooks/useAdbDevices";
 import type { Data } from "../index/+data";
-import { AddDeviceDialog } from "./AddDeviceDialog";
-import { AssignCameraDialog } from "./AssignCameraDialog";
 import { CameraRowContainer } from "./CameraRowContainer";
 import { ControlUnitCardContainer } from "./ControlUnitCardContainer";
-import { LinkCameraToTvDialog } from "./LinkCameraToTvDialog";
-import { LinkSuitestDialog } from "./LinkSuitestDialog";
 import { TvRowContainer } from "./TvRowContainer";
 import type { Database } from "./types";
 import { useRegistryController } from "./useRegistryController";
@@ -41,6 +44,9 @@ export function RegistryBody({
 }) {
   const controller = useRegistryController(db, adbDevices, workflows);
   const workflowNames = workflows.map((w) => w.name);
+  const assigningCameraTarget = controller.assigningCamera?.adb
+    ? Network.format(controller.assigningCamera.adb.target)
+    : undefined;
 
   return (
     <Box sx={{ px: 3, py: 3 }}>
@@ -110,26 +116,47 @@ export function RegistryBody({
 
       {/* Assign camera <-> adb host dialog */}
       <AssignCameraDialog
-        camera={controller.assigningCamera}
-        adbDevices={adbDevices}
-        usedTargets={controller.usedAdbTargets}
+        open={controller.assigningCamera !== null}
+        cameraLabel={controller.assigningCamera?.label}
+        selectedTarget={assigningCameraTarget}
+        candidates={adbDevices.filter(
+          (d) => d.target === assigningCameraTarget || !controller.usedAdbTargets.has(d.target),
+        )}
         onAssign={controller.handleAssign}
         onClose={() => controller.setAssigningCamera(null)}
       />
 
       {/* Riconciliazione manuale: collega una camera a un video-capture-device Suitest */}
-      <LinkSuitestDialog
-        target={controller.linking}
-        candidates={controller.linkCandidates}
-        onLink={controller.handleLinkSuitest}
+      <SelectDialog
+        open={controller.linking !== null}
+        title="Link Suitest video capture device"
+        selectedId={controller.linking?.currentVideoCaptureDeviceId}
+        options={controller.linkCandidates}
+        emptyMessage={
+          <>
+            Nessun device Suitest disponibile per il collegamento.
+            <br />
+            Verifica che la sync con Suitest sia andata a buon fine.
+          </>
+        }
+        onSelect={controller.handleLinkSuitest}
         onClose={() => controller.setLinking(null)}
       />
 
       {/* Riconciliazione manuale invertita: collega una camera orfana a una TV */}
-      <LinkCameraToTvDialog
-        tv={controller.linkingTv}
-        candidates={controller.linkTvCandidates}
-        onLink={controller.handleLinkCameraToTv}
+      <SelectDialog
+        open={controller.linkingTv !== null}
+        title={`Link camera${controller.linkingTv ? ` - ${controller.linkingTv.label}` : ""}`}
+        options={controller.linkTvCandidates}
+        emptyMessage={
+          <>
+            Nessuna camera locale orfana da collegare a questa TV.
+            <br />
+            Verifica che Suitest abbia già assegnato un video-capture-device a questa TV e che esista una camera locale
+            non ancora collegata.
+          </>
+        }
+        onSelect={controller.handleLinkCameraToTv}
         onClose={() => controller.setLinkingTv(null)}
       />
     </Box>

@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bunx @biomejs/biome check --write packages/core/src/schedule/codec.ts packages/ui/src/pipeline/ops.ts packages/ui/src/registry/activity/RecoveryActivityView.tsx packages/ui/src/task-runner/types.ts)"
+    ]
+  }
+}

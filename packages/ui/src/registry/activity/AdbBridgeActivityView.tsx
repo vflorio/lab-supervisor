@@ -1,5 +1,5 @@
-import type { StatusTone } from "./StatusPill";
-import { StatusPill } from "./StatusPill";
+import type { StatusTone } from "../StatusPill";
+import { StatusPill } from "../StatusPill";
 
 export interface AdbBridgeActivityViewProps {
   readonly status?: string;

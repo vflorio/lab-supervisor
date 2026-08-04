@@ -38,7 +38,7 @@ export const toCameraEntry = (camera: CameraView): DomainCameraEntry => ({
 
 export type ResetRecovery = (policy: string, entityId: string, tripwireIndex: number) => void;
 
-// I componenti puri espongono un solo `onResetRecovery` senza argomenti (un bottone per riga),
+// I componenti puri espongono un solo `onRearmRecovery` senza argomenti (un bottone per riga),
 // quindi qui si prende il primo tripwire bloccato per (domain, entityId) - nel caso comune ce
 // n'è al più uno alla volta.
 function useResetRecoveryHandler(domain: string, entityId: string, onReset: ResetRecovery): (() => void) | undefined {
@@ -53,10 +53,10 @@ export interface CameraRowData {
   readonly adbReachable?: boolean;
   readonly recoveryStatus?: string;
   readonly adbActivityStatus?: string;
-  readonly onResetRecovery?: () => void;
+  readonly onRearmRecovery?: () => void;
 }
 
-export function useCameraRowData(camera: CameraView, onResetRecovery: ResetRecovery): CameraRowData {
+export function useCameraRowData(camera: CameraView, onRearmRecovery: ResetRecovery): CameraRowData {
   const { table: predicates } = useFacts();
   const { table: activity } = useActivity();
   const videoCaptureDeviceId = O.toUndefined(camera.videoCaptureDeviceId) ?? "";
@@ -76,7 +76,7 @@ export function useCameraRowData(camera: CameraView, onResetRecovery: ResetRecov
       ?.value as boolean | undefined,
     recoveryStatus: activity.get(activityKey({ source: "recovery", entityId: videoCaptureDeviceId }))?.status,
     adbActivityStatus: activity.get(activityKey({ source: "adb", entityId: camera.id }))?.status,
-    onResetRecovery: useResetRecoveryHandler("suitest-camera", videoCaptureDeviceId, onResetRecovery),
+    onRearmRecovery: useResetRecoveryHandler("suitest-camera", videoCaptureDeviceId, onRearmRecovery),
   };
 }
 
@@ -85,10 +85,10 @@ export interface TvRowData {
   readonly inUse?: boolean;
   readonly inUseBy?: string;
   readonly recoveryStatus?: string;
-  readonly onResetRecovery?: () => void;
+  readonly onRearmRecovery?: () => void;
 }
 
-export function useTvRowData(tv: TvView, onResetRecovery: ResetRecovery): TvRowData {
+export function useTvRowData(tv: TvView, onRearmRecovery: ResetRecovery): TvRowData {
   const { table: predicates } = useFacts();
   const { table: activity } = useActivity();
 
@@ -100,17 +100,17 @@ export function useTvRowData(tv: TvView, onResetRecovery: ResetRecovery): TvRowD
       ?.value as boolean | undefined,
     inUseBy: tv.inUseBy?.email ?? tv.inUseBy?.orgName ?? tv.inUseBy?.tokenName,
     recoveryStatus: activity.get(activityKey({ source: "recovery", entityId: tv.deviceId }))?.status,
-    onResetRecovery: useResetRecoveryHandler("suitest-device", tv.deviceId, onResetRecovery),
+    onRearmRecovery: useResetRecoveryHandler("suitest-device", tv.deviceId, onRearmRecovery),
   };
 }
 
 export interface ControlUnitRowData {
   readonly online?: boolean;
   readonly recoveryStatus?: string;
-  readonly onResetRecovery?: () => void;
+  readonly onRearmRecovery?: () => void;
 }
 
-export function useControlUnitRowData(cu: ControlUnitView, onResetRecovery: ResetRecovery): ControlUnitRowData {
+export function useControlUnitRowData(cu: ControlUnitView, onRearmRecovery: ResetRecovery): ControlUnitRowData {
   const { table: predicates } = useFacts();
   const { table: activity } = useActivity();
 
@@ -119,6 +119,6 @@ export function useControlUnitRowData(cu: ControlUnitView, onResetRecovery: Rese
       factKey({ domain: "suitest-control-unit", entityId: cu.id, name: "suitest_control_unit_online" }),
     )?.value as boolean | undefined,
     recoveryStatus: activity.get(activityKey({ source: "recovery", entityId: cu.id }))?.status,
-    onResetRecovery: useResetRecoveryHandler("suitest-control-unit", cu.id, onResetRecovery),
+    onRearmRecovery: useResetRecoveryHandler("suitest-control-unit", cu.id, onRearmRecovery),
   };
 }

@@ -34,7 +34,6 @@ export function ControlUnitCardContainer({
       onToggle={() => controller.handleToggle("candybox", group.cu.id, group.cu.controlled)}
       onEdit={() => controller.startEdit("candybox", group.cu.id, group.cu.label)}
       onDelete={() => controller.handleDelete("candybox", group.cu.id)}
-      onSettings={() => {}}
     >
       {group.tvs.map((tvGroup) => (
         <TvRowContainer key={tvGroup.tv.deviceId} group={tvGroup} workflows={workflows} controller={controller} />

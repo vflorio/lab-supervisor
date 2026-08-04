@@ -88,7 +88,7 @@
       "label": "Suitest Camera Connection",
       "tripwires": [
         {
-          // Grace period before intervention; above one poll cycle (20s)
+          // Grace period before intervention; above one poll cycle
           "grace": "60s",
           "predicate": ["truthy", "suitest_camera_connected"],
           // Escalation sequenziale: prima prova con riavvio app, poi reboot del device

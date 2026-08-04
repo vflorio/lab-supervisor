@@ -1,13 +1,13 @@
 import { Link as LinkIcon, Tv } from "@mui/icons-material";
-import { Box, Button, Chip, Stack } from "@mui/material";
-import { Children, type ReactNode, useState } from "react";
-import type { TvEntry } from "../domain/types";
-import { EntryRow, entryRowSubgridSx } from "../misc/EntryRow";
-import { ManualWorkflowActivityView } from "./ManualWorkflowActivityView";
-import { isRecoveryStuck, RecoveryActivityView } from "./RecoveryActivityView";
-import { SuitestDeviceInUseView } from "./SuitestDeviceInUseView";
-import { SuitestDeviceStatusView } from "./SuitestDeviceStatusView";
-import { WorkflowLauncher } from "./WorkflowLauncher";
+import { Box, Button, Stack } from "@mui/material";
+import { Children, type ReactNode } from "react";
+import type { TvEntry } from "../../domain/types";
+import { EntryRow, entryRowSubgridSx } from "../../misc/EntryRow";
+import { ManualWorkflowActivityView } from "../activity/ManualWorkflowActivityView";
+import { RearmRecoveryButton, RecoveryActivityView } from "../activity/RecoveryActivityView";
+import { SuitestDeviceInUseView } from "../indicators/SuitestDeviceInUseView";
+import { SuitestDeviceStatusView } from "../indicators/SuitestDeviceStatusView";
+import { WorkflowLauncher } from "../WorkflowLauncher";
 
 export interface TvRowProps {
   readonly tv: TvEntry;
@@ -22,7 +22,7 @@ export interface TvRowProps {
   readonly onDelete: () => void;
   readonly onLinkCamera?: () => void;
   readonly onRunWorkflow?: (workflowName: string) => void;
-  readonly onResetRecovery?: () => void;
+  readonly onRearmRecovery?: () => void;
   readonly children?: ReactNode;
 }
 
@@ -43,10 +43,9 @@ export function TvRow({
   onDelete,
   onLinkCamera,
   onRunWorkflow,
-  onResetRecovery,
+  onRearmRecovery,
   children,
 }: TvRowProps) {
-  const [expanded, setExpanded] = useState(true);
   const cameraCount = Children.count(children);
 
   return (
@@ -57,17 +56,6 @@ export function TvRow({
         secondary={tv.ip}
         checked={tv.controlled}
         checkedTitle="Controlled by supervisor"
-        leadingExtra={
-          cameraCount > 0 && (
-            <Chip
-              size="small"
-              variant="outlined"
-              onClick={() => setExpanded((current) => !current)}
-              label={`${expanded ? "▲" : "▼"} ${cameraCount}`}
-              sx={{ flexShrink: 0 }}
-            />
-          )
-        }
         indicators={[
           <SuitestDeviceStatusView key="status" value={deviceStatus} />,
           <SuitestDeviceInUseView key="inuse" value={inUse} by={inUseBy} />,
@@ -91,17 +79,13 @@ export function TvRow({
             </Button>
           ),
           onRunWorkflow && <WorkflowLauncher key="wf" workflows={workflows} onLaunch={onRunWorkflow} />,
-          isRecoveryStuck(recoveryStatus) && onResetRecovery && (
-            <Button key="reset" size="small" variant="outlined" color="error" onClick={onResetRecovery}>
-              Reset recovery
-            </Button>
-          ),
+          <RearmRecoveryButton key="reset" recoveryStatus={recoveryStatus} onRearmRecovery={onRearmRecovery} />,
         ]}
         onToggle={onToggle}
         onEdit={onEdit}
         onDelete={onDelete}
       />
-      {expanded && cameraCount > 0 && (
+      {cameraCount > 0 && (
         <Box sx={{ ...entryRowSubgridSx, rowGap: 1, pl: 3, borderLeft: "2px solid", borderColor: "divider" }}>
           {children}
         </Box>

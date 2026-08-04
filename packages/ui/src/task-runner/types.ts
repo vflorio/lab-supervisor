@@ -1,4 +1,5 @@
 import type { LoopStatus } from "@supervisor/core/task-runner/model";
+import { match } from "ts-pattern";
 import type { StatusTone } from "../registry/StatusPill";
 
 // Stesso stato che il motore generico dietro ogni loop di background pubblica sul filo
@@ -11,13 +12,8 @@ export type ServiceConnection = "connecting" | "online" | "reconnecting";
 // Unico punto in cui uno stato di loop diventa un tono, cosi' ogni LoopWidget nella
 // ServiceStrip resta coerente con gli altri.
 export function loopTone(state: LoopState): StatusTone {
-  switch (state) {
-    case "running":
-      return "success";
-    case "exhausted":
-    case "error":
-      return "error";
-    default:
-      return "disabled";
-  }
+  return match(state)
+    .with("running", () => "success" as const)
+    .with("exhausted", "error", () => "error" as const)
+    .otherwise(() => "disabled" as const);
 }

@@ -1,5 +1,6 @@
 import * as E from "fp-ts/Either";
 import * as t from "io-ts";
+import { match } from "ts-pattern";
 import * as DateTime from "../date-time";
 import { type AppError, of } from "../errors";
 import * as Schedule from "./schedule";
@@ -188,16 +189,12 @@ const decodeVerb = (verb: ScheduleVerbJson): E.Either<ScheduleDecodeError, Sched
   return build ? E.right(build(args)) : E.left(scheduleDecodeError(`Verbo schedule sconosciuto: "${name}"`));
 };
 
-const applyOp = (acc: Schedule.Schedule, step: Schedule.Schedule, op: ScheduleOp): Schedule.Schedule => {
-  switch (op) {
-    case "union":
-      return Schedule.MonoidUnion.concat(acc, step);
-    case "intersection":
-      return Schedule.MonoidIntersection.concat(acc, step);
-    case "subtract":
-      return Schedule.subtract(acc, step);
-  }
-};
+const applyOp = (acc: Schedule.Schedule, step: Schedule.Schedule, op: ScheduleOp): Schedule.Schedule =>
+  match(op)
+    .with("union", () => Schedule.MonoidUnion.concat(acc, step))
+    .with("intersection", () => Schedule.MonoidIntersection.concat(acc, step))
+    .with("subtract", () => Schedule.subtract(acc, step))
+    .exhaustive();
 
 export interface ComposedStep {
   readonly op: ScheduleOp;

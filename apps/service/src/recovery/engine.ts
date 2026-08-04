@@ -23,7 +23,9 @@ import type * as AdbCapabilities from "./adb-capabilities";
 import * as Capabilities from "./capabilities";
 import * as Target from "./target";
 
-// One Recovery.start per RecoveryPolicy (optional), filtered by domain; transitions notify dispatcher on "recovering" and "exhausted"
+// Ogni Recovery Policy ha il propria TaskRunner loop,
+// che monitora le entità di dominio, lancia i workflow di recovery e notifiche;
+// le transizioni di stato vengono pubblicate sul RecoveryStream
 
 const TICK_POLICY = RetryCodec.describedConstant(DateTime.durationToMs("1s"));
 

@@ -1,5 +1,5 @@
-import type { StatusTone } from "./StatusPill";
-import { StatusPill } from "./StatusPill";
+import type { StatusTone } from "../StatusPill";
+import { StatusPill } from "../StatusPill";
 
 export interface ManualWorkflowActivityViewProps {
   readonly status?: string;
@@ -16,7 +16,11 @@ export function manualWorkflowActivityTone(status: string | undefined): [StatusT
   return ["disabled", status];
 }
 
+// A differenza di recovery/adb (sempre rilevanti), un lancio manuale è un evento raro: il
+// pill resta nascosto in idle invece di occupare spazio in ogni riga TV per il caso comune
+// in cui non è mai stato lanciato nulla.
 export function ManualWorkflowActivityView({ status }: ManualWorkflowActivityViewProps) {
+  if (status === undefined) return null;
   const [tone, text] = manualWorkflowActivityTone(status);
   return <StatusPill label={text} tone={tone} />;
 }
