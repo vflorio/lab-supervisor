@@ -104,7 +104,6 @@
           "adbId": "192.168.1.4:5555"
         }
       ],
-      "tvs": [{ "deviceId": "tv-001", "label": "TV_1", "controlled": false, "ip": "192.168.2.1" }],
       "adb": [{ "id": "192.168.1.4:5555", "label": "Lenovo Tab M10", "target": "192.168.1.4:5555" }]
     }
   }

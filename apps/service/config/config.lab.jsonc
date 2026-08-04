@@ -53,26 +53,16 @@
       ]
     ],
     [
-      "android-suitest-test",
-      [
-        // wake screen
-        ["wakeUp"],
-        // Start app if not running
-        ["ensureActivity", "st.suite.camera", "st.suite.android.suitestcamera.MainActivity"],
-        ["run", "suitest-set-experimental-profile"]
-      ]
-    ],
-    [
-      "android-suitest-camera",
+      "suitest-camera-restart",
       [
         ["restartApp", "com.suitest.android.camera"],
-        ["await", ["probe", "activityResumed", "com.suitest.android.camera.CameraActivity"], "30s"],
-        // Connect taps use fixed coords; auto-reconnection would land on different UI
-        ["when", ["not", ["ref", "suitest_camera_connected"]], "suitest-connect"]
+        ["await", ["probe", "activityResumed", "com.suitest.android.camera.CameraActivity"], "5s"],
+        ["run", "suitest-set-experimental-profile"],
+        ["run", "suitest-connect"]
       ]
     ],
     [
-      "android-suitest-camera-reboot",
+      "suitest-camera-reboot",
       [
         ["reboot"],
         ["waitForDevice"],
@@ -81,44 +71,35 @@
         ["run", "suitest-connect"]
       ]
     ],
-
-    // "async" variants for recovery pipelines: workflow + predicate confirmation (without it, or-branches never escalate)
+    // "verified" variants: same workflow + predicate confirmation, used by recovery pipeline
     [
-      "android-suitest-camera-async",
-      [["run", "android-suitest-camera"], ["await", ["ref", "suitest_camera_connected"], "45s"]]
+      "suitest-camera-restart-verified",
+      [["run", "suitest-camera-restart"], ["await", ["ref", "suitest_camera_connected"], "45s"]]
     ],
     [
-      "android-suitest-camera-reboot-async",
-      [["run", "android-suitest-camera-reboot"], ["await", ["ref", "suitest_camera_connected"], "60s"]]
+      "suitest-camera-reboot-verified",
+      [["run", "suitest-camera-reboot"], ["await", ["ref", "suitest_camera_connected"], "60s"]]
     ]
   ],
 
   "recovery": [
     {
       "domain": "suitest-camera",
-      "label": "suitest-camera-recovery",
+      "label": "Suitest Camera Connection",
       "tripwires": [
         {
           // Grace period before intervention; above one poll cycle (20s)
           "grace": "60s",
           "predicate": ["ref", "suitest_camera_connected"],
-          // Escalation: app restart, then device reboot (but never while recording); gate is here, not in workflow
-          "pipeline": [
-            "or",
-            ["workflow", "android-suitest-camera-async"],
-            [
-              "and",
-              ["condition", ["not", ["ref", "suitest_camera_recording"]]],
-              ["workflow", "android-suitest-camera-reboot-async"]
-            ]
-          ],
-          // Delay between escalation cycles (each awaits confirmation internally)
-          "retry": [["constantDelay", "2m"], ["limitRetries", 2]],
-          "notify": [
+          // Escalation sequenziale: prima prova con riavvio app, poi reboot del device
+          "pipeline": ["or", ["workflow", "suitest-camera-restart-verified"], ["workflow", "suitest-camera-reboot-verified"]],
+          // Delay tra i cicli di escalation, ritenta 2 volte prima di notificare
+           "retry": [["constantDelay", "2m"], ["limitRetries", 2]],
+            "notify": [
             {
               "type": ["slack"],
               "channel": "#lab-supervisor",
-              "message": "{{label}} ({{ip}}) suitest camera offline, recovery esaurita: intervento manuale richiesto",
+              "message": "{{label}} ({{ip}}) suitest connection failed, manual intervention required",
               "policy": ["exhausted"]
             }
           ]

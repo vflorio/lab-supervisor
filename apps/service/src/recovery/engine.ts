@@ -164,8 +164,8 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
                 () => {},
                 (lifecycle) => {
                   const rules = policy.tripwires[tripwireIndex]?.notify ?? [];
-                  // onStatus is synchronous, can't be awaited; detach & forget (dispatch is still quick)
-                  void notify(source, lifecycle, rules)();
+                  // fire & forget
+                  notify(source, lifecycle, rules)();
                 },
               ),
             );

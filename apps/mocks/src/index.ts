@@ -5,7 +5,7 @@ import { pipe } from "fp-ts/lib/function";
 import { slackRoutes } from "./slack/routes";
 import { SlackStore } from "./slack/store";
 import { suitestRoutes } from "./suitest/routes";
-import { SuitestStore } from "./suitest/store";
+import { DEFAULT_DUMP_PATH, loadDumpSeed, SuitestStore } from "./suitest/store";
 
 const PORT = Number(import.meta.env.PORT ?? 3002);
 
@@ -13,11 +13,18 @@ const SUITEST_TOKEN_ID = import.meta.env.SUITEST_TOKEN_ID ?? "dev-suitest-token-
 const SUITEST_TOKEN_PASSWORD = import.meta.env.SUITEST_TOKEN_PASSWORD ?? "dev-suitest-token-password";
 const SLACK_BOT_TOKEN = import.meta.env.SLACK_BOT_TOKEN ?? "dev-slack-token";
 
+// Se impostata, serve i dati del dump reale (scripts/suitest-dump.ps1) al posto dei seed
+// hardcoded di debug. Valori "1"/"true" usano il dump di default in src/suitest/dump.json,
+// qualsiasi altra stringa e' trattata come percorso custom.
+const SUITEST_DUMP_PATH_RAW = import.meta.env.SUITEST_DUMP_PATH;
+const SUITEST_DUMP_PATH =
+  SUITEST_DUMP_PATH_RAW === "1" || SUITEST_DUMP_PATH_RAW === "true" ? DEFAULT_DUMP_PATH : SUITEST_DUMP_PATH_RAW;
+
 // -------------------------------------------------------------------------------------
 // Stores
 // -------------------------------------------------------------------------------------
 
-const suitestStore = new SuitestStore();
+const suitestStore = new SuitestStore(SUITEST_DUMP_PATH ? loadDumpSeed(SUITEST_DUMP_PATH) : undefined);
 const slackStore = new SlackStore();
 
 // -------------------------------------------------------------------------------------

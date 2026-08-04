@@ -1,8 +1,35 @@
+import { readFileSync } from "node:fs";
 import type { ControlUnit, Device, DeviceStatus, InUseBy, VideoCaptureDevice } from "@supervisor/core/adapters/suitest";
 
 // -------------------------------------------------------------------------------------
 // Seed data
 // -------------------------------------------------------------------------------------
+
+export interface SuitestSeed {
+  devices: Device[];
+  videoCaptureDevices: VideoCaptureDevice[];
+  controlUnits: ControlUnit[];
+}
+
+// Percorso di default del dump generato con scripts/suitest-dump.ps1
+export const DEFAULT_DUMP_PATH = new URL("./dump.json", import.meta.url).pathname;
+
+// Shape del dump: devices/videoCaptureDevices sono l'envelope paginato dell'API reale ({ values, next, ... }),
+// controlUnits e' gia' un array semplice.
+interface DumpFile {
+  devices?: { values?: Device[] };
+  videoCaptureDevices?: { values?: VideoCaptureDevice[] };
+  controlUnits?: ControlUnit[];
+}
+
+export function loadDumpSeed(path: string): SuitestSeed {
+  const raw = JSON.parse(readFileSync(path, "utf-8")) as DumpFile;
+  return {
+    devices: raw.devices?.values ?? [],
+    videoCaptureDevices: raw.videoCaptureDevices?.values ?? [],
+    controlUnits: raw.controlUnits ?? [],
+  };
+}
 
 const device = (overrides: Partial<Device>): Device => ({
   deviceId: crypto.randomUUID(),
@@ -87,17 +114,23 @@ export class SuitestStore {
   devices: Device[];
   videoCaptureDevices: VideoCaptureDevice[];
   controlUnits: ControlUnit[];
+  private readonly seed: SuitestSeed;
 
-  constructor() {
-    this.devices = structuredClone(seedDevices);
-    this.videoCaptureDevices = structuredClone(seedVideoCaptureDevices);
-    this.controlUnits = structuredClone(seedControlUnits);
+  constructor(seed?: SuitestSeed) {
+    this.seed = seed ?? {
+      devices: seedDevices,
+      videoCaptureDevices: seedVideoCaptureDevices,
+      controlUnits: seedControlUnits,
+    };
+    this.devices = structuredClone(this.seed.devices);
+    this.videoCaptureDevices = structuredClone(this.seed.videoCaptureDevices);
+    this.controlUnits = structuredClone(this.seed.controlUnits);
   }
 
   reset = () => {
-    this.devices = structuredClone(seedDevices);
-    this.videoCaptureDevices = structuredClone(seedVideoCaptureDevices);
-    this.controlUnits = structuredClone(seedControlUnits);
+    this.devices = structuredClone(this.seed.devices);
+    this.videoCaptureDevices = structuredClone(this.seed.videoCaptureDevices);
+    this.controlUnits = structuredClone(this.seed.controlUnits);
   };
 
   getDevice = (id: string): Device | undefined => this.devices.find((d) => d.deviceId === id);

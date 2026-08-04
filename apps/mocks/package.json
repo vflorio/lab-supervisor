@@ -13,7 +13,8 @@
   },
   "private": true,
   "scripts": {
-    "mock-services:start": "bun --watch run src/index.ts"
+    "mock-services:start": "bun --watch run src/index.ts",
+    "mock-services:start:dump": "SUITEST_DUMP_PATH=1 bun --watch run src/index.ts"
   },
   "type": "module"
 }
