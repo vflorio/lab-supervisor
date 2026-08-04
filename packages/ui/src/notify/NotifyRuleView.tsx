@@ -14,7 +14,7 @@ export function NotifyRuleView({ value }: NotifyRuleViewProps) {
           {value.type.type}
         </Typography>
         <Typography variant="caption" color="textSecondary">
-          #{value.channel} · {value.policy.join(", ")}
+          #{value.channel} - {value.policy.join(", ")}
         </Typography>
       </Stack>
       <Typography variant="caption" color="textSecondary">

@@ -1,9 +1,5 @@
 import type { LoopEntry } from "./model";
 
-// "Valore corrente per loop" (Service -> Web), non un ring buffer: a differenza di
-// ActivityStream/RecoveryStream, di un heartbeat non esiste uno storico da riprodurre alla
-// prima connessione, esiste solo l'ultimo battito - stessa forma di AndroidBridge.devicesFeed.
-
 export interface LoopFeed {
   readonly subscribe: (listener: (entry: LoopEntry) => void) => () => void;
   readonly snapshot: () => readonly LoopEntry[];

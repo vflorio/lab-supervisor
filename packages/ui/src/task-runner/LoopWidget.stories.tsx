@@ -29,7 +29,7 @@ export const Running: Story = {
 export const Idle: Story = {
   args: {
     id: "tracker:suitest-device",
-    label: "Suitest · devices",
+    label: "Suitest - devices",
     state: "idle",
     iteration: 0,
     policyLabel: "constant 30s",
@@ -40,7 +40,7 @@ export const Idle: Story = {
 export const Exhausted: Story = {
   args: {
     id: "recovery:adb-camera",
-    label: "Recovery · adb-camera",
+    label: "Recovery - adb-camera",
     state: "exhausted",
     iteration: 12,
     lastTickAt: NOW - 120_000,

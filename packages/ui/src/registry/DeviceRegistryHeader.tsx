@@ -28,7 +28,7 @@ export function DeviceRegistryHeader({
       actions={
         <>
           <StatusPill
-            label={`${controlUnitCount} control units · ${tvCount} TVs · ${cameraCount} cameras`}
+            label={`${controlUnitCount} control units - ${tvCount} TVs - ${cameraCount} cameras`}
             tone="disabled"
           />
           <StatusPill label={`${controlledCount} controlled`} tone="success" />

@@ -16,8 +16,8 @@ import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
 import * as RA from "fp-ts/ReadonlyArray";
 import * as TE from "fp-ts/TaskEither";
-import type * as AdbStream from "./adb/adb-stream";
-import * as Node from "./node";
+import type * as AndroidBridge from "../android-bridge/android-bridge";
+import * as Node from "../node";
 
 const toDeviceSnapshot = (devices: readonly Adb.Device[]): readonly Trpc.AndroidDeviceSnapshot[] =>
   pipe(
@@ -34,7 +34,7 @@ export type Deps = {
   readonly configPath: O.Option<string>;
   readonly trpcLog: Logger.Tagged;
   readonly logStream: LogStream.LogStream;
-  readonly adbDeviceStream: AdbStream.AdbDeviceStream;
+  readonly adbDeviceStream: AndroidBridge.AdbDeviceStream;
   readonly predicateStream: Predicates.PredicateFeed;
   readonly recoveryStream: Recovery.RecoveryFeed;
   readonly notifyStream: Notify.NotifyFeed;
@@ -85,14 +85,12 @@ export const create = ({
         currentConfig = { ...currentConfig, workflows: [...workflows] };
         return Config.redact(currentConfig);
       },
-      // Il cast rispecchia solo la variance readonly->mutable dell'array in input: la forma è
-      // già garantita da RecoveryPolicyCodec al bordo del router, non serve riclonare ogni livello.
+      // Il cast rispecchia solo la variance readonly->mutable dell'array in input
       updateRecovery: (recovery) => {
         currentConfig = { ...currentConfig, recovery: recovery as Config.Service["recovery"] };
         return Config.redact(currentConfig);
       },
-      // Endomorfismo: legge il file, applica il patch, riscrive solo i campi cambiati (i commenti
-      // nel resto del file sopravvivono, vedi Config.modify) - fallisce se la config viene da URL.
+      // Endomorfismo: legge il file, applica il patch, riscrive solo i campi cambiati - fallisce se la config viene da URL.
       setConfig: (patch) =>
         pipe(
           configPath,
@@ -121,7 +119,7 @@ export const create = ({
   };
 };
 
-const android = (trpcLog: Logger.Tagged, stream: AdbStream.AdbDeviceStream): Trpc.Services["android"] => ({
+const android = (trpcLog: Logger.Tagged, stream: AndroidBridge.AdbDeviceStream): Trpc.Services["android"] => ({
   devices: () => pipe(Adb.devices({ logger: trpcLog, spawn: Node.spawn }), TE.map(toDeviceSnapshot)),
   reboot: (target) => Adb.reboot(target)({ logger: trpcLog, spawn: Node.spawn }),
 

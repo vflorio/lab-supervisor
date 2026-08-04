@@ -7,7 +7,7 @@ import type * as Retry from "@supervisor/core/retry/retry";
 import * as TaskRunner from "@supervisor/core/task-runner/index";
 import * as E from "fp-ts/Either";
 import type * as TE from "fp-ts/TaskEither";
-import type { AdbDeviceStream } from "./adb-stream";
+import type { AdbDeviceStream } from "./stream";
 
 // ADB reachability tracker - dominio "adb": raggiungibilità dei device Android via rete locale
 export const DOMAIN = "adb";
@@ -28,8 +28,8 @@ export interface Deps {
   readonly loopStream?: TaskRunner.LoopStream;
 }
 
-// Un target sparito del tutto dall'output di `adb devices` (a differenza di uno con status
-// "offline") non produce item da diffare - senza questo passaggio adb_device_reachable
+// Un target sparito del tutto dall'output di `adb devices` (a differenza di uno con status "offline")
+// non produce item da diffare - senza questo passaggio adb_device_reachable
 // resterebbe congelato al suo ultimo valore noto per sempre.
 const retractVanished = (
   knownTargets: ReadonlySet<string>,

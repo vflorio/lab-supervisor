@@ -1,5 +1,6 @@
 import * as Adb from "@supervisor/core/adapters/adb/shell";
 import * as AndroidBridge from "@supervisor/core/android-bridge/machine";
+import * as DateTime from "@supervisor/core/date-time";
 import type { LabRegistry } from "@supervisor/core/db";
 import * as Errors from "@supervisor/core/errors";
 import * as Network from "@supervisor/core/network";
@@ -8,12 +9,12 @@ import type * as Shell from "@supervisor/core/shell";
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";
-import type { AdbDeviceStream } from "./adb/adb-stream";
 import * as Gating from "./gating";
+import type { AdbDeviceStream } from "./stream";
 
-// Cadenza di poll di `awaitIdle` su stato già in memoria (no I/O) - non configurabile,
-// il tempo totale di attesa è `timeoutMs`, passato dal chiamante.
-const AWAIT_IDLE_POLL_MS = 2000;
+export * from "./stream";
+
+const AWAIT_IDLE_POLL_MS = DateTime.durationToMs("2s");
 
 const awaitIdleTimeout = (cameraId: string, timeoutMs: number): Shell.CommandTimeoutError =>
   Errors.of("CommandTimeout")(`Timed out waiting for "${cameraId}" to become Idle after ${timeoutMs}ms`);
@@ -129,7 +130,7 @@ export const create = (env: AndroidBridge.AndroidBridgeMachineEnv, adbDeviceStre
     for (const [id, state] of states) {
       if (state._tag !== "Idle" || isReachable(state.target)(devices)) continue;
 
-      void dispatchTo(id, { _tag: "ConnectionLost", reason: "Device no longer reachable via ADB" })();
+      dispatchTo(id, { _tag: "ConnectionLost", reason: "Device no longer reachable via ADB" })();
     }
   });
 

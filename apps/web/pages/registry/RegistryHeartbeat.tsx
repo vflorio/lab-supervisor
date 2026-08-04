@@ -8,8 +8,6 @@ import { useLoops } from "../../hooks/useLoops";
 import type { Data } from "../index/+data";
 import { RegistryBody } from "./Registry";
 
-// Unico punto in cui una LoopEntry (wire type di @supervisor/core/task-runner) diventa un
-// LoopWidgetProps - `status` si chiama `state` lato UI, il resto passa 1:1.
 const toLoopWidgetProps = (entry: LoopEntry): LoopWidgetProps => ({
   id: entry.id,
   label: entry.label,
@@ -29,12 +27,7 @@ export function RegistryHeartbeatView() {
 
   return (
     <Box sx={{ maxHeight: "calc(100vh - 64px)", overflowY: "auto" }}>
-      <ServiceStrip
-        connection={loops.status}
-        loops={Array.from(loops.table.values())
-          .toSorted((a, b) => a.label.localeCompare(b.label))
-          .map(toLoopWidgetProps)}
-      />
+      <ServiceStrip connection={loops.status} loops={loops.sorted.map(toLoopWidgetProps)} />
       {match(registry)
         .with({ ok: true }, ({ data }) => <RegistryBody db={data} adbDevices={liveAdbDevices} workflows={workflows} />)
         .with({ ok: false }, ({ error }) => <Alert severity="error">Registry error: {error.message}</Alert>)

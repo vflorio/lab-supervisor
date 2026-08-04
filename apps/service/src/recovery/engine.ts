@@ -1,7 +1,7 @@
 import type * as Activity from "@supervisor/core/activity/stream";
 import type { SlackConfig } from "@supervisor/core/adapters/slack";
 import type * as ConfigModel from "@supervisor/core/config";
-import { durationToMs } from "@supervisor/core/date-time";
+import * as DateTime from "@supervisor/core/date-time";
 import type * as Logger from "@supervisor/core/logger/logger";
 import * as NotifyDispatch from "@supervisor/core/notify/dispatch";
 import type { NotifyLifecycle, NotifyRule } from "@supervisor/core/notify/model";
@@ -16,7 +16,7 @@ import * as O from "fp-ts/Option";
 import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
-import type * as AndroidBridgeOrchestrator from "../android-bridge";
+import type * as AndroidBridge from "../android-bridge/android-bridge";
 import * as Node from "../node";
 import * as Registry from "../registry";
 import type * as Workflow from "../workflow";
@@ -25,8 +25,7 @@ import * as Target from "./target";
 
 // One Recovery.start per RecoveryPolicy (optional), filtered by domain; transitions notify dispatcher on "recovering" and "exhausted"
 
-// Tick rate for re-observation (detects grace expiry without new predicates); fixed cost is local CPU only
-const TICK_POLICY = RetryCodec.describedConstant(1000);
+const TICK_POLICY = RetryCodec.describedConstant(DateTime.durationToMs("1s"));
 
 export interface Env {
   readonly logger: Logger.Tagged;
@@ -35,7 +34,7 @@ export interface Env {
   readonly recoveryStream: Recovery.RecoveryStream;
   readonly notifyStream: NotifyStream.NotifyStream;
   readonly activityStream: Activity.ActivityStream;
-  readonly androidBridge: AndroidBridgeOrchestrator.Handle;
+  readonly androidBridge: AndroidBridge.Handle;
   readonly loopStream: TaskRunner.LoopStream;
 }
 
@@ -44,7 +43,7 @@ export type StartError = RetryCodec.PolicyDecodeError;
 export interface Handle {
   readonly stop: () => void;
   // Rearm tripwire after exhaustion (returns false if policy missing or entity never observed)
-  readonly reset: (policyLabel: string, entityId: string, tripwireIndex: number) => boolean;
+  readonly rearmTripwire: (policyLabel: string, entityId: string, tripwireIndex: number) => boolean;
   // Exposed to manual workflow runner; used by RecoveryPolicy so manual runs get same gating and target resolution
   readonly capabilitiesEnv: Capabilities.Env;
 }
@@ -80,7 +79,7 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
       fsEnv: Node.fsEnv,
     },
     androidBridge: env.androidBridge,
-    waitForDeviceTimeoutMs: durationToMs(env.config.adb.waitForDeviceTimeout),
+    waitForDeviceTimeoutMs: DateTime.durationToMs(env.config.adb.waitForDeviceTimeout),
   };
 
   // Describe entity (readable label/ip) for notification message placeholders; registry read failures fall back to entityId
@@ -139,7 +138,7 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
           tickPolicy: TICK_POLICY.policy,
           descriptor: {
             id: `recovery:${policy.label}`,
-            label: `Recovery · ${policy.label}`,
+            label: `Recovery - ${policy.label}`,
             policyLabel: TICK_POLICY.label,
           },
           loopStream: env.loopStream,
@@ -182,8 +181,8 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
         stop: () => {
           for (const handle of handles.values()) handle.stop();
         },
-        reset: (policyLabel, entityId, tripwireIndex) =>
-          handles.get(policyLabel)?.reset(entityId, tripwireIndex) ?? false,
+        rearmTripwire: (policyLabel, entityId, tripwireIndex) =>
+          handles.get(policyLabel)?.rearm(entityId, tripwireIndex) ?? false,
       };
     }),
   );

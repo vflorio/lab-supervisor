@@ -1,5 +1,6 @@
 import type * as Activity from "@supervisor/core/activity/stream";
 import type * as ConfigModel from "@supervisor/core/config";
+import * as DateTime from "@supervisor/core/date-time";
 import * as Errors from "@supervisor/core/errors";
 import type * as Logger from "@supervisor/core/logger/logger";
 import type * as Notify from "@supervisor/core/notify/stream";
@@ -11,23 +12,18 @@ import type * as WorkflowInterpreter from "@supervisor/core/workflow/interpreter
 import { flow, pipe } from "fp-ts/function";
 import * as IO from "fp-ts/IO";
 import * as TE from "fp-ts/TaskEither";
-import type * as AdbStream from "./adb/adb-stream";
-import * as AdbTracking from "./adb/adb-tracking";
-import * as AndroidBridgeOrchestrator from "./android-bridge";
-import * as ManualWorkflow from "./manual-workflow";
+import * as AndroidBridge from "./android-bridge/android-bridge";
+import * as AndroidBridgeTracking from "./android-bridge/tracking";
 import * as Node from "./node";
 import * as RecoveryEngine from "./recovery/engine";
 import * as Registry from "./registry";
 import * as SuitestTracking from "./suitest/tracking";
+import * as WorkflowManual from "./workflow-manual";
 
-// Active Lifecycle: tutto ciò che esiste solo mentre il servizio è "active" secondo
-// l'ActivationSchedule - tracker ADB/Suitest, orchestrator android-bridge, sync del registry.
-// `deactivateActiveLifecycle` richiede in input esattamente il valore ritornato da
-// `createActiveLifecycle`: non si possono fermare risorse che non si sono prima ottenute
-// da una create riuscita.
+// Active Lifecycle: tutto ciò che esiste solo mentre il servizio è attivo secondo l'ActivationSchedule
 
-export interface Policies {
-  readonly adbTrackingPolicy: RetryCodec.DescribedPolicy;
+export interface TrackingPolicies {
+  readonly androidBridgeTrackingPolicy: RetryCodec.DescribedPolicy;
   readonly suitestCameraTrackingPolicy: RetryCodec.DescribedPolicy;
   readonly suitestControlUnitTrackingPolicy: RetryCodec.DescribedPolicy;
   readonly suitestDeviceTrackingPolicy: RetryCodec.DescribedPolicy;
@@ -36,24 +32,29 @@ export interface Policies {
 export interface Env {
   readonly logger: Logger.Tagged;
   readonly config: ConfigModel.Service;
-  readonly policies: Policies;
+  readonly policies: TrackingPolicies;
+  // Fatti nominati e tipizzati (bool/string/number) sulle entità dei domini tracciati (adb/suitest-*): chiave (domain, entityId, name)
   readonly predicateStream: Predicates.PredicateStream;
-  readonly adbDeviceStream: AdbStream.AdbDeviceStream;
+  // Lista completa dei device ADB correnti ad ogni cambiamento (snapshot intero, non delta)
+  readonly adbDeviceStream: AndroidBridge.AdbDeviceStream;
+  // Transizioni di stato di ogni tripwire di recovery (healthy/pending/recovering/exhausted/fatalError): chiave (policy, domain, entityId, tripwireIndex), con storico
   readonly recoveryStream: Recovery.RecoveryStream;
+  // Notifiche puntuali verso l'esterno (Slack), una per regola valutata: evento singolo, senza snapshot
   readonly notifyStream: Notify.NotifyStream;
+  // Cosa i sottosistemi (recovery/adb/workflow) stanno facendo sulle entità di dominio: una riga di stato per (source, entityId), con storico
   readonly activityStream: Activity.ActivityStream;
-  // Heartbeat dei loop di background (§7 - vedi packages/ui/src/task-runner): sopravvive al
-  // ciclo di activation, per questo vive nell'Env del servizio e non nell'ActiveLifecycle.
+  // Heartbeat dei loop di background del TaskRunner: solo l'ultimo stato (running/idle/error/...) per ogni loop
   readonly loopStream: TaskRunner.LoopStream;
 }
 
 export interface ActiveLifecycle {
-  readonly adbTracking: TaskRunner.Handle;
+  readonly androidBridge: AndroidBridge.Handle;
+  readonly androidBridgeTracking: TaskRunner.Handle;
   readonly suitestTracking: TaskRunner.Handle;
-  readonly androidBridge: AndroidBridgeOrchestrator.Handle;
-  readonly adbReconciler: TaskRunner.Handle;
+  readonly androidBridgeReconciler: TaskRunner.Handle;
   readonly recovery: RecoveryEngine.Handle;
-  // Lancio manuale di un workflow (operatore, via tRPC) - vedi ./manual-workflow.ts
+
+  // Lancio manuale di un workflow (via tRPC)
   readonly runWorkflow: (
     cameraId: string,
     workflowName: string,
@@ -62,27 +63,19 @@ export interface ActiveLifecycle {
 
 export type CreateError = Registry.SyncError | RecoveryEngine.StartError;
 
-// Cadenza del tick di reconcile dell'AndroidBridge - non configurabile: un giro costa solo
-// `Registry.read` (locale) più, per camera Disconnected, un tentativo già limitato/backoff-ato
-// dalla propria policy di retry. Un tick più fitto non costa una richiesta esterna in più.
-const ADB_RECONCILE_TICK_MS = 5000;
+const RECONCILE_POLICY = RetryCodec.describedConstant(DateTime.durationToMs("5s"));
 
-const readRegistry = (env: Env) =>
-  Registry.read({
-    logger: env.logger.child("Registry"),
-    suitestConfig: env.config.suitest,
-    dbPath: env.config.registry.dbPath,
-    seedDevices: env.config.registry.devices,
-    fsEnv: Node.fsEnv,
-  });
-
-const RECONCILE_POLICY = RetryCodec.describedConstant(ADB_RECONCILE_TICK_MS);
-
-const createAdbReconciler = (env: Env, androidBridge: AndroidBridgeOrchestrator.Handle): TaskRunner.Handle => {
+const createAndroidBridgeReconciler = (env: Env, androidBridge: AndroidBridge.Handle): TaskRunner.Handle => {
   const reconcileLog = env.logger.child("AndroidBridge");
 
   const onTick: TE.TaskEither<Errors.AppError, string | undefined> = pipe(
-    readRegistry(env),
+    Registry.read({
+      logger: env.logger.child("Registry"),
+      suitestConfig: env.config.suitest,
+      dbPath: env.config.registry.dbPath,
+      seedDevices: env.config.registry.devices,
+      fsEnv: Node.fsEnv,
+    }),
     TE.orElseFirstIOK((error) => reconcileLog.error(`registry read failed - ${Errors.format(error)}`)),
     TE.flatMap((registry) =>
       pipe(
@@ -97,7 +90,7 @@ const createAdbReconciler = (env: Env, androidBridge: AndroidBridgeOrchestrator.
     logger: reconcileLog,
     descriptor: {
       id: "android-bridge:reconcile",
-      label: "Android Bridge Reconcile",
+      label: "Android Bridge - Reconcile",
       policyLabel: RECONCILE_POLICY.label,
     },
     policy: RECONCILE_POLICY.policy,
@@ -118,15 +111,15 @@ const createRecovery = (
       recoveryStream: env.recoveryStream,
       notifyStream: env.notifyStream,
       activityStream: env.activityStream,
-      androidBridge: resources.androidBridge,
       loopStream: env.loopStream,
+      androidBridge: resources.androidBridge,
     }),
     TE.fromEither,
     TE.map(
       (recovery): ActiveLifecycle => ({
         ...resources,
         recovery,
-        runWorkflow: ManualWorkflow.run({
+        runWorkflow: WorkflowManual.run({
           logger: env.logger.child("ManualWorkflow"),
           workflows: env.config.workflows,
           capabilitiesEnv: recovery.capabilitiesEnv,
@@ -142,7 +135,7 @@ const createResources =
   () => {
     const trackingLog = env.logger.child("Tracking");
 
-    const androidBridge = AndroidBridgeOrchestrator.create(
+    const androidBridge = AndroidBridge.create(
       {
         logger: env.logger.child("AndroidBridge"),
         spawn: Node.spawn,
@@ -152,18 +145,18 @@ const createResources =
       env.adbDeviceStream,
     );
 
-    const adbReconciler = createAdbReconciler(env, androidBridge);
+    const androidBridgeReconciler = createAndroidBridgeReconciler(env, androidBridge);
 
-    const adbTracking = AdbTracking.create({
+    const androidBridgeTracking = AndroidBridgeTracking.create({
       logger: trackingLog,
       predicateStream: env.predicateStream,
       adbDeviceStream: env.adbDeviceStream,
       adbEnv: { logger: trackingLog.child("Tracker-ADB"), spawn: Node.spawn },
-      policy: env.policies.adbTrackingPolicy.policy,
+      policy: env.policies.androidBridgeTrackingPolicy.policy,
       descriptor: {
-        id: "tracker:adb",
-        label: "ADB tracking",
-        policyLabel: env.policies.adbTrackingPolicy.label,
+        id: "tracker:android-bridge",
+        label: "Android Bridge - Tracking",
+        policyLabel: env.policies.androidBridgeTrackingPolicy.label,
       },
       loopStream: env.loopStream,
     });
@@ -180,30 +173,34 @@ const createResources =
       loopStream: env.loopStream,
     });
 
-    return { androidBridge, adbTracking, suitestTracking, adbReconciler };
+    return { androidBridge, androidBridgeTracking, suitestTracking, androidBridgeReconciler };
   };
 
-const startBackgroundLoops = ({ adbTracking, suitestTracking, adbReconciler }: ActiveLifecycle): IO.IO<void> =>
+const startBackgroundTasks = ({
+  androidBridgeTracking,
+  suitestTracking,
+  androidBridgeReconciler,
+}: ActiveLifecycle): IO.IO<void> =>
   TaskRunner.detach(
     pipe(
-      [suitestTracking.start, adbTracking.start, adbReconciler.start],
+      [suitestTracking.start, androidBridgeTracking.start, androidBridgeReconciler.start],
       TE.traverseArray(flow(TaskRunner.detach, TE.fromIO)),
     ),
   );
 
 const stopResources = ({
-  adbTracking,
+  androidBridgeTracking,
   suitestTracking,
   androidBridge,
-  adbReconciler,
+  androidBridgeReconciler,
   recovery,
 }: ActiveLifecycle): IO.IO<void> =>
   pipe(
     IO.Do,
     IO.flatMap(() => recovery.stop),
-    IO.flatMap(() => adbTracking.stop),
+    IO.flatMap(() => androidBridgeTracking.stop),
     IO.flatMap(() => suitestTracking.stop),
-    IO.flatMap(() => adbReconciler.stop),
+    IO.flatMap(() => androidBridgeReconciler.stop),
     IO.flatMap(() => androidBridge.stop),
   );
 
@@ -219,7 +216,7 @@ export const createActiveLifecycle = (env: Env): TE.TaskEither<CreateError, Acti
     TE.tapIO(() => env.logger.info("Activation flow completed")),
     TE.flatMap(() => TE.fromIO(createResources(env))),
     TE.flatMap((resources) => createRecovery(env, resources)),
-    TE.tapIO(startBackgroundLoops),
+    TE.tapIO(startBackgroundTasks),
   );
 
 export const deactivateActiveLifecycle = (lifecycle: ActiveLifecycle): IO.IO<void> => stopResources(lifecycle);

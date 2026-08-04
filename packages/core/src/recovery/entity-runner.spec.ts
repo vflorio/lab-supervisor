@@ -421,7 +421,7 @@ describe("recovery/entity-runner", () => {
     const inFlight = runner.observe(lookup, 1000); // -> recovering, pipeline bloccata
     await flushMicrotasks();
 
-    expect(runner.reset(0)).toBe(true); // l'operatore riarma il tripwire
+    expect(runner.rearm(0)).toBe(true); // l'operatore riarma il tripwire
 
     inFlightGate.open();
     await inFlight; // l'esito ("exhausted") arriva ora, ma riferito a un episodio già chiuso

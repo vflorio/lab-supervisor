@@ -8,12 +8,12 @@ import type { Workflow } from "@supervisor/core/workflow/workflow";
 import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
 import * as TE from "fp-ts/TaskEither";
-import * as AdbTracking from "./adb/adb-tracking";
+import * as AndroidBridgeTracking from "./android-bridge/tracking";
 import * as Capabilities from "./recovery/capabilities";
 import * as Registry from "./registry";
 import * as SuitestCamera from "./suitest/suitest-camera";
 
-// Manual workflow run (operator, via tRPC); reuses RecoveryPolicy's Capabilities.Env for consistent gating and notifications
+// Manual workflow run (via tRPC) riutilizza Capabilities.Env per gating e notifiche
 
 export interface Env {
   readonly logger: Logger.Tagged;
@@ -57,8 +57,8 @@ export const run =
         )({
           logger: env.logger,
           workflows: env.workflows,
-          capabilities: Capabilities.capabilitiesFor(AdbTracking.DOMAIN, env.capabilitiesEnv)(adbId),
-          probes: Capabilities.probesFor(AdbTracking.DOMAIN, env.capabilitiesEnv)(adbId),
+          capabilities: Capabilities.capabilitiesFor(AndroidBridgeTracking.DOMAIN, env.capabilitiesEnv)(adbId),
+          probes: Capabilities.probesFor(AndroidBridgeTracking.DOMAIN, env.capabilitiesEnv)(adbId),
           lookup: lookupFor(camera),
         }),
       ),

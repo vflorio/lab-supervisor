@@ -35,7 +35,7 @@ export interface RecoveryRunnerEnv {
 export interface RecoveryRunnerHandle {
   readonly stop: () => void;
   // Rearm tripwire after exhaustion (returns false if entity never observed)
-  readonly reset: (entityId: string, tripwireIndex: number) => boolean;
+  readonly rearm: (entityId: string, tripwireIndex: number) => boolean;
 }
 
 export const start = (
@@ -122,7 +122,7 @@ export const start = (
           unsubscribe();
           tickLoop.stop();
         },
-        reset: (entityId, tripwireIndex) => runnersByEntity.get(entityId)?.reset(tripwireIndex) ?? false,
+        rearm: (entityId, tripwireIndex) => runnersByEntity.get(entityId)?.rearm(tripwireIndex) ?? false,
       };
     }),
   );

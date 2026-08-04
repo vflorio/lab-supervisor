@@ -1,7 +1,6 @@
 import { type ActivityEntry, activityKey } from "./model";
 
-// Activity feed (ring buffer + "ultimo per chiave" + subscribe): a differenza di un feed di
-// eventi puntuali, qui interessa lo stato corrente di ogni (source, entityId), non solo lo storico.
+// Activity feed (ring buffer + "ultimo per chiave" + subscribe)
 
 export interface ActivityFeed {
   readonly subscribe: (listener: (entry: ActivityEntry) => void) => () => void;

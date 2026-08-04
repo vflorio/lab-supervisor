@@ -11,11 +11,6 @@ const CONNECTION_TONE: Record<ServiceConnection, StatusTone> = {
 
 export interface ServiceStripProps {
   readonly connection: ServiceConnection;
-  // Un widget per loop, non un aggregato: quando un dominio ne espone più d'uno (Suitest: 3
-  // pollings indipendenti, Recovery: uno per policy) sono N voci in questa stessa lista, ognuna
-  // già "titolata" dal proprio `label` (es. "Suitest · cameras", "Recovery · <policy>") - nessun
-  // widget speciale che li raggruppa. Una pagina dedicata potrà in futuro renderizzare la stessa
-  // lista altrove, senza bisogno di un tipo diverso.
   readonly loops: readonly LoopWidgetProps[];
 }
 

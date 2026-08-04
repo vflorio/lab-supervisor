@@ -39,7 +39,7 @@ const ONLINE_ARGS: ServiceStripProps = {
     },
     {
       id: "tracker:suitest-camera",
-      label: "Suitest · cameras",
+      label: "Suitest - cameras",
       state: "running",
       iteration: 234,
       policyLabel: "constant 30s",
@@ -47,7 +47,7 @@ const ONLINE_ARGS: ServiceStripProps = {
     },
     {
       id: "tracker:suitest-control-unit",
-      label: "Suitest · control units",
+      label: "Suitest - control units",
       state: "running",
       iteration: 234,
       policyLabel: "constant 30s",
@@ -55,7 +55,7 @@ const ONLINE_ARGS: ServiceStripProps = {
     },
     {
       id: "tracker:suitest-device",
-      label: "Suitest · devices",
+      label: "Suitest - devices",
       state: "idle",
       iteration: 0,
       policyLabel: "constant 30s",
@@ -63,7 +63,7 @@ const ONLINE_ARGS: ServiceStripProps = {
     },
     {
       id: "recovery:adb-camera",
-      label: "Recovery · adb-camera",
+      label: "Recovery - adb-camera",
       state: "running",
       iteration: 56,
       lastTickAt: NOW - 1_800,

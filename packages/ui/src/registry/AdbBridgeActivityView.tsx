@@ -17,5 +17,5 @@ export function adbBridgeActivityTone(status: string | undefined): [StatusTone, 
 
 export function AdbBridgeActivityView({ status }: AdbBridgeActivityViewProps) {
   const [tone, text] = adbBridgeActivityTone(status);
-  return <StatusPill label={`adb · ${text}`} tone={tone} />;
+  return <StatusPill label={`adb - ${text}`} tone={tone} />;
 }

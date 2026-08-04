@@ -30,7 +30,7 @@ export const create = ({ logger, stream, policies, suitestConfig, loopStream }: 
     stream,
     policy: policies.suitestCamera.policy,
     config: SuitestCamera.trackerConfig,
-    descriptor: { id: "tracker:suitest-camera", label: "Suitest · cameras", policyLabel: policies.suitestCamera.label },
+    descriptor: { id: "tracker:suitest-camera", label: "Suitest - cameras", policyLabel: policies.suitestCamera.label },
     loopStream,
   })({ suitestConfig, logger: logger.child("Tracker-Suitest:camera") });
 
@@ -41,7 +41,7 @@ export const create = ({ logger, stream, policies, suitestConfig, loopStream }: 
     config: SuitestControlUnit.trackerConfig,
     descriptor: {
       id: "tracker:suitest-control-unit",
-      label: "Suitest · control units",
+      label: "Suitest - control units",
       policyLabel: policies.suitestControlUnit.label,
     },
     loopStream,
@@ -52,7 +52,7 @@ export const create = ({ logger, stream, policies, suitestConfig, loopStream }: 
     stream,
     policy: policies.suitestDevice.policy,
     config: SuitestDevice.trackerConfig,
-    descriptor: { id: "tracker:suitest-device", label: "Suitest · devices", policyLabel: policies.suitestDevice.label },
+    descriptor: { id: "tracker:suitest-device", label: "Suitest - devices", policyLabel: policies.suitestDevice.label },
     loopStream,
   })({ suitestConfig, logger: logger.child("Tracker-Suitest:device") });
 

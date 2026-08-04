@@ -4,6 +4,9 @@
   "author": {
     "name": "vflorio & ai"
   },
+  "dependencies": {
+    "storybook": "10.5.5"
+  },
   "devDependencies": {
     "@biomejs/biome": "2.5.0",
     "@playwright/test": "^1.61.1",
@@ -40,8 +43,5 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ],
-  "dependencies": {
-    "storybook": "10.5.5"
-  }
+  ]
 }

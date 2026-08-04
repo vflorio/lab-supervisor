@@ -1,13 +1,13 @@
 import * as E from "fp-ts/Either";
 import { describe, expect, it } from "vitest";
 import * as BooleanTree from "../boolean-tree/tree";
-import * as Expr from "./expression";
+import * as Expression from "./expression";
 import { PredicateExpressionCodec } from "./expression-codec";
 
 describe("predicates/expression-codec", () => {
   it("decodes a ref", () => {
     const result = PredicateExpressionCodec.decode(["ref", "suitest_camera_connected"]);
-    expect(result).toStrictEqual(E.right(Expr.ref("suitest_camera_connected")));
+    expect(result).toStrictEqual(E.right(Expression.ref("suitest_camera_connected")));
   });
 
   it("decodes nested or/not", () => {
@@ -17,8 +17,8 @@ describe("predicates/expression-codec", () => {
     expect(result).toStrictEqual(
       E.right(
         BooleanTree.or([
-          Expr.ref("suitest_camera_recording"),
-          BooleanTree.not(Expr.ref("suitest_control_unit_online")),
+          Expression.ref("suitest_camera_recording"),
+          BooleanTree.not(Expression.ref("suitest_control_unit_online")),
         ]),
       ),
     );
@@ -34,7 +34,7 @@ describe("predicates/expression-codec", () => {
   });
 
   it("round-trips through encode", () => {
-    const expr = BooleanTree.and([Expr.ref("a"), Expr.equals("b", "ready")]);
+    const expr = BooleanTree.and([Expression.ref("a"), Expression.equals("b", "ready")]);
     expect(PredicateExpressionCodec.decode(PredicateExpressionCodec.encode(expr))).toStrictEqual(E.right(expr));
   });
 });

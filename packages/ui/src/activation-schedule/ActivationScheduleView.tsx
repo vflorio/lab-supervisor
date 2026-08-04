@@ -10,7 +10,7 @@ export function ActivationScheduleView({ value }: ActivationScheduleViewProps) {
   return (
     <Stack spacing={1}>
       <Typography variant="monoTitle" color="textSecondary">
-        {value.days.length === 7 ? "Tutti i giorni" : value.days.join(", ")} · {value.from}–{value.to}
+        {value.days.length === 7 ? "Tutti i giorni" : value.days.join(", ")} - {value.from}–{value.to}
       </Typography>
       <ScheduleGrid value={value} />
     </Stack>

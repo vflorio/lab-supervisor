@@ -33,5 +33,5 @@ export function isRecoveryStuck(status: string | undefined): boolean {
 
 export function RecoveryActivityView({ status }: RecoveryActivityViewProps) {
   const [tone, text] = recoveryActivityTone(status);
-  return <StatusPill label={`recovery · ${text}`} tone={tone} />;
+  return <StatusPill label={`recovery - ${text}`} tone={tone} />;
 }

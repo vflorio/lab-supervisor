@@ -6,14 +6,14 @@ export type ServiceStatus = "connecting" | "online" | "reconnecting";
 
 export interface Loops {
   readonly status: ServiceStatus;
-  // Ultimo stato noto per loop, chiave = LoopEntry["id"]
   readonly table: ReadonlyMap<string, LoopEntry>;
+  readonly sorted: readonly LoopEntry[];
 }
 
-// Heartbeat dei loop di background (§7): stessa cautela snapshot-poi-subscribe di
-// usePredicates/useActivity - la query iniziale va attesa prima di avviare la subscription,
-// altrimenti un tail più recente verrebbe sovrascritto da uno snapshot risolto più tardi ma
-// più vecchio.
+// Heartbeat dei loop di background:
+// la query iniziale va attesa prima di avviare la subscription,
+// altrimenti un tail più recente verrebbe sovrascritto da uno
+// snapshot risolto più tardi ma più vecchio.
 export function useLoops(): Loops {
   const [status, setStatus] = useState<ServiceStatus>("connecting");
   const [table, setTable] = useState<ReadonlyMap<string, LoopEntry>>(new Map());
@@ -57,5 +57,22 @@ export function useLoops(): Loops {
     };
   }, []);
 
-  return { status, table };
+  // Sort the loops by priority: tracker first, then android-bridge, then recovery, then the rest alphabetically.
+  const sorted = Array.from(table.values()).toSorted((a, b) => {
+    const aPrefix = a.id.split(":")[0];
+    const bPrefix = b.id.split(":")[0];
+
+    if (aPrefix === "tracker" && bPrefix !== "tracker") return -1;
+    if (aPrefix !== "tracker" && bPrefix === "tracker") return 1;
+
+    if (aPrefix === "android-bridge" && bPrefix !== "android-bridge") return -1;
+    if (aPrefix !== "android-bridge" && bPrefix === "android-bridge") return 1;
+
+    if (aPrefix === "recovery" && bPrefix !== "recovery") return -1;
+    if (aPrefix !== "recovery" && bPrefix === "recovery") return 1;
+
+    return a.label.localeCompare(b.label);
+  });
+
+  return { status, table, sorted };
 }

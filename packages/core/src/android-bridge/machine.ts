@@ -1,4 +1,4 @@
-import * as Machine from "@supervisor/core/state-machine/machine";
+import * as AndroidBridgeMachine from "@supervisor/core/state-machine/machine";
 import { forwardToActivity } from "./hooks/activity";
 import { logStateChange } from "./hooks/tracing";
 import type { AndroidBridgeMachineEnv } from "./interpret";
@@ -53,12 +53,16 @@ export * from "./model";
 //
 // =========================================================================================
 
-const machine: Machine.Machine<
+const machine: AndroidBridgeMachine.Machine<
   AndroidBridgeMachineEnv,
   never,
   Model.AndroidBridgeState,
   Model.AndroidBridgeEvent,
   Model.AndroidBridgeIntent
-> = Machine.make(reduce, interpret, Machine.composeTransitionHooks(logStateChange, forwardToActivity));
+> = AndroidBridgeMachine.make(
+  reduce,
+  interpret,
+  AndroidBridgeMachine.composeTransitionHooks(logStateChange, forwardToActivity),
+);
 
-export const dispatch = Machine.dispatch(machine);
+export const dispatch = AndroidBridgeMachine.dispatch(machine);

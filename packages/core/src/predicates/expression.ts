@@ -1,4 +1,4 @@
-import type { Predicate } from "fp-ts/Predicate";
+import type { Predicate as Expression } from "fp-ts/Predicate";
 import { match } from "ts-pattern";
 import * as BooleanTree from "../boolean-tree/tree";
 import type { PredicateValue } from "./model";
@@ -16,30 +16,30 @@ export type FactLeaf =
 
 export type PredicateExpression = BooleanTree.BooleanTree<FactLeaf>;
 
-export const compileFactLeaf = (leaf: FactLeaf): Predicate<PredicateLookup> =>
+export const compileFactLeaf = (leaf: FactLeaf): Expression<PredicateLookup> =>
   match(leaf)
     .with(
       { type: "ref" },
-      ({ name }): Predicate<PredicateLookup> =>
+      ({ name }): Expression<PredicateLookup> =>
         (lookup) =>
           lookup(name) === true,
     )
     .with(
       { type: "equals" },
-      ({ name, value }): Predicate<PredicateLookup> =>
+      ({ name, value }): Expression<PredicateLookup> =>
         (lookup) =>
           lookup(name) === value,
     )
     .with(
       { type: "includes" },
-      ({ name, value }): Predicate<PredicateLookup> =>
+      ({ name, value }): Expression<PredicateLookup> =>
         (lookup) =>
           String(lookup(name) ?? "").includes(value),
     )
     .exhaustive();
 
 // Compile expression into evaluator
-export const compile: (expr: PredicateExpression) => Predicate<PredicateLookup> = BooleanTree.compile(compileFactLeaf);
+export const compile: (expr: PredicateExpression) => Expression<PredicateLookup> = BooleanTree.compile(compileFactLeaf);
 
 // Constructors for TypeScript use (config comes via codec); avoid manual leaf wrapping
 export const ref = (name: string): PredicateExpression => BooleanTree.leaf({ type: "ref", name });

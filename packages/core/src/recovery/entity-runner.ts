@@ -27,7 +27,7 @@ export interface EntityRunnerEnv {
 export interface EntityRunner {
   readonly observe: (lookup: PredicateLookup, now: number) => Promise<void>;
   // Rearm exhausted/fatalError tripwire (returns false if index out of bounds)
-  readonly reset: (tripwireIndex: number) => boolean;
+  readonly rearm: (tripwireIndex: number) => boolean;
 }
 
 interface TripwireInstance {
@@ -134,5 +134,5 @@ export const create = (compiledTripwires: readonly CompiledTripwire[], env: Enti
     return true;
   };
 
-  return { observe, reset };
+  return { observe, rearm: reset };
 };

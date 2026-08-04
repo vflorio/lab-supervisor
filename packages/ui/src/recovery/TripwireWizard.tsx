@@ -112,7 +112,7 @@ export function TripwireWizard({
       >
         <Box>
           <Typography variant="overline" color="textSecondary" sx={{ mb: 0.5 }}>
-            recovery · {domain}
+            recovery - {domain}
           </Typography>
           <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
             Nuovo Tripwire

@@ -14,27 +14,26 @@ import * as TaskRunner from "@supervisor/core/task-runner/index";
 import type * as Validation from "@supervisor/core/validation";
 import * as WorkflowInterpreter from "@supervisor/core/workflow/interpreter";
 import * as E from "fp-ts/Either";
-import { constFalse, pipe } from "fp-ts/function";
+import { constVoid, pipe } from "fp-ts/function";
 import * as IO from "fp-ts/IO";
+import * as IORef from "fp-ts/IORef";
 import * as O from "fp-ts/Option";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
-import * as AdbStream from "./adb/adb-stream";
+import * as AndroidBridge from "./android-bridge/android-bridge";
 import * as Config from "./config";
 import * as ServiceLogger from "./logger";
 import type * as Node from "./node";
 import * as ServiceLifecycle from "./service-lifecycle";
-import * as Trpc from "./trpc";
-import * as TrpcServices from "./trpc-services";
+import * as Trpc from "./trpc/server";
+import * as TrpcServices from "./trpc/services";
 
 export interface Env {
   readonly logger: Logger.Tagged;
-  readonly configFetcher: Config.ConfigFetcher;
-  // Percorso del file di config, se la sorgente è `--config <path>` - `None` per `--config-url`,
-  // nel qual caso `setConfig` (persistenza su file, vedi trpc-services.ts) non è disponibile.
-  readonly configPath: O.Option<string>;
   readonly process: Node.Process;
+  readonly configFetcher: Config.ConfigFetcher;
+  readonly configPath: O.Option<string>;
 }
 
 type Effect<A> = RTE.ReaderTaskEither<
@@ -43,19 +42,12 @@ type Effect<A> = RTE.ReaderTaskEither<
   A
 >;
 
-const logInfo = (message: string): Effect<void> =>
-  pipe(
-    RTE.ask<Env>(),
-    RTE.tapIO((env) => env.logger.info(message)),
-    RTE.asUnit,
-  );
-
 const loadConfig: Effect<ConfigModel.Service> = (env) => Config.load(env.configFetcher);
 
-const parseConfigPolicies = (config: ConfigModel.Service): Effect<ServiceLifecycle.Policies> =>
+const parseConfigPolicies = (config: ConfigModel.Service): Effect<ServiceLifecycle.TrackingPolicies> =>
   pipe(
     E.Do,
-    E.bind("adbTrackingPolicy", () => RetryCodec.described(config.tracking.adb.policy)),
+    E.bind("androidBridgeTrackingPolicy", () => RetryCodec.described(config.tracking.adb.policy)),
     E.bind("suitestCameraTrackingPolicy", () => RetryCodec.described(config.tracking.suitestCamera.policy)),
     E.bind("suitestControlUnitTrackingPolicy", () => RetryCodec.described(config.tracking.suitestControlUnit.policy)),
     E.bind("suitestDeviceTrackingPolicy", () => RetryCodec.described(config.tracking.suitestDevice.policy)),
@@ -78,7 +70,7 @@ export interface ServiceHandle {
 }
 
 export const create: Effect<ServiceHandle> = pipe(
-  logInfo("Loading config..."),
+  RTE.Do,
   RTE.bind("config", () => loadConfig),
   RTE.bind("policies", ({ config }) => parseConfigPolicies(config)),
   RTE.bind("configPath", () => RTE.asks((env: Env) => env.configPath)),
@@ -87,7 +79,7 @@ export const create: Effect<ServiceHandle> = pipe(
     const logStream = LogStream.createLogStream();
     const logger = pipe(ServiceLogger.create(config.log, [logStream.transport]), Logger.tagged("Service"));
 
-    const activationSchedule = constFalse()
+    const activationSchedule = import.meta.env.DEV_ACTIVATION_SCHEDULE
       ? devActivationSchedule()
       : ActivationSchedule.toSchedule(config.activationSchedule);
 
@@ -96,21 +88,19 @@ export const create: Effect<ServiceHandle> = pipe(
     const activationLog = logger.child("Activation");
 
     const predicateStream = Predicates.createPredicateStream();
-    const adbDeviceStream = AdbStream.createAdbDeviceStream();
+    const adbDeviceStream = AndroidBridge.createAdbDeviceStream();
     const recoveryStream = Recovery.createRecoveryStream();
     const notifyStream = Notify.createNotifyStream();
     const activityStream = Activity.createActivityStream();
-    // Sopravvive al ciclo di activation (§7): quando il lifecycle si ferma ogni loop pubblica
-    // "stopped" con la sua ultima iteration, non sparisce dalla strip.
     const loopStream = TaskRunner.createLoopStream();
 
-    let active: O.Option<ServiceLifecycle.ActiveLifecycle> = O.none;
+    const isActive = IORef.newIORef<O.Option<ServiceLifecycle.ActiveLifecycle>>(O.none)();
 
-    // Il motore di recovery esiste solo mentre il servizio è "active": senza, non c'è nulla da riarmare.
+    // tRPC
     const resetRecovery = (policyLabel: string, entityId: string, tripwireIndex: number): boolean =>
       pipe(
-        active,
-        O.map((lifecycle) => lifecycle.recovery.reset(policyLabel, entityId, tripwireIndex)),
+        isActive.read(),
+        O.map((lifecycle) => lifecycle.recovery.rearmTripwire(policyLabel, entityId, tripwireIndex)),
         O.getOrElse(() => false),
       );
 
@@ -120,7 +110,7 @@ export const create: Effect<ServiceHandle> = pipe(
       workflowName: string,
     ): TE.TaskEither<WorkflowInterpreter.WorkflowError, void> =>
       pipe(
-        active,
+        isActive.read(),
         O.map((lifecycle) => lifecycle.runWorkflow(cameraId, workflowName)),
         O.getOrElse(() => TE.left(WorkflowInterpreter.workflowError("Service not active"))),
       );
@@ -146,14 +136,12 @@ export const create: Effect<ServiceHandle> = pipe(
       }),
     });
 
-    const clearActive: IO.IO<void> = () => {
-      active = O.none;
-    };
+    const clearActive: IO.IO<void> = isActive.write(O.none);
 
     const deactivateIfActive: IO.IO<void> = () =>
       pipe(
-        active,
-        O.match(() => IO.of(undefined), ServiceLifecycle.deactivateActiveLifecycle),
+        isActive.read(),
+        O.match(() => constVoid, ServiceLifecycle.deactivateActiveLifecycle),
       )();
 
     const activationRunner = Activation.create(activationLog, activationSchedule, {
@@ -169,9 +157,7 @@ export const create: Effect<ServiceHandle> = pipe(
           activityStream,
           loopStream,
         }),
-        TE.tapIO((lifecycle) => () => {
-          active = O.some(lifecycle);
-        }),
+        TE.tapIO((lifecycle) => isActive.write(O.some(lifecycle))),
         TE.asUnit,
         TE.getOrElse((error) => T.fromIO(activationLog.error(`Activation flow failed: ${Errors.format(error)}`))),
       ),

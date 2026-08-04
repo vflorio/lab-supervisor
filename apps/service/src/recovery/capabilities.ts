@@ -1,4 +1,4 @@
-import type * as AndroidBridge from "@supervisor/core/android-bridge/machine";
+import type * as AndroidBridgeMachine from "@supervisor/core/android-bridge/machine";
 import * as Errors from "@supervisor/core/errors";
 import type * as Logger from "@supervisor/core/logger/logger";
 import type * as Network from "@supervisor/core/network";
@@ -8,10 +8,10 @@ import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
-import type * as AndroidBridgeOrchestrator from "../android-bridge";
+import type * as AndroidBridge from "../android-bridge/android-bridge";
 import * as Registry from "../registry";
 import * as Workflow from "../workflow";
-import { resolveAndroidBridgeId, resolveTarget } from "./target";
+import * as Target from "./target";
 
 // CommandCapabilities for a RecoveryPolicy; resolves ADB target fresh per command (no cache needed)
 
@@ -19,7 +19,7 @@ export interface Env {
   readonly logger: Logger.Tagged;
   readonly registryEnv: Registry.RegistrySyncEnv;
   readonly workflowEnv: Workflow.WorkflowRunnerEnv;
-  readonly androidBridge: AndroidBridgeOrchestrator.Handle;
+  readonly androidBridge: AndroidBridge.Handle;
   readonly waitForDeviceTimeoutMs: number;
 }
 
@@ -30,11 +30,11 @@ const bridgeFor = (domain: string, env: Env, entityId: string) => {
     pipe(
       Registry.read(env.registryEnv),
       TE.mapLeft((error) => WorkflowInterpreter.workflowError(`Registry read failed: ${Errors.format(error)}`)),
-      TE.map((db) => resolveAndroidBridgeId(domain, entityId, db.lab)),
+      TE.map((db) => Target.resolveAndroidBridgeId(domain, entityId, db.lab)),
     );
 
   // Notify bridge event if tracked (best-effort; unresolvable id or failure doesn't affect command outcome)
-  const notifyBridge = (event: AndroidBridge.AndroidBridgeEvent): TE.TaskEither<never, void> =>
+  const notifyBridge = (event: AndroidBridgeMachine.AndroidBridgeEvent): TE.TaskEither<never, void> =>
     pipe(
       androidBridgeId(),
       TE.flatMap(
@@ -61,7 +61,7 @@ const bridgeFor = (domain: string, env: Env, entityId: string) => {
       Registry.read(env.registryEnv),
       TE.mapLeft((error) => WorkflowInterpreter.workflowError(`Registry read failed: ${Errors.format(error)}`)),
       TE.flatMapOption(
-        (db) => resolveTarget(domain, entityId, db.lab),
+        (db) => Target.resolveTarget(domain, entityId, db.lab),
         () => WorkflowInterpreter.workflowError(`No ADB target resolved for ${domain}/${entityId}`),
       ),
       TE.flatMap(use),
