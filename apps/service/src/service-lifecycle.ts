@@ -18,7 +18,7 @@ import * as Node from "./node";
 import * as RecoveryEngine from "./recovery/engine";
 import * as Registry from "./registry";
 import * as SuitestTracking from "./suitest/tracking";
-import * as WorkflowManual from "./workflow-manual";
+import * as WorkflowManualRun from "./workflow-manual-run";
 
 // Active Lifecycle: tutto ciò che esiste solo mentre il servizio è attivo secondo l'ActivationSchedule
 
@@ -119,7 +119,7 @@ const createRecovery = (
       (recovery): ActiveLifecycle => ({
         ...resources,
         recovery,
-        runWorkflow: WorkflowManual.run({
+        runWorkflow: WorkflowManualRun.run({
           logger: env.logger.child("ManualWorkflow"),
           workflows: env.config.workflows,
           capabilitiesEnv: recovery.capabilitiesEnv,

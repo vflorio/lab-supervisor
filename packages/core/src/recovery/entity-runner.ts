@@ -7,9 +7,9 @@ import type { FactLookup } from "../fact/condition";
 import type * as Logger from "../logger/logger";
 import * as Retry from "../retry/retry";
 import * as Machine from "../state-machine/machine";
-import type { CommandCapabilities, WorkflowEnv } from "../workflow/interpreter";
+import type { Commands, WorkflowEnv } from "../workflow/interpreter";
 import { interpretPipeline } from "../workflow/pipeline-interpreter";
-import type { ProbeCapabilities } from "../workflow/probe";
+import type { Probes } from "../workflow/probe";
 import type { Workflow } from "../workflow/workflow";
 import type { CompiledTripwire } from "./compile";
 import * as TripwireMachine from "./tripwire-machine";
@@ -19,8 +19,8 @@ import * as TripwireMachine from "./tripwire-machine";
 export interface EntityRunnerEnv {
   readonly logger: Logger.Tagged;
   readonly workflows: readonly Workflow[];
-  readonly capabilities: CommandCapabilities;
-  readonly probes?: ProbeCapabilities;
+  readonly commands: Commands;
+  readonly probes?: Probes;
   readonly onStatus?: (tripwireIndex: number, state: TripwireMachine.TripwireState) => void;
 }
 
@@ -57,7 +57,7 @@ const describeTransition = (from: TripwireMachine.TripwireState, to: TripwireMac
 export const create = (compiledTripwires: readonly CompiledTripwire[], env: EntityRunnerEnv): EntityRunner => {
   const workflowEnv: WorkflowEnv = {
     logger: env.logger,
-    capabilities: env.capabilities,
+    commands: env.commands,
     probes: env.probes,
     workflows: env.workflows,
   };

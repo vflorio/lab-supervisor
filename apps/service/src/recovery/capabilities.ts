@@ -10,15 +10,15 @@ import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
 import type * as AndroidBridge from "../android-bridge/runner";
 import * as Registry from "../registry";
-import * as Workflow from "../workflow";
+import * as AdbCapabilities from "./adb-capabilities";
 import * as Target from "./target";
 
-// CommandCapabilities for a RecoveryPolicy; resolves ADB target fresh per command (no cache needed)
+// Commands for a RecoveryPolicy; resolves ADB target fresh per command (no cache needed)
 
 export interface Env {
   readonly logger: Logger.Tagged;
   readonly registryEnv: Registry.RegistrySyncEnv;
-  readonly workflowEnv: Workflow.WorkflowRunnerEnv;
+  readonly workflowEnv: AdbCapabilities.Env;
   readonly androidBridge: AndroidBridge.Handle;
   readonly waitForDeviceTimeoutMs: number;
 }
@@ -70,9 +70,9 @@ const bridgeFor = (domain: string, env: Env, entityId: string) => {
   return { androidBridgeId, notifyBridge, remediate, resolveEndpoint };
 };
 
-export const capabilitiesFor =
+export const commandsFor =
   (domain: string, env: Env) =>
-  (entityId: string): WorkflowInterpreter.CommandCapabilities => {
+  (entityId: string): WorkflowInterpreter.Commands => {
     const { androidBridgeId, notifyBridge, remediate, resolveEndpoint } = bridgeFor(domain, env, entityId);
 
     // Gate: reject early if AndroidBridge knows camera won't accept commands; in-memory state can give false negatives but never false positives
@@ -95,14 +95,12 @@ export const capabilitiesFor =
     // `gate: false` per i comandi che devono funzionare anche a camera non Idle (reboot):
     // gatarli rifiuterebbe esattamente ciò di cui una recovery ha bisogno.
     const withTarget = <A>(
-      run: (
-        capabilities: WorkflowInterpreter.CommandCapabilities,
-      ) => TE.TaskEither<WorkflowInterpreter.WorkflowError, A>,
+      run: (capabilities: WorkflowInterpreter.Commands) => TE.TaskEither<WorkflowInterpreter.WorkflowError, A>,
       gate: boolean = true,
     ): TE.TaskEither<WorkflowInterpreter.WorkflowError, A> =>
       pipe(
         gate ? requireAccepting() : TE.right(undefined),
-        TE.flatMap(() => resolveEndpoint((target) => run(Workflow.makeCapabilities(env.workflowEnv, target)))),
+        TE.flatMap(() => resolveEndpoint((target) => run(AdbCapabilities.makeCommands(env.workflowEnv, target)))),
         TE.tapError(remediate("command")),
       );
 
@@ -144,14 +142,14 @@ export const capabilitiesFor =
 // Probes for a RecoveryPolicy; same target resolution as commands but no AndroidBridge gate (reads are safe, and gating would block decision conditions)
 export const probesFor =
   (domain: string, env: Env) =>
-  (entityId: string): WorkflowProbe.ProbeCapabilities => {
+  (entityId: string): WorkflowProbe.Probes => {
     const { remediate, resolveEndpoint } = bridgeFor(domain, env, entityId);
 
     const withTarget = <A>(
-      read: (probes: WorkflowProbe.ProbeCapabilities) => TE.TaskEither<WorkflowInterpreter.WorkflowError, A>,
+      read: (probes: WorkflowProbe.Probes) => TE.TaskEither<WorkflowInterpreter.WorkflowError, A>,
     ): TE.TaskEither<WorkflowInterpreter.WorkflowError, A> =>
       pipe(
-        resolveEndpoint((target) => read(Workflow.makeProbes(env.workflowEnv, target))),
+        resolveEndpoint((target) => read(AdbCapabilities.makeProbes(env.workflowEnv, target))),
         TE.tapError(remediate("probe")),
       );
 

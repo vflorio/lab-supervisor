@@ -8,7 +8,7 @@ import type * as Workflow from "./workflow";
 
 // fixtures
 
-const noopCapabilities = (): Interpreter.CommandCapabilities => ({
+const noopCapabilities = (): Interpreter.Commands => ({
   restartApp: () => TE.right(undefined),
   ensureActivity: () => TE.right(undefined),
   openUrl: () => TE.right(undefined),
@@ -28,7 +28,7 @@ const envWith = (workflows: readonly Workflow.Workflow[], calls: string[] = []):
     error: () => () => {},
     logNetwork: () => () => {},
   },
-  capabilities: {
+  commands: {
     ...noopCapabilities(),
     restartApp: (pkg) => {
       calls.push(`restartApp:${pkg}`);
@@ -50,7 +50,7 @@ const failingEnv = (calls: string[]): Interpreter.WorkflowEnv => ({
     error: () => () => {},
     logNetwork: () => () => {},
   },
-  capabilities: {
+  commands: {
     ...noopCapabilities(),
     restartApp: (pkg) => {
       calls.push(`restartApp:${pkg}`);
@@ -134,7 +134,7 @@ describe("pipeline interpreter", () => {
     ];
     const env: Interpreter.WorkflowEnv = {
       ...envWith(workflows, calls),
-      capabilities: {
+      commands: {
         ...noopCapabilities(),
         restartApp: (pkg) => {
           calls.push(`restartApp:${pkg}`);
@@ -199,7 +199,7 @@ describe("pipeline interpreter", () => {
     const env: Interpreter.WorkflowEnv = {
       ...envWith(workflows, calls),
       // Il riavvio dell'app non risolve; solo il reboot rimette online il device
-      capabilities: {
+      commands: {
         ...noopCapabilities(),
         restartApp: (pkg) => {
           calls.push(`restartApp:${pkg}`);

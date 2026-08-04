@@ -3,7 +3,7 @@ import type * as TE from "fp-ts/TaskEither";
 import { type AppError, of } from "../errors";
 import type { FactLookup } from "../fact/condition";
 import type { Logger } from "../logger/logger";
-import type { ProbeCapabilities } from "./probe";
+import type { Probes } from "./probe";
 import type { TapCoords, Workflow } from "./workflow";
 
 // Env e vocabolario di errore dell'interprete, in un modulo a sé: `condition` ne ha bisogno per
@@ -21,7 +21,7 @@ export interface WorkflowError extends AppError<"WorkflowError"> {
 export const workflowError = of("WorkflowError");
 
 // Comandi: cambiano lo stato del device. I probe (./probe) lo leggono soltanto.
-export interface CommandCapabilities {
+export interface Commands {
   readonly restartApp: (packageId: string) => TE.TaskEither<WorkflowError, void>;
   readonly ensureActivity: (packageId: string, activity: string) => TE.TaskEither<WorkflowError, void>;
   readonly openUrl: (url: string) => TE.TaskEither<WorkflowError, void>;
@@ -34,7 +34,7 @@ export interface CommandCapabilities {
 
 export interface WorkflowEnv {
   readonly logger: Logger;
-  readonly capabilities: CommandCapabilities;
+  readonly commands: Commands;
   readonly workflows: readonly Workflow[];
   // Vista sui fatti applicativi correnti, per le foglie "fatto" di una Condition. Opzionale
   // perché non ogni contesto ne ha una da offrire: senza, la condizione fallisce con un
@@ -42,7 +42,7 @@ export interface WorkflowEnv {
   // Va letta ad ogni chiamata, non catturata: `await` aspetta proprio che cambi.
   readonly lookup?: FactLookup;
   // Letture dal vivo del device, per le foglie `probe`. Opzionale con la stessa logica.
-  readonly probes?: ProbeCapabilities;
+  readonly probes?: Probes;
   // Profondità di annidamento corrente (`run`, `when`): i workflow si richiamano per nome e
   // nulla vieta un ciclo in config - senza un bound sarebbe una ricorsione infinita, e con
   // `when` la ricorsione diventa una cosa che uno *vuole* scrivere.

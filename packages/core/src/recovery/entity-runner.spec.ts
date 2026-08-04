@@ -29,7 +29,7 @@ const loggerCapturingWarnings = (warnings: string[]): any => ({
   child: (): any => loggerCapturingWarnings(warnings),
 });
 
-const capabilitiesWith = (impl: Partial<Interpreter.CommandCapabilities>): Interpreter.CommandCapabilities => ({
+const capabilitiesWith = (impl: Partial<Interpreter.Commands>): Interpreter.Commands => ({
   restartApp: () => TE.right(undefined),
   ensureActivity: () => TE.right(undefined),
   openUrl: () => TE.right(undefined),
@@ -93,7 +93,7 @@ describe("recovery/entity-runner", () => {
     const runner = EntityRunner.create(compileOrThrow(tripwires), {
       logger: noopLogger as any,
       workflows: [{ name: "reconnect", commands: [{ type: "reboot" }] }],
-      capabilities: capabilitiesWith({
+      commands: capabilitiesWith({
         reboot: () => {
           calls.push("reboot");
           return TE.right(undefined);
@@ -126,7 +126,7 @@ describe("recovery/entity-runner", () => {
     const runner = EntityRunner.create(compileOrThrow(tripwires), {
       logger: noopLogger as any,
       workflows: [{ name: "reconnect", commands: [{ type: "reboot" }] }],
-      capabilities: capabilitiesWith({
+      commands: capabilitiesWith({
         // Il reboot "riesce" (nessun comando fallito) e riporta davvero il device online:
         // è questo secondo fatto, riverificato sul predicate, a contare come successo.
         reboot: () => {
@@ -174,7 +174,7 @@ describe("recovery/entity-runner", () => {
     const runner = EntityRunner.create(compileOrThrow(tripwires), {
       logger: noopLogger as any,
       workflows: [{ name: "reconnect", commands: [{ type: "restartApp", packageId: "pkg" }] }],
-      capabilities: capabilitiesWith({
+      commands: capabilitiesWith({
         restartApp: () => {
           attempts++;
           if (attempts >= 3) connected = true; // il 3° tentativo è quello che ripristina davvero il device
@@ -209,7 +209,7 @@ describe("recovery/entity-runner", () => {
     const runner = EntityRunner.create(compileOrThrow(tripwires), {
       logger: loggerCapturingWarnings(warnings),
       workflows: [{ name: "reconnect", commands: [{ type: "reboot" }] }],
-      capabilities: capabilitiesWith({
+      commands: capabilitiesWith({
         // Il comando "riesce" sempre (nessun errore), ma non fa mai tornare online il device:
         // rappresenta un workflow "programmato bene" e senza errori che però non basta a
         // ripristinare il predicate.
@@ -262,7 +262,7 @@ describe("recovery/entity-runner", () => {
     const runner = EntityRunner.create(compileOrThrow(tripwires), {
       logger: noopLogger as any,
       workflows: [], // il workflow referenziato non è registrato -> Left di configurazione
-      capabilities: capabilitiesWith({}),
+      commands: capabilitiesWith({}),
       onStatus: (_index, state) => transitions.push(state),
     });
 
@@ -288,7 +288,7 @@ describe("recovery/entity-runner", () => {
     const runner = EntityRunner.create(compileOrThrow(singleTripwire()), {
       logger: noopLogger as any,
       workflows: [{ name: "reconnect", commands: [{ type: "reboot" }] }],
-      capabilities: capabilitiesWith({
+      commands: capabilitiesWith({
         reboot: () =>
           TE.fromTask(async () => {
             calls.push("reboot");
@@ -328,7 +328,7 @@ describe("recovery/entity-runner", () => {
     const runner = EntityRunner.create(compileOrThrow(singleTripwire()), {
       logger: noopLogger as any,
       workflows: [{ name: "reconnect", commands: [{ type: "reboot" }] }],
-      capabilities: capabilitiesWith({
+      commands: capabilitiesWith({
         reboot: () =>
           TE.fromTask(async () => {
             calls.push("reboot");
@@ -368,7 +368,7 @@ describe("recovery/entity-runner", () => {
     const runner = EntityRunner.create(compileOrThrow(singleTripwire()), {
       logger: noopLogger as any,
       workflows: [{ name: "reconnect", commands: [{ type: "reboot" }] }],
-      capabilities: capabilitiesWith({
+      commands: capabilitiesWith({
         // La pipeline resta appesa e poi fallisce: da sola porterebbe a `exhausted`.
         reboot: () =>
           pipe(
@@ -404,7 +404,7 @@ describe("recovery/entity-runner", () => {
     const runner = EntityRunner.create(compileOrThrow(singleTripwire()), {
       logger: noopLogger as any,
       workflows: [{ name: "reconnect", commands: [{ type: "reboot" }] }],
-      capabilities: capabilitiesWith({
+      commands: capabilitiesWith({
         reboot: () =>
           pipe(
             TE.fromTask(() => inFlightGate.opened),
@@ -458,7 +458,7 @@ describe("recovery/entity-runner", () => {
         { name: "tripwire-1", commands: [{ type: "wakeUp" }] },
         { name: "tripwire-2", commands: [{ type: "reboot" }] },
       ],
-      capabilities: capabilitiesWith({
+      commands: capabilitiesWith({
         wakeUp: () => {
           fired.push("tripwire-1");
           return TE.right(undefined);

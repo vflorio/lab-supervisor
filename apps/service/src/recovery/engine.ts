@@ -19,7 +19,7 @@ import { match } from "ts-pattern";
 import type * as AndroidBridge from "../android-bridge/runner";
 import * as Node from "../node";
 import * as Registry from "../registry";
-import type * as Workflow from "../workflow";
+import type * as AdbCapabilities from "./adb-capabilities";
 import * as Capabilities from "./capabilities";
 import * as Target from "./target";
 
@@ -62,7 +62,7 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
     ? O.some({ botToken: env.config.slack.botToken })
     : O.none;
 
-  const workflowEnv: Workflow.WorkflowRunnerEnv = {
+  const workflowEnv: AdbCapabilities.Env = {
     logger: env.logger.child("Workflow"),
     workflows: env.config.workflows,
     spawn: Node.spawn,
@@ -133,7 +133,7 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
           logger: env.logger.child(`RecoveryPolicy:${policy.label}`),
           stream: env.factStream,
           workflows: env.config.workflows,
-          capabilitiesFor: Capabilities.capabilitiesFor(policy.domain, capabilitiesEnv),
+          commandsFor: Capabilities.commandsFor(policy.domain, capabilitiesEnv),
           probesFor: Capabilities.probesFor(policy.domain, capabilitiesEnv),
           tickPolicy: TICK_POLICY.policy,
           descriptor: {

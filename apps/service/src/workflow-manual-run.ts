@@ -57,7 +57,7 @@ export const run =
         )({
           logger: env.logger,
           workflows: env.workflows,
-          capabilities: Capabilities.capabilitiesFor(AndroidBridgeTracking.DOMAIN, env.capabilitiesEnv)(adbId),
+          commands: Capabilities.commandsFor(AndroidBridgeTracking.DOMAIN, env.capabilitiesEnv)(adbId),
           probes: Capabilities.probesFor(AndroidBridgeTracking.DOMAIN, env.capabilitiesEnv)(adbId),
           lookup: lookupFor(camera),
         }),

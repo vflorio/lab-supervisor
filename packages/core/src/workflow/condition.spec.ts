@@ -18,11 +18,11 @@ const noopLogger: WorkflowEnv["logger"] = {
 const envWith = (over: Partial<WorkflowEnv>): WorkflowEnv => ({
   workflows: [],
   logger: noopLogger,
-  capabilities: {} as WorkflowEnv["capabilities"],
+  commands: {} as WorkflowEnv["commands"],
   ...over,
 });
 
-const probes = (over: Partial<Probe.ProbeCapabilities> = {}): Probe.ProbeCapabilities => ({
+const probes = (over: Partial<Probe.Probes> = {}): Probe.Probes => ({
   screenOn: () => TE.right(true),
   keyguardShowing: () => TE.right(false),
   activityResumed: () => TE.right(true),

@@ -19,7 +19,7 @@ const noopLogger = {
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-const noopCapabilities = (): Interpreter.CommandCapabilities => ({
+const noopCapabilities = (): Interpreter.Commands => ({
   restartApp: () => TE.right(undefined),
   ensureActivity: () => TE.right(undefined),
   openUrl: () => TE.right(undefined),
@@ -55,7 +55,7 @@ describe("recovery/runner", () => {
       logger: noopLogger as any,
       stream,
       workflows: [{ name: "fix", commands: [{ type: "wakeUp" }] }],
-      capabilitiesFor: (entityId) => ({
+      commandsFor: (entityId) => ({
         ...noopCapabilities(),
         wakeUp: () => {
           fired.push(entityId);
@@ -101,7 +101,7 @@ describe("recovery/runner", () => {
       logger: noopLogger as any,
       stream,
       workflows: [{ name: "fix", commands: [{ type: "wakeUp" }] }],
-      capabilitiesFor: (entityId) => ({
+      commandsFor: (entityId) => ({
         ...noopCapabilities(),
         wakeUp: () => {
           fired.push(entityId);
@@ -149,7 +149,7 @@ describe("recovery/runner", () => {
       logger: noopLogger as any,
       stream,
       workflows: [{ name: "fix", commands: [{ type: "wakeUp" }] }],
-      capabilitiesFor: (entityId) => ({
+      commandsFor: (entityId) => ({
         ...noopCapabilities(),
         wakeUp: () => {
           fired.push(entityId);
@@ -202,7 +202,7 @@ describe("recovery/runner", () => {
       logger: noopLogger as any,
       stream,
       workflows: [{ name: "fix", commands: [{ type: "wakeUp" }] }],
-      capabilitiesFor: (entityId) => ({
+      commandsFor: (entityId) => ({
         ...noopCapabilities(),
         wakeUp: () =>
           TE.fromTask(async () => {
@@ -248,7 +248,7 @@ describe("recovery/runner", () => {
       logger: noopLogger as any,
       stream,
       workflows: [],
-      capabilitiesFor: () => noopCapabilities(),
+      commandsFor: () => noopCapabilities(),
       tickPolicy: Retry.constantDelay(5),
       descriptor: { id: "recovery-test", label: "recovery-test", policyLabel: "constant 5ms" },
     });

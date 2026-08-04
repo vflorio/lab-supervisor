@@ -6,7 +6,7 @@ import { durationToMs } from "../date-time";
 import { format } from "../errors";
 import * as Condition from "./condition";
 import {
-  type CommandCapabilities,
+  type Commands,
   type Effect,
   MAX_WORKFLOW_DEPTH,
   type WorkflowEnv,
@@ -50,8 +50,8 @@ const commandToString = (cmd: Command): string =>
     .exhaustive();
 
 const liftCommand =
-  (effect: (command: CommandCapabilities) => TE.TaskEither<WorkflowError, void>): Effect<void> =>
-  ({ capabilities }) =>
+  (effect: (command: Commands) => TE.TaskEither<WorkflowError, void>): Effect<void> =>
+  ({ commands: capabilities }) =>
     effect(capabilities);
 
 const delay = (ms: number): TE.TaskEither<never, void> =>

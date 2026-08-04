@@ -18,7 +18,7 @@ const noopEnv = (log: string[] = []): Interpreter.WorkflowEnv => ({
     error: (msg) => () => log.push(`[ERROR] ${msg}`),
     logNetwork: (msg) => () => log.push(`[NETWORK] ${msg}`),
   },
-  capabilities: {
+  commands: {
     restartApp: () => TE.right(undefined),
     ensureActivity: () => TE.right(undefined),
     openUrl: () => TE.right(undefined),
@@ -30,7 +30,7 @@ const noopEnv = (log: string[] = []): Interpreter.WorkflowEnv => ({
   },
 });
 
-const noopProbes = (): Probe.ProbeCapabilities => ({
+const noopProbes = (): Probe.Probes => ({
   screenOn: () => TE.right(true),
   keyguardShowing: () => TE.right(false),
   activityResumed: () => TE.right(true),
@@ -54,8 +54,8 @@ describe("workflow interpreter", () => {
   it("propagates a command failure as a Left", async () => {
     const env: Interpreter.WorkflowEnv = {
       ...noopEnv(),
-      capabilities: {
-        ...noopEnv().capabilities,
+      commands: {
+        ...noopEnv().commands,
         restartApp: () => TE.left({ type: "WorkflowError", message: "nope" }),
       },
     };
@@ -74,8 +74,8 @@ describe("workflow interpreter", () => {
     const env: Interpreter.WorkflowEnv = {
       workflows: [{ name: "my-workflow", commands: [{ type: "inputTap", coords: { x: 0.5, y: 0.5 } }] }],
       logger: noopEnv().logger,
-      capabilities: {
-        ...noopEnv().capabilities,
+      commands: {
+        ...noopEnv().commands,
         inputTap: (coords) => {
           tapCalls.push(coords);
           return TE.right(undefined);
@@ -220,8 +220,8 @@ describe("workflow interpreter", () => {
       ...noopEnv(),
       workflows,
       lookup: () => connected,
-      capabilities: {
-        ...noopEnv().capabilities,
+      commands: {
+        ...noopEnv().commands,
         reboot: () => {
           calls.push("reboot");
           return TE.right(undefined);
@@ -252,8 +252,8 @@ describe("workflow interpreter", () => {
       ...noopEnv(),
       workflows: [{ name: "then-wf", commands: [{ type: "reboot" }] }],
       lookup: () => false,
-      capabilities: {
-        ...noopEnv().capabilities,
+      commands: {
+        ...noopEnv().commands,
         reboot: () => {
           calls.push("reboot");
           return TE.right(undefined);
@@ -281,8 +281,8 @@ describe("workflow interpreter", () => {
         ...noopProbes(),
         screenOn: () => TE.left({ type: "WorkflowError", message: "adb is not answering" }),
       },
-      capabilities: {
-        ...noopEnv().capabilities,
+      commands: {
+        ...noopEnv().commands,
         wakeUp: () => {
           calls.push("wakeUp");
           return TE.right(undefined);

@@ -7,8 +7,8 @@ import * as Logger from "../logger/logger";
 import type { PolicyDecodeError } from "../retry/codec";
 import type { Policy } from "../retry/retry";
 import * as TaskRunner from "../task-runner";
-import type { CommandCapabilities } from "../workflow/interpreter";
-import type { ProbeCapabilities } from "../workflow/probe";
+import type { Commands } from "../workflow/interpreter";
+import type { Probes } from "../workflow/probe";
 import type { Workflow } from "../workflow/workflow";
 import { type CompiledTripwire, compileTripwires } from "./compile";
 import * as EntityRunner from "./entity-runner";
@@ -21,8 +21,8 @@ export interface RecoveryRunnerEnv {
   readonly logger: Logger.Tagged;
   readonly stream: FactFeed;
   readonly workflows: readonly Workflow[];
-  readonly capabilitiesFor: (entityId: string) => CommandCapabilities;
-  readonly probesFor?: (entityId: string) => ProbeCapabilities;
+  readonly commandsFor: (entityId: string) => Commands;
+  readonly probesFor?: (entityId: string) => Probes;
   // Tick rate for re-observation (detects grace period expiry without new facts)
   readonly tickPolicy: Policy;
   // Loop identity for dashboard; one per RecoveryPolicy, not aggregated
@@ -57,7 +57,7 @@ export const start = (
         const created = EntityRunner.create(compiledTripwires, {
           logger: env.logger.child(entityId),
           workflows: env.workflows,
-          capabilities: env.capabilitiesFor(entityId),
+          commands: env.commandsFor(entityId),
           probes: env.probesFor?.(entityId),
           onStatus: env.onStatus && ((tripwireIndex, state) => env.onStatus!(entityId, tripwireIndex, state)),
         });

@@ -3,7 +3,7 @@ import { match } from "ts-pattern";
 import * as BooleanTree from "../boolean-tree/tree";
 import { compileFactLeaf, type FactLeaf } from "../fact/condition";
 import { type Effect, type WorkflowEnv, type WorkflowError, workflowError } from "./env";
-import type { Orientation, ProbeCapabilities, ProbeName } from "./probe";
+import type { Orientation, ProbeName, Probes } from "./probe";
 
 // Condition: boolean tree with facts + live device probes; effectful short-circuit evaluation
 
@@ -38,7 +38,7 @@ const withArg = (leaf: ProbeLeaf, run: (arg: string) => ProbeResult): ProbeResul
   return arg === undefined ? TE.left(workflowError(`probe "${leaf.name}": missing required argument`)) : run(arg);
 };
 
-const runProbe = (leaf: ProbeLeaf, probes: ProbeCapabilities): ProbeResult =>
+const runProbe = (leaf: ProbeLeaf, probes: Probes): ProbeResult =>
   match(leaf.name)
     .with("screenOn", () => probes.screenOn())
     .with("keyguardShowing", () => probes.keyguardShowing())

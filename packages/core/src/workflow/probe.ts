@@ -5,7 +5,7 @@ import type { WorkflowError } from "./env";
 
 export type Orientation = "landscape" | "portrait";
 
-export interface ProbeCapabilities {
+export interface Probes {
   // Screen power state (doesn't include lockscreen)
   readonly screenOn: () => TE.TaskEither<WorkflowError, boolean>;
   // Lockscreen state (note: dismissKeyguard on unlocked screen scrolls foreground app)
@@ -15,7 +15,7 @@ export interface ProbeCapabilities {
   readonly orientation: (expected: Orientation) => TE.TaskEither<WorkflowError, boolean>;
 }
 
-export type ProbeName = keyof ProbeCapabilities;
+export type ProbeName = keyof Probes;
 
 // Metadata for UI and codec; mirrors COMMAND_SCHEMA
 export interface ProbeSchema {

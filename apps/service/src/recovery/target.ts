@@ -8,7 +8,7 @@ import { match } from "ts-pattern";
 import * as AndroidBridge from "../android-bridge/tracking";
 import * as SuitestCamera from "../suitest/suitest-camera";
 
-// Risolve l'entityId di un dominio tracciato nel Network.Endpoint ADB per le CommandCapabilities
+// Risolve l'entityId di un dominio tracciato nel Network.Endpoint ADB per i Commands
 // di una pipeline di recovery
 
 export const resolveTarget = (domain: string, entityId: string, registry: Db.LabRegistry): O.Option<Network.Endpoint> =>
