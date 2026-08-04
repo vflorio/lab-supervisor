@@ -15,7 +15,7 @@ export const Default: Story = {
   args: {
     value: {
       grace: "30s",
-      predicate: { type: "ref", name: "suitest_camera_connected" },
+      predicate: { type: "truthy", name: "suitest_camera_connected" },
       pipeline: { type: "workflow", workflowName: "wake_and_check" },
       retry: [
         ["exponentialBackoff", "1s"],

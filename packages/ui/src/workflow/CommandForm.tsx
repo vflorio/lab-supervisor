@@ -18,7 +18,7 @@ export interface CommandFormProps {
   readonly factOptions?: readonly FactOption[];
 }
 
-const DEFAULT_CONDITION: Condition = { type: "leaf", leaf: { type: "ref", name: "" } };
+const DEFAULT_CONDITION: Condition = { type: "leaf", leaf: { type: "truthy", name: "" } };
 
 const defaultFieldValue = (kind: CommandSchema["fields"][number]["kind"]): unknown =>
   match(kind)

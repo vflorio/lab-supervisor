@@ -33,6 +33,9 @@ const commandToString = (cmd: Command): string =>
   match(cmd)
     .with({ type: "restartApp" }, ({ packageId }) => `restartApp(${packageId})`)
     .with({ type: "ensureActivity" }, ({ packageId, activity }) => `ensureActivity(${packageId}, ${activity})`)
+    .with({ type: "launchApp" }, ({ packageId }) => `launchApp(${packageId})`)
+    .with({ type: "forceStopApp" }, ({ packageId }) => `forceStopApp(${packageId})`)
+    .with({ type: "dismissKeyguard" }, () => "dismissKeyguard")
     .with({ type: "openUrl" }, ({ url }) => `openUrl(${url})`)
     .with({ type: "openDeveloperSettings" }, () => "openDeveloperSettings")
     .with({ type: "reboot" }, () => "reboot")
@@ -131,6 +134,9 @@ const interpretCommand = (cmd: Command): Effect<void> =>
         .with({ type: "ensureActivity" }, ({ packageId, activity }) =>
           liftCommand((c) => c.ensureActivity(packageId, activity)),
         )
+        .with({ type: "launchApp" }, ({ packageId }) => liftCommand((c) => c.launchApp(packageId)))
+        .with({ type: "forceStopApp" }, ({ packageId }) => liftCommand((c) => c.forceStopApp(packageId)))
+        .with({ type: "dismissKeyguard" }, () => liftCommand((c) => c.dismissKeyguard()))
         .with({ type: "openUrl" }, ({ url }) => liftCommand((c) => c.openUrl(url)))
         .with({ type: "openDeveloperSettings" }, () => liftCommand((c) => c.openDeveloperSettings()))
         .with({ type: "reboot" }, () => liftCommand((c) => c.reboot()))

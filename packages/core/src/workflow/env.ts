@@ -7,7 +7,7 @@ import type { Probes } from "./probe";
 import type { TapCoords, Workflow } from "./workflow";
 
 // Env e vocabolario di errore dell'interprete, in un modulo a sé: `condition` ne ha bisogno per
-// valutare le proprie foglie, e l'interprete ha bisogno di `condition` per eseguire `when`.
+// valutare le proprie leaf, e l'interprete ha bisogno di `condition` per eseguire `when`.
 // Tenerli insieme sarebbe un ciclo di import a runtime.
 
 // `cause`: preserva l'errore sottostante *con il suo tag* attraverso il mapping generico che
@@ -22,8 +22,11 @@ export const workflowError = of("WorkflowError");
 
 // Comandi: cambiano lo stato del device. I probe (./probe) lo leggono soltanto.
 export interface Commands {
+  readonly launchApp: (packageId: string) => TE.TaskEither<WorkflowError, void>;
+  readonly forceStopApp: (packageId: string) => TE.TaskEither<WorkflowError, void>;
   readonly restartApp: (packageId: string) => TE.TaskEither<WorkflowError, void>;
   readonly ensureActivity: (packageId: string, activity: string) => TE.TaskEither<WorkflowError, void>;
+  readonly dismissKeyguard: () => TE.TaskEither<WorkflowError, void>;
   readonly openUrl: (url: string) => TE.TaskEither<WorkflowError, void>;
   readonly openDeveloperSettings: () => TE.TaskEither<WorkflowError, void>;
   readonly reboot: () => TE.TaskEither<WorkflowError, void>;
@@ -36,12 +39,12 @@ export interface WorkflowEnv {
   readonly logger: Logger;
   readonly commands: Commands;
   readonly workflows: readonly Workflow[];
-  // Vista sui fatti applicativi correnti, per le foglie "fatto" di una Condition. Opzionale
-  // perché non ogni contesto ne ha una da offrire: senza, la condizione fallisce con un
+  // Vista sui fatti applicativi correnti, per le leaf "fatto" di una Condition.
+  // Opzionale perché non ogni contesto ne ha una da offrire: senza, la condizione fallisce con un
   // messaggio esplicito invece di decidere su un `false` che non distingue "falso" da "ignoto".
   // Va letta ad ogni chiamata, non catturata: `await` aspetta proprio che cambi.
   readonly lookup?: FactLookup;
-  // Letture dal vivo del device, per le foglie `probe`. Opzionale con la stessa logica.
+  // Letture dal vivo del device, per le leaf `probe`. Opzionale con la stessa logica.
   readonly probes?: Probes;
   // Profondità di annidamento corrente (`run`, `when`): i workflow si richiamano per nome e
   // nulla vieta un ciclo in config - senza un bound sarebbe una ricorsione infinita, e con

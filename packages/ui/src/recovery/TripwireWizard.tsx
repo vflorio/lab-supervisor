@@ -37,7 +37,7 @@ const INITIAL_STATE: WizardState = {
 
 const buildTripwire = (state: WizardState): RecoveryTripwire => ({
   grace: state.grace,
-  predicate: Facts.ref(state.factName),
+  predicate: Facts.truthy(state.factName),
   pipeline: buildPipeline(state.selectedWorkflows, state.pipelineOp) ?? { type: "workflow", workflowName: "" },
   retry: state.retry,
   notify: state.notify.length > 0 ? state.notify : undefined,

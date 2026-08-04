@@ -13,6 +13,9 @@ export type TapCoords = { readonly x: number; readonly y: number };
 export type Command =
   | { readonly type: "restartApp"; readonly packageId: string }
   | { readonly type: "ensureActivity"; readonly packageId: string; readonly activity: string }
+  | { readonly type: "launchApp"; readonly packageId: string }
+  | { readonly type: "forceStopApp"; readonly packageId: string }
+  | { readonly type: "dismissKeyguard" }
   | { readonly type: "openUrl"; readonly url: string }
   | { readonly type: "openDeveloperSettings" }
   | { readonly type: "reboot" }

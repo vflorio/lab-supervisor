@@ -138,7 +138,7 @@ export const decode = (json: PolicyJson): E.Either<PolicyDecodeError, Policy> =>
 };
 
 // -------------------------------------------------------------------------------------
-// Human summary - per il `policyLabel` dei loop visualizzati in UI (§7): deriva sempre dallo
+// Human summary - per il `policyLabel` dei loop visualizzati in UI: deriva sempre dallo
 // stesso PolicyJson decodificato da `decode`, così label e comportamento non possono divergere.
 // -------------------------------------------------------------------------------------
 

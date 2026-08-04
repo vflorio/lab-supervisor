@@ -11,7 +11,7 @@ describe("recovery/codec", () => {
       tripwires: [
         {
           grace: "1m",
-          predicate: ["ref", "suitest_camera_connected"],
+          predicate: ["truthy", "suitest_camera_connected"],
           pipeline: ["or", ["workflow", "restart-camera-app"], ["workflow", "reboot-camera"]],
           retry: [
             ["constantDelay", "10s"],
@@ -20,7 +20,7 @@ describe("recovery/codec", () => {
         },
         {
           grace: "5m",
-          predicate: ["or", ["ref", "suitest_camera_recording"], ["not", ["ref", "suitest_control_unit_online"]]],
+          predicate: ["or", ["truthy", "suitest_camera_recording"], ["not", ["truthy", "suitest_control_unit_online"]]],
           pipeline: ["workflow", "reboot-camera"],
           retry: [
             ["constantDelay", "30s"],
@@ -29,7 +29,7 @@ describe("recovery/codec", () => {
         },
         {
           grace: "1h",
-          predicate: ["and", ["ref", "suitest_camera_recording"], ["ref", "suitest_camera_streaming"]],
+          predicate: ["and", ["truthy", "suitest_camera_recording"], ["truthy", "suitest_camera_streaming"]],
           pipeline: ["workflow", "reboot-camera"],
           retry: [
             ["constantDelay", "1m"],
@@ -43,7 +43,7 @@ describe("recovery/codec", () => {
     expect(E.isRight(result)).toBe(true);
     if (E.isRight(result)) {
       expect(result.right.tripwires).toHaveLength(3);
-      expect(result.right.tripwires[0]?.predicate).toStrictEqual(Facts.ref("suitest_camera_connected"));
+      expect(result.right.tripwires[0]?.predicate).toStrictEqual(Facts.truthy("suitest_camera_connected"));
     }
   });
 
@@ -54,7 +54,7 @@ describe("recovery/codec", () => {
       tripwires: [
         {
           grace: "10s",
-          predicate: ["ref", "suitest_camera_connected"],
+          predicate: ["truthy", "suitest_camera_connected"],
           pipeline: ["workflow", "open-chrome"],
           retry: [
             ["constantDelay", "10s"],
@@ -93,7 +93,7 @@ describe("recovery/codec", () => {
       tripwires: [
         {
           grace: "10s",
-          predicate: ["ref", "x"],
+          predicate: ["truthy", "x"],
           pipeline: ["workflow", "y"],
           retry: [["constantDelay", "10s"]],
         },
@@ -109,7 +109,7 @@ describe("recovery/codec", () => {
     const result = RecoveryPolicyCodec.decode({
       label: "Recovery A",
       domain: "suitest-camera",
-      tripwires: [{ grace: "1m", predicate: ["ref", "x"], pipeline: ["workflow", "y"] }],
+      tripwires: [{ grace: "1m", predicate: ["truthy", "x"], pipeline: ["workflow", "y"] }],
     });
     expect(E.isLeft(result)).toBe(true);
   });

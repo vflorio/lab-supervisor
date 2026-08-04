@@ -4,7 +4,7 @@ import type { FactOption } from "../fact/FactRefPicker";
 import { ConditionLeafForm } from "./ConditionLeafForm";
 import { conditionTreeOps } from "./ops";
 
-const DEFAULT_LEAF: ConditionLeaf = { type: "ref", name: "" };
+const DEFAULT_LEAF: ConditionLeaf = { type: "truthy", name: "" };
 
 export interface ConditionFormProps {
   readonly value: Condition;

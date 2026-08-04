@@ -22,6 +22,9 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 const noopCapabilities = (): Interpreter.Commands => ({
   restartApp: () => TE.right(undefined),
   ensureActivity: () => TE.right(undefined),
+  launchApp: () => TE.right(undefined),
+  forceStopApp: () => TE.right(undefined),
+  dismissKeyguard: () => TE.right(undefined),
   openUrl: () => TE.right(undefined),
   openDeveloperSettings: () => TE.right(undefined),
   reboot: () => TE.right(undefined),
@@ -41,7 +44,7 @@ describe("recovery/runner", () => {
       tripwires: [
         {
           grace: "10ms",
-          predicate: Condition.ref("healthy"),
+          predicate: Condition.truthy("healthy"),
           pipeline: { type: "workflow", workflowName: "fix" },
           retry: [
             ["constantDelay", "1ms"],
@@ -87,7 +90,7 @@ describe("recovery/runner", () => {
       tripwires: [
         {
           grace: "10ms",
-          predicate: Condition.ref("healthy"),
+          predicate: Condition.truthy("healthy"),
           pipeline: { type: "workflow", workflowName: "fix" },
           retry: [
             ["constantDelay", "1ms"],
@@ -135,7 +138,7 @@ describe("recovery/runner", () => {
       tripwires: [
         {
           grace: "10ms",
-          predicate: Condition.ref("healthy"),
+          predicate: Condition.truthy("healthy"),
           pipeline: { type: "workflow", workflowName: "fix" },
           retry: [
             ["constantDelay", "1ms"],
@@ -188,7 +191,7 @@ describe("recovery/runner", () => {
       tripwires: [
         {
           grace: "10ms",
-          predicate: Condition.ref("healthy"),
+          predicate: Condition.truthy("healthy"),
           pipeline: { type: "workflow", workflowName: "fix" },
           retry: [
             ["constantDelay", "1ms"],
@@ -237,7 +240,7 @@ describe("recovery/runner", () => {
       tripwires: [
         {
           grace: "10ms",
-          predicate: Condition.ref("healthy"),
+          predicate: Condition.truthy("healthy"),
           pipeline: { type: "workflow", workflowName: "fix" },
           retry: [],
         },

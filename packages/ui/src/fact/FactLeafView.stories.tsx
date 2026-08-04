@@ -12,7 +12,7 @@ type Story = StoryObj<typeof FactLeafView>;
 
 export const Ref: Story = {
   args: {
-    value: { type: "ref", name: "suitest_camera_connected" } as FactLeaf,
+    value: { type: "truthy", name: "suitest_camera_connected" } as FactLeaf,
   },
 };
 

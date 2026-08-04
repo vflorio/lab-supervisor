@@ -68,8 +68,7 @@ const ScheduleStepJsonCodec = new t.Type<ScheduleStepJson, unknown[], unknown>(
 
 export const ScheduleJsonCodec = t.array(ScheduleStepJsonCodec);
 
-// Metadata per la UI: quali verbi esistono e che argomenti prendono, senza duplicare i
-// costruttori runtime sotto (vedi ../retry/codec#POLICY_STEP_SCHEMA per lo stesso pattern).
+// Metadata per la UI: quali verbi esistono e che argomenti prendono
 export type ScheduleStepArgKind = "day" | "time" | "duration";
 
 export interface ScheduleStepSchema {

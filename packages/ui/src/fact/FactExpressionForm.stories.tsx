@@ -21,7 +21,7 @@ const mockFactOptions: readonly FactOption[] = [
 const initialCondition: Condition = {
   type: "and",
   nodes: [
-    { type: "leaf", leaf: { type: "ref", name: "suitest_camera_connected" } },
+    { type: "leaf", leaf: { type: "truthy", name: "suitest_camera_connected" } },
     {
       type: "or",
       nodes: [
@@ -45,7 +45,7 @@ export const Default: Story = {
 
 export const Simple: Story = {
   args: {
-    value: { type: "leaf", leaf: { type: "ref", name: "suitest_camera_connected" } } as Condition,
+    value: { type: "leaf", leaf: { type: "truthy", name: "suitest_camera_connected" } } as Condition,
     factOptions: mockFactOptions,
   },
   render: function Render(args) {

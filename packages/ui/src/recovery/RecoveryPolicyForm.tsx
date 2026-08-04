@@ -22,7 +22,7 @@ export interface RecoveryPolicyFormProps {
 
 const defaultTripwire = (): RecoveryTripwire => ({
   grace: "30s" as DurationString,
-  predicate: Facts.ref(""),
+  predicate: Facts.truthy(""),
   pipeline: { type: "workflow", workflowName: "" },
   retry: [],
   notify: [],

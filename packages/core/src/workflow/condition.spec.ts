@@ -34,8 +34,8 @@ describe("workflow/condition", () => {
   it("evaluates fact leaves against the env lookup, exactly like a tripwire predicate", async () => {
     const env = envWith({ lookup: (name) => name === "connected" });
 
-    expect(await Condition.evaluate(Condition.ref("connected"))(env)()).toStrictEqual(E.right(true));
-    expect(await Condition.evaluate(Condition.ref("recording"))(env)()).toStrictEqual(E.right(false));
+    expect(await Condition.evaluate(Condition.truthy("connected"))(env)()).toStrictEqual(E.right(true));
+    expect(await Condition.evaluate(Condition.truthy("recording"))(env)()).toStrictEqual(E.right(false));
   });
 
   it("evaluates probe leaves through the probe capabilities", async () => {
@@ -67,7 +67,7 @@ describe("workflow/condition", () => {
       probes: probes({ screenOn: () => TE.right(true) }),
     });
 
-    const condition = BooleanTree.and([BooleanTree.not(Condition.ref("connected")), Condition.probe("screenOn")]);
+    const condition = BooleanTree.and([BooleanTree.not(Condition.truthy("connected")), Condition.probe("screenOn")]);
 
     expect(await Condition.evaluate(condition)(env)()).toStrictEqual(E.right(true));
   });
@@ -84,7 +84,7 @@ describe("workflow/condition", () => {
       }),
     });
 
-    await Condition.evaluate(BooleanTree.or([Condition.ref("connected"), Condition.probe("screenOn")]))(env)();
+    await Condition.evaluate(BooleanTree.or([Condition.truthy("connected"), Condition.probe("screenOn")]))(env)();
     expect(calls).toBe(0);
   });
 
@@ -100,7 +100,7 @@ describe("workflow/condition", () => {
       }),
     });
 
-    await Condition.evaluate(BooleanTree.and([Condition.ref("connected"), Condition.probe("screenOn")]))(env)();
+    await Condition.evaluate(BooleanTree.and([Condition.truthy("connected"), Condition.probe("screenOn")]))(env)();
     expect(calls).toBe(0);
   });
 
@@ -118,6 +118,6 @@ describe("workflow/condition", () => {
   });
 
   it("fails when the env carries no lookup, rather than reading every fact as false", async () => {
-    expect(E.isLeft(await Condition.evaluate(Condition.ref("connected"))(envWith({}))())).toBe(true);
+    expect(E.isLeft(await Condition.evaluate(Condition.truthy("connected"))(envWith({}))())).toBe(true);
   });
 });

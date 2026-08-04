@@ -37,6 +37,22 @@ export const COMMAND_SCHEMA: readonly CommandSchema[] = [
     ],
   },
   {
+    type: "launchApp",
+    description: "Avvia l'app indicata senza fermarla prima (no-op se è già in foreground)",
+    fields: [{ key: "packageId", label: "package id", kind: "string" }],
+  },
+  {
+    type: "forceStopApp",
+    description: "Forza lo stop dell'app indicata senza riavviarla",
+    fields: [{ key: "packageId", label: "package id", kind: "string" }],
+  },
+  {
+    type: "dismissKeyguard",
+    description:
+      "Sblocca il lockscreen con una swipe (da usare con la probe keyguardShowing: a schermo sbloccato scrolla l'app in foreground)",
+    fields: [],
+  },
+  {
     type: "openUrl",
     description: "Apre l'URL indicato nel browser di default del device",
     fields: [{ key: "url", label: "url", kind: "string" }],
@@ -102,6 +118,19 @@ const validateCommand = (u: unknown, c: t.Context): t.Validation<Command> => {
 
       return t.success({ type: "ensureActivity" as const, packageId, activity });
     })
+    .with("launchApp", () => {
+      const packageId = args[0];
+      if (typeof packageId !== "string") return t.failure(u, c, "launchApp requires a string package id");
+
+      return t.success({ type: "launchApp" as const, packageId });
+    })
+    .with("forceStopApp", () => {
+      const packageId = args[0];
+      if (typeof packageId !== "string") return t.failure(u, c, "forceStopApp requires a string package id");
+
+      return t.success({ type: "forceStopApp" as const, packageId });
+    })
+    .with("dismissKeyguard", () => t.success({ type: "dismissKeyguard" as const }))
     .with("openUrl", () => {
       const url = args[0];
       if (typeof url !== "string") return t.failure(u, c, "openUrl requires a string URL");
@@ -168,6 +197,9 @@ const encodeCommand = (cmd: Command): unknown[] =>
   match(cmd)
     .with({ type: "restartApp" }, ({ packageId }) => ["restartApp", packageId])
     .with({ type: "ensureActivity" }, ({ packageId, activity }) => ["ensureActivity", packageId, activity])
+    .with({ type: "launchApp" }, ({ packageId }) => ["launchApp", packageId])
+    .with({ type: "forceStopApp" }, ({ packageId }) => ["forceStopApp", packageId])
+    .with({ type: "dismissKeyguard" }, () => ["dismissKeyguard"])
     .with({ type: "openUrl" }, ({ url }) => ["openUrl", url])
     .with({ type: "openDeveloperSettings" }, () => ["openDeveloperSettings"])
     .with({ type: "reboot" }, () => ["reboot"])

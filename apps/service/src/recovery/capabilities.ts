@@ -130,6 +130,9 @@ export const commandsFor =
     return {
       restartApp: (packageId) => withTarget((c) => c.restartApp(packageId)),
       ensureActivity: (packageId, activity) => withTarget((c) => c.ensureActivity(packageId, activity)),
+      launchApp: (packageId) => withTarget((c) => c.launchApp(packageId)),
+      forceStopApp: (packageId) => withTarget((c) => c.forceStopApp(packageId)),
+      dismissKeyguard: () => withTarget((c) => c.dismissKeyguard()),
       openUrl: (url) => withTarget((c) => c.openUrl(url)),
       openDeveloperSettings: () => withTarget((c) => c.openDeveloperSettings()),
       reboot,

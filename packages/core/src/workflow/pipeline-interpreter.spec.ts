@@ -11,6 +11,9 @@ import type * as Workflow from "./workflow";
 const noopCapabilities = (): Interpreter.Commands => ({
   restartApp: () => TE.right(undefined),
   ensureActivity: () => TE.right(undefined),
+  launchApp: () => TE.right(undefined),
+  forceStopApp: () => TE.right(undefined),
+  dismissKeyguard: () => TE.right(undefined),
   openUrl: () => TE.right(undefined),
   openDeveloperSettings: () => TE.right(undefined),
   reboot: () => TE.right(undefined),
@@ -187,12 +190,12 @@ describe("pipeline interpreter", () => {
         name: "restart-app",
         commands: [
           { type: "restartApp", packageId: "app" },
-          { type: "await", condition: Condition.ref("connected"), timeout: "40ms" },
+          { type: "await", condition: Condition.truthy("connected"), timeout: "40ms" },
         ],
       },
       {
         name: "reboot-device",
-        commands: [{ type: "reboot" }, { type: "await", condition: Condition.ref("connected"), timeout: "100ms" }],
+        commands: [{ type: "reboot" }, { type: "await", condition: Condition.truthy("connected"), timeout: "100ms" }],
       },
     ];
 
@@ -237,7 +240,7 @@ describe("pipeline interpreter", () => {
       PipelineInterpreter.interpretPipeline({
         type: "and",
         pipelines: [
-          { type: "condition", condition: { type: "not", node: Condition.ref("recording") } },
+          { type: "condition", condition: { type: "not", node: Condition.truthy("recording") } },
           { type: "workflow", workflowName: "reboot-wf" },
         ],
       })({ ...envWith(workflows, calls), lookup: () => recording })();

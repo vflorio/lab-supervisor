@@ -52,14 +52,14 @@ export const WORKFLOW_TEMPLATES: readonly WorkflowTemplate[] = [
   {
     label: "Attesa su condizione mista",
     description:
-      "Combina un fatto osservato (predicate `ref`) e una probe live in `or`, dentro un `await`: la stessa Condition può mescolare le due sorgenti di verità, e basta che una delle due si verifichi per sbloccare la sequenza.",
+      "Combina un fatto osservato (predicate `truthy`) e una probe live in `or`, dentro un `await`: la stessa Condition può mescolare le due sorgenti di verità, e basta che una delle due si verifichi per sbloccare la sequenza.",
     workflow: {
       name: "await_stable_connection",
       commands: [
         { type: "wakeUp" },
         {
           type: "await",
-          condition: Condition.or([Condition.ref("adb_device_online"), Condition.probe("screenOn")]),
+          condition: Condition.or([Condition.truthy("adb_device_online"), Condition.probe("screenOn")]),
           timeout: "45s",
         },
         { type: "sleep", duration: "2s" },

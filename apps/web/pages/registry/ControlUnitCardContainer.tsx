@@ -34,8 +34,6 @@ export function ControlUnitCardContainer({
       onToggle={() => controller.handleToggle("candybox", group.cu.id, group.cu.controlled)}
       onEdit={() => controller.startEdit("candybox", group.cu.id, group.cu.label)}
       onDelete={() => controller.handleDelete("candybox", group.cu.id)}
-      // Placeholder no-op per questa passata: nessun backend/dialog dietro finché non è chiaro
-      // cosa deve configurare (vedi PLAN.md).
       onSettings={() => {}}
     >
       {group.tvs.map((tvGroup) => (

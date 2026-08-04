@@ -1,7 +1,7 @@
 import { Stack, Typography } from "@mui/material";
 import type { FactLeaf } from "./ops";
 
-// Readonly: "name" (ref) | "name == value" (equals) | "name includes value" (includes).
+// Readonly: "name" (truthy) | "name == value" (equals) | "name includes value" (includes).
 export interface FactLeafViewProps {
   readonly value: FactLeaf;
 }

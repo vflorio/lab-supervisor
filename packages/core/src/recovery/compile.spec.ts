@@ -9,7 +9,7 @@ describe("recovery/compile", () => {
     const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: "1m",
-        predicate: Condition.ref("suitest_camera_connected"),
+        predicate: Condition.truthy("suitest_camera_connected"),
         pipeline: { type: "workflow", workflowName: "restart" },
         retry: [
           ["constantDelay", "10s"],
@@ -32,7 +32,7 @@ describe("recovery/compile", () => {
     const tripwires: readonly RecoveryTripwire[] = [
       {
         grace: "1m",
-        predicate: Condition.ref("x"),
+        predicate: Condition.truthy("x"),
         pipeline: { type: "workflow", workflowName: "y" },
         retry: [],
       },

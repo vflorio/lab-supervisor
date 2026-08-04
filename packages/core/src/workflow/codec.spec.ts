@@ -10,11 +10,11 @@ import * as Condition from "./condition";
 // foglia `probe` conviva con le foglie "fatto" nella stessa algebra.
 
 describe("Command codec: await", () => {
-  const json = ["await", ["ref", "suitest_camera_connected"], "60s"];
+  const json = ["await", ["truthy", "suitest_camera_connected"], "60s"];
 
   it("decodes a fact condition and a duration", () => {
     expect(CommandCodec.decode(json)).toStrictEqual(
-      E.right({ type: "await", condition: Condition.ref("suitest_camera_connected"), timeout: "60s" }),
+      E.right({ type: "await", condition: Condition.truthy("suitest_camera_connected"), timeout: "60s" }),
     );
   });
 
@@ -28,7 +28,7 @@ describe("Command codec: await", () => {
   it("accepts a tripwire-shaped composite expression verbatim", () => {
     const result = CommandCodec.decode([
       "await",
-      ["and", ["ref", "suitest_camera_connected"], ["not", ["ref", "suitest_camera_recording"]]],
+      ["and", ["truthy", "suitest_camera_connected"], ["not", ["truthy", "suitest_camera_recording"]]],
       "2m",
     ]);
 
@@ -36,8 +36,8 @@ describe("Command codec: await", () => {
       E.right({
         type: "await",
         condition: BooleanTree.and([
-          Condition.ref("suitest_camera_connected"),
-          BooleanTree.not(Condition.ref("suitest_camera_recording")),
+          Condition.truthy("suitest_camera_connected"),
+          BooleanTree.not(Condition.truthy("suitest_camera_recording")),
         ]),
         timeout: "2m",
       }),
@@ -45,7 +45,7 @@ describe("Command codec: await", () => {
   });
 
   it("rejects a timeout that is not a duration", () => {
-    expect(E.isLeft(CommandCodec.decode(["await", ["ref", "x"], 60]))).toBe(true);
+    expect(E.isLeft(CommandCodec.decode(["await", ["truthy", "x"], 60]))).toBe(true);
   });
 });
 
@@ -57,13 +57,13 @@ describe("Command codec: when", () => {
   });
 
   it("decodes a guard with an else branch and round-trips it", () => {
-    const json = ["when", ["not", ["ref", "connected"]], "reconnect", "verify"];
+    const json = ["when", ["not", ["truthy", "connected"]], "reconnect", "verify"];
     const decoded = CommandCodec.decode(json);
     if (E.isLeft(decoded)) throw new Error("expected a decoded command");
 
     expect(decoded.right).toStrictEqual({
       type: "when",
-      condition: BooleanTree.not(Condition.ref("connected")),
+      condition: BooleanTree.not(Condition.truthy("connected")),
       thenWorkflow: "reconnect",
       elseWorkflow: "verify",
     });
@@ -71,7 +71,27 @@ describe("Command codec: when", () => {
   });
 
   it("requires the name of the workflow to run", () => {
-    expect(E.isLeft(CommandCodec.decode(["when", ["ref", "x"]]))).toBe(true);
+    expect(E.isLeft(CommandCodec.decode(["when", ["truthy", "x"]]))).toBe(true);
+  });
+});
+
+// Le primitive dietro restartApp/wakeUp: qui interessa solo che il tag esista e non collida
+// con la macro omonima, così `when` può comporle al posto della macro.
+describe("Command codec: primitives", () => {
+  it.each([
+    [["launchApp", "com.suitest.android.camera"], { type: "launchApp", packageId: "com.suitest.android.camera" }],
+    [["forceStopApp", "com.suitest.android.camera"], { type: "forceStopApp", packageId: "com.suitest.android.camera" }],
+    [["dismissKeyguard"], { type: "dismissKeyguard" }],
+  ])("decodes %j and round-trips it", (json, expected) => {
+    const decoded = CommandCodec.decode(json);
+    expect(decoded).toStrictEqual(E.right(expected));
+    if (E.isLeft(decoded)) throw new Error("expected a decoded command");
+
+    expect(CommandCodec.encode(decoded.right)).toStrictEqual(json);
+  });
+
+  it.each([["launchApp"], ["forceStopApp"]])("rejects %s without a package id", (name) => {
+    expect(E.isLeft(CommandCodec.decode([name]))).toBe(true);
   });
 });
 

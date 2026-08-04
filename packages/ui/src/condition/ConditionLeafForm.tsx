@@ -82,7 +82,7 @@ export function ConditionLeafForm({ value, onChange, factOptions }: ConditionLea
         size="small"
         value={source}
         onChange={(event: SelectChangeEvent) =>
-          onChange(event.target.value === "probe" ? DEFAULT_PROBE : { type: "ref", name: "" })
+          onChange(event.target.value === "probe" ? DEFAULT_PROBE : { type: "truthy", name: "" })
         }
         sx={{ minWidth: 90 }}
       >

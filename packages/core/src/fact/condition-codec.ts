@@ -3,7 +3,7 @@ import { match } from "ts-pattern";
 import { booleanTreeCodec } from "../boolean-tree/codec";
 import type { Condition, FactLeaf } from "./condition";
 
-// Tagged tuples: ["ref", "name"] | ["equals", name, value] | ["includes", name, substr]
+// Tagged tuples: ["truthy", "name"] | ["equals", name, value] | ["includes", name, substr]
 // And/or/not handled by ../boolean-tree/codec; leaves only
 
 const FactValueCodec = t.union([t.boolean, t.string, t.number]);
@@ -17,11 +17,11 @@ const validateFactLeaf = (u: unknown, c: t.Context): t.Validation<FactLeaf> => {
   if (typeof tag !== "string") return t.failure(u, c, "First element must be a string (condition tag)");
 
   return match<string, t.Validation<FactLeaf>>(tag)
-    .with("ref", () => {
+    .with("truthy", () => {
       const name = args[0];
-      if (typeof name !== "string") return t.failure(u, c, "ref requires a fact name");
+      if (typeof name !== "string") return t.failure(u, c, "truthy requires a fact name");
 
-      return t.success({ type: "ref" as const, name });
+      return t.success({ type: "truthy" as const, name });
     })
     .with("equals", () => {
       const name = args[0];
@@ -44,7 +44,7 @@ const validateFactLeaf = (u: unknown, c: t.Context): t.Validation<FactLeaf> => {
 
 const encodeFactLeaf = (leaf: FactLeaf): unknown[] =>
   match(leaf)
-    .with({ type: "ref" }, ({ name }) => ["ref", name])
+    .with({ type: "truthy" }, ({ name }) => ["truthy", name])
     .with({ type: "equals" }, ({ name, value }) => ["equals", name, value])
     .with({ type: "includes" }, ({ name, value }) => ["includes", name, value])
     .exhaustive();

@@ -61,11 +61,11 @@ function ValueEditor({ value, onChange }: { value: FactValue; onChange: (next: F
   );
 }
 
-const KINDS = ["ref", "equals", "includes"] as const;
+const KINDS = ["truthy", "equals", "includes"] as const;
 
 const leafFor = (kind: (typeof KINDS)[number], name: string): FactLeaf =>
-  kind === "ref"
-    ? { type: "ref", name }
+  kind === "truthy"
+    ? { type: "truthy", name }
     : kind === "equals"
       ? { type: "equals", name, value: false }
       : { type: "includes", name, value: "" };

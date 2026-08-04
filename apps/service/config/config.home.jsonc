@@ -62,8 +62,11 @@
     ["open-developer-settings", [["wakeUp"], ["openDeveloperSettings"]]],
 
     // "async" variants for recovery pipelines: same workflow + predicate confirmation
-    ["open-chrome-async", [["run", "open-chrome"], ["await", ["ref", "suitest_camera_connected"], "45s"]]],
-    ["open-chrome-reboot-async", [["run", "open-chrome-reboot"], ["await", ["ref", "suitest_camera_connected"], "60s"]]]
+    ["open-chrome-async", [["run", "open-chrome"], ["await", ["truthy", "suitest_camera_connected"], "45s"]]],
+    [
+      "open-chrome-reboot-async",
+      [["run", "open-chrome-reboot"], ["await", ["truthy", "suitest_camera_connected"], "60s"]]
+    ]
   ],
 
   "recovery": [
@@ -73,7 +76,7 @@
       "tripwires": [
         {
           // What to observe
-          "predicate": ["ref", "suitest_camera_connected"],
+          "predicate": ["truthy", "suitest_camera_connected"],
           // How long predicate must be false before pipeline triggers
           "grace": "10s",
           // Action on predicate false >= grace; sequential escalation

@@ -1,6 +1,7 @@
 {
   "suitest": {
-    "baseUrl": "https://the.suite.st/api/public/v4",
+    //"baseUrl": "https://the.suite.st/api/public/v4",
+    "baseUrl": "http://localhost:3002/v1/suitest",
     "tokenId": "dev-suitest-token-id",
     "tokenPassword": "dev-suitest-token-password"
   },
@@ -18,13 +19,13 @@
   "activationSchedule": {
     "days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
     "from": "09:00",
-    "to": "18:00"
+    "to": "23:00"
   },
   "tracking": {
-    "adb": { "policy": [["constantDelay", "5s"]] }, // local poll, no external cost
-    "suitestCamera": { "policy": [["constantDelay", "20s"]] },
-    "suitestControlUnit": { "policy": [["constantDelay", "20s"]] },
-    "suitestDevice": { "policy": [["constantDelay", "20s"]] }
+    "adb": { "policy": [["constantDelay", "10s"]] },
+    "suitestCamera": { "policy": [["constantDelay", "30s"]] },
+    "suitestControlUnit": { "policy": [["constantDelay", "60s"]] },
+    "suitestDevice": { "policy": [["constantDelay", "60s"]] }
   },
   "log": {
     "level": "debug" // "error" | "warn" | "info" | "debug"
@@ -71,14 +72,13 @@
         ["run", "suitest-connect"]
       ]
     ],
-    // "verified" variants: same workflow + predicate confirmation, used by recovery pipeline
     [
       "suitest-camera-restart-verified",
-      [["run", "suitest-camera-restart"], ["await", ["ref", "suitest_camera_connected"], "45s"]]
+      [["run", "suitest-camera-restart"], ["await", ["truthy", "suitest_camera_connected"], "45s"]]
     ],
     [
       "suitest-camera-reboot-verified",
-      [["run", "suitest-camera-reboot"], ["await", ["ref", "suitest_camera_connected"], "60s"]]
+      [["run", "suitest-camera-reboot"], ["await", ["truthy", "suitest_camera_connected"], "60s"]]
     ]
   ],
 
@@ -90,12 +90,16 @@
         {
           // Grace period before intervention; above one poll cycle (20s)
           "grace": "60s",
-          "predicate": ["ref", "suitest_camera_connected"],
+          "predicate": ["truthy", "suitest_camera_connected"],
           // Escalation sequenziale: prima prova con riavvio app, poi reboot del device
-          "pipeline": ["or", ["workflow", "suitest-camera-restart-verified"], ["workflow", "suitest-camera-reboot-verified"]],
-          // Delay tra i cicli di escalation, ritenta 2 volte prima di notificare
-           "retry": [["constantDelay", "2m"], ["limitRetries", 2]],
-            "notify": [
+          "pipeline": [
+            "or",
+            ["workflow", "suitest-camera-restart-verified"],
+            ["workflow", "suitest-camera-reboot-verified"]
+          ],
+          // Delay ritenta ogni 2m per altre 2 volte prima di notificare
+          "retry": [["constantDelay", "2m"], ["limitRetries", 2]],
+          "notify": [
             {
               "type": ["slack"],
               "channel": "#lab-supervisor",

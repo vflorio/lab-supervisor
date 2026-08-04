@@ -13,7 +13,7 @@ type Story = StoryObj<typeof FactExpressionView>;
 const complexCondition: Condition = {
   type: "and",
   nodes: [
-    { type: "leaf", leaf: { type: "ref", name: "suitest_camera_connected" } },
+    { type: "leaf", leaf: { type: "truthy", name: "suitest_camera_connected" } },
     {
       type: "or",
       nodes: [
@@ -24,7 +24,7 @@ const complexCondition: Condition = {
   ],
 };
 
-const simpleRef: Condition = { type: "leaf", leaf: { type: "ref", name: "suitest_camera_connected" } };
+const simpleRef: Condition = { type: "leaf", leaf: { type: "truthy", name: "suitest_camera_connected" } };
 
 export const Default: Story = {
   args: {

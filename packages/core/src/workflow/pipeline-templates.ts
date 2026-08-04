@@ -38,7 +38,7 @@ export const PIPELINE_TEMPLATES: readonly PipelineTemplate[] = [
     pipeline: {
       type: "and",
       pipelines: [
-        { type: "condition", condition: Condition.not(Condition.ref("recording_active")) },
+        { type: "condition", condition: Condition.not(Condition.truthy("recording_active")) },
         {
           type: "or",
           pipelines: [

@@ -40,13 +40,19 @@ export const makeCommands = (env: Env, target: Network.Endpoint): WorkflowInterp
           active ? TE.right(undefined) : pipe(Adb.launchApp(packageId)(target)(adbEnv), TE.mapLeft(mapWorkflowError)),
         ),
       ),
+    launchApp: (packageId) => pipe(Adb.launchApp(packageId)(target)(adbEnv), TE.mapLeft(mapWorkflowError)),
+    forceStopApp: (packageId) => pipe(Adb.forceStopApp(packageId)(target)(adbEnv), TE.mapLeft(mapWorkflowError)),
+    dismissKeyguard: () => pipe(Adb.dismissKeyguard(target)(adbEnv), TE.mapLeft(mapWorkflowError)),
     openUrl: (url) => pipe(Adb.openUrl(url)(target)(adbEnv), TE.mapLeft(mapWorkflowError)),
     openDeveloperSettings: () => pipe(Adb.openDeveloperSettings(target)(adbEnv), TE.mapLeft(mapWorkflowError)),
     reboot: () => pipe(Adb.reboot(target)(adbEnv), TE.mapLeft(mapWorkflowError)),
+    // Swipe solo se il lockscreen c'è davvero: su schermo già sbloccato dismissKeyguard
+    // scrolla l'app in foreground (vedi ../../../../packages/core/src/workflow/probe.ts)
     wakeUp: () =>
       pipe(
         Adb.wakeUp(target)(adbEnv),
-        TE.flatMap(() => Adb.dismissKeyguard(target)(adbEnv)),
+        TE.flatMap(() => Adb.isKeyguardShowing(target)(adbEnv)),
+        TE.flatMap((showing) => (showing ? Adb.dismissKeyguard(target)(adbEnv) : TE.right(undefined))),
         TE.mapLeft(mapWorkflowError),
       ),
     inputTap: (coords) => pipe(Adb.inputTap(coords.x, coords.y)(target)(adbEnv), TE.mapLeft(mapWorkflowError)),

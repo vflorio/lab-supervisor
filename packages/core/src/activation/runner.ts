@@ -10,8 +10,6 @@ import { type ActivationMachineEnv, type ActivationState, dispatch, init } from 
 
 export type StartError = TaskRunner.StartError;
 
-// Loop puramente interno (valuta lo schedule ogni secondo): niente `loopStream`, non alimenta
-// la dashboard - esiste e viene loggato, ma non è uno dei quattro loop di §7.
 const DESCRIPTOR: TaskRunner.LoopDescriptor = { id: "activation", label: "Activation", policyLabel: "constant 1s" };
 
 export const create = (

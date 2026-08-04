@@ -2,7 +2,7 @@ import type { LoopEntry } from "@supervisor/core/task-runner/model";
 import { publicProcedure, router } from "../instance";
 
 // -------------------------------------------------------------------------------------
-// Loops router (heartbeat dei loop di background, §7 - live tail, SSE-based subscription)
+// Loops router (heartbeat dei loop di background - live tail, SSE-based subscription)
 // -------------------------------------------------------------------------------------
 
 export const loopsRouter = router({

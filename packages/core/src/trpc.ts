@@ -119,6 +119,6 @@ export interface Services {
   readonly activity: ActivityFeed; // Service -> Web
   // Feed delle transizioni di stato del motore di recovery
   readonly recovery: RecoveryFeed; // Service -> Web
-  // Heartbeat dei loop di background (§7 - vedi packages/ui/src/task-runner)
+  // Heartbeat dei loop di background (vedi packages/ui/src/task-runner)
   readonly loops: LoopFeed; // Service -> Web
 }

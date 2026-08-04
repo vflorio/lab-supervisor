@@ -10,7 +10,7 @@ const DEFAULT_LEAF: PipelineLeaf = { type: "workflow", workflowName: "" };
 
 const DEFAULT_CONDITION_LEAF: PipelineLeaf = {
   type: "condition",
-  condition: { type: "leaf", leaf: { type: "ref", name: "" } },
+  condition: { type: "leaf", leaf: { type: "truthy", name: "" } },
 };
 
 export interface PipelineFormProps {

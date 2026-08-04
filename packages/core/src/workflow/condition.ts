@@ -24,7 +24,7 @@ export const probe = (name: ProbeName, ...args: readonly string[]): Condition =>
   BooleanTree.leaf({ type: "probe", name, args });
 
 // Fact constructors
-export const ref = (name: string): Condition => BooleanTree.leaf({ type: "ref", name });
+export const truthy = (name: string): Condition => BooleanTree.leaf({ type: "truthy", name });
 
 export const equals = (name: string, value: any): Condition => BooleanTree.leaf({ type: "equals", name, value });
 
