@@ -3,6 +3,7 @@ package com.vflorio.supervisoragent.agent
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.provider.Settings
 
 // Settings.Global: richiedono WRITE_SECURE_SETTINGS, protection level `development` - non
@@ -25,6 +26,11 @@ object AdbSettings {
         val wifiDebugging: Int?,
         val usbDebugging: Int?,
     )
+
+    // Il framework riporta adb_wifi_enabled a 0 da solo (WiFi perso, BSSID vuoto, AP non ancora
+    // associato al boot): sono le chiavi che il servizio osserva, perche' nessun evento di rete
+    // segnalerebbe quella riscrittura.
+    val OBSERVED_URIS: List<Uri> = listOf(ADB_WIFI_ENABLED, ADB_ENABLED).map(Settings.Global::getUriFor)
 
     fun hasPermission(context: Context): Boolean =
         context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED

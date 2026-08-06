@@ -1,12 +1,9 @@
 package com.vflorio.supervisoragent
 
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
-import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -25,7 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -134,16 +130,12 @@ private fun AgentScreen(modifier: Modifier = Modifier) {
 
         Spacer(Modifier.size(12.dp))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = {
-                AgentService.reassertSettings(context, "manual")
-                state = health(context)
-            }) { Text("Apply now") }
-
-            if (!state.batteryExempt) {
-                OutlinedButton(onClick = { context.requestBatteryExemption() }) { Text("Battery") }
-            }
-        }
+        // L'esenzione doze la concede l'host (`dumpsys deviceidle whitelist +pkg`): qui resta
+        // solo la riscrittura dei settings, che e' l'unica cosa che l'app puo' fare da sola.
+        Button(onClick = {
+            AgentService.reassertSettings(context, "manual")
+            state = health(context)
+        }) { Text("Reapply settings") }
 
         Spacer(Modifier.size(20.dp))
 
@@ -212,10 +204,4 @@ private fun StatusRow(label: String, ok: Boolean, detail: String) {
             )
         }
     }
-}
-
-private fun Context.requestBatteryExemption() {
-    startActivity(
-        Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName")),
-    )
 }
