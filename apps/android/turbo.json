@@ -1,0 +1,14 @@
+{
+  "$schema": "https://v2-10-4.turborepo.dev/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "android:build:debug": {
+      "inputs": ["$TURBO_DEFAULT$", "gradle/**", "!**/build/**", "!.gradle/**", "!.kotlin/**"],
+      "outputs": ["app/build/outputs/apk/debug/**"]
+    },
+    "build": {
+      "inputs": ["$TURBO_DEFAULT$", "gradle/**", "!**/build/**", "!.gradle/**", "!.kotlin/**"],
+      "outputs": ["app/build/outputs/apk/release/**"]
+    }
+  }
+}
