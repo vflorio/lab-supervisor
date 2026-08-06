@@ -13,209 +13,159 @@ import type { CameraView, Database, DeviceKind, LinkingTarget, NewAdbTargetForm,
 
 // Estratto da Registry.tsx: cosi' Registry.tsx e RegistryTree.tsx riusano la stessa
 // business logic e differiscono solo nel rendering.
-const emptyNewAdbTarget: NewAdbTargetForm = { label: "", target: "" };
+//
+// Il file e' diviso in un controller per feature: ognuno tiene il proprio stato e le proprie
+// azioni, riceve le sole dipendenze condivise (`Deps`) e viene composto in fondo da
+// `useRegistryController`, che ne aggrega i domini nel valore di ritorno.
 
-export function useRegistryController(
-  db: Database,
-  adbDevices: readonly AdbDevice[],
-  workflows: readonly { name: string }[],
-) {
-  const [error, setError] = useState<string | null>(null);
-  const [editing, setEditing] = useState<{ kind: DeviceKind; id: string; label: string } | null>(null);
-  const [editLabel, setEditLabel] = useState("");
-  const [addOpen, setAddOpen] = useState(false);
-  const [newAdbTarget, setNewAdbTarget] = useState<NewAdbTargetForm>(emptyNewAdbTarget);
-  const [assigningCamera, setAssigningCamera] = useState<CameraView | null>(null);
-  const [linking, setLinking] = useState<LinkingTarget | null>(null);
-  const [linkingTv, setLinkingTv] = useState<TvView | null>(null);
-  const log = useServiceLogger();
+// -------------------------------------------------------------------------------------
+// Dipendenze condivise
+// -------------------------------------------------------------------------------------
 
-  const handleToggle = (kind: DeviceKind, id: string, controlled: boolean) => {
-    log(`User ${controlled ? "disabled" : "enabled"} control of ${kind} ${id}`);
-    return mutate(
-      () =>
-        match(kind)
-          .with("candybox", () => mutations.candybox.update.mutate({ id, controlled: !controlled }))
-          .with("camera", () => mutations.camera.update.mutate({ id, controlled: !controlled }))
-          .with("tv", () => mutations.tv.update.mutate({ deviceId: id, controlled: !controlled }))
-          .exhaustive(),
-      setError,
-    );
-  };
+type MutationResult<T> = { ok: true; data: T } | { ok: false; error: { message: string } };
 
-  const handleSaveLabel = () =>
-    mutate(async () => {
-      if (!editing) return { ok: false as const, error: { type: "ValidationError", message: "Nothing to edit" } };
+// Mutation sul registry su disco: banner in caso di errore, reload() in caso di successo
+type RunMutation = <T>(fn: () => Promise<MutationResult<T>>) => Promise<void>;
 
-      log(`User renamed ${editing.kind} ${editing.id} to "${editLabel}"`);
-      const result = await match(editing.kind)
-        .with("candybox", () => mutations.candybox.update.mutate({ id: editing.id, label: editLabel }))
-        .with("camera", () => mutations.camera.update.mutate({ id: editing.id, label: editLabel }))
-        .with("tv", () => mutations.tv.update.mutate({ deviceId: editing.id, label: editLabel }))
-        .exhaustive();
-      if (result.ok) setEditing(null);
-      return result;
-    }, setError);
+interface Deps {
+  readonly db: Database;
+  readonly log: ReturnType<typeof useServiceLogger>;
+  readonly run: RunMutation;
+  // Per gli interventi operatore, che non toccano il registry e quindi non passano da `run`
+  readonly setError: (message: string | null) => void;
+}
 
-  const handleDelete = (kind: DeviceKind, id: string) => {
-    log(`User deleted ${kind} ${id}`, "warn");
-    return mutate(
-      () =>
-        match(kind)
-          .with("candybox", () => mutations.candybox.remove.mutate(id))
-          .with("camera", () => mutations.camera.remove.mutate(id))
-          .with("tv", () => mutations.tv.remove.mutate(id))
-          .exhaustive(),
-      setError,
-    );
-  };
+// Le mutation guidate da un dialog dipendono dal target ancora selezionato: se e' sparito si
+// fallisce senza chiamare il servizio.
+const invalid = (message: string) => ({ ok: false as const, error: { type: "ValidationError", message } });
 
-  // Assegna un host ADB a una camera: upsert (idempotente, chiave = target stesso) del target
-  // nel registro `adb`, poi collega la camera via foreign key `adbId`.
-  const handleAssign = (target: string) =>
-    mutate(async () => {
-      if (!assigningCamera) return { ok: false as const, error: { type: "ValidationError", message: "No camera" } };
+function useErrorSink() {
+  const [message, setMessage] = useState<string | null>(null);
+  const run: RunMutation = (fn) => mutate(fn, setMessage);
+  return { message, dismiss: () => setMessage(null), setError: setMessage, run };
+}
 
-      const decoded = Network.decode(target);
-      if (E.isLeft(decoded)) return { ok: false as const, error: decoded.left };
+// Stato comune a rinomina/assegnazione/link: un target selezionato, `null` = dialog chiuso.
+function useDialogTarget<T>() {
+  const [target, setTarget] = useState<T | null>(null);
+  return { target, open: (value: T) => setTarget(value), close: () => setTarget(null) };
+}
 
-      const id = Network.format(decoded.right);
-      log(`User assigned ADB host ${id} to camera ${assigningCamera.id}`);
-      const addResult = await mutations.adb.add.mutate({ id, label: id, target: id });
-      if (!addResult.ok) return addResult;
+// -------------------------------------------------------------------------------------
+// Inventario: gerarchia e contatori, derivati puri dal db
+// -------------------------------------------------------------------------------------
 
-      const result = await mutations.camera.update.mutate({ id: assigningCamera.id, adbId: id });
-      if (result.ok) setAssigningCamera(null);
-      return result;
-    }, setError);
-
-  const handleLinkSuitest = (videoCaptureDeviceId: string) =>
-    mutate(async () => {
-      if (!linking) return { ok: false as const, error: { type: "ValidationError", message: "Nothing to link" } };
-
-      log(`User linked Suitest video-capture-device ${videoCaptureDeviceId} to camera ${linking.id}`);
-      const result = await mutations.camera.update.mutate({
-        id: linking.id,
-        videoCaptureDeviceId,
-      });
-      if (result.ok) setLinking(null);
-      return result;
-    }, setError);
-
-  // Riarma un tripwire "exhausted" (intervento manuale): a differenza delle altre mutation di
-  // questa view non fa `reload()` (mutate()) - non tocca il registry su disco, l'esito arriva
-  // dallo stream live di recovery/activity già sottoscritto (vedi RecoveryIntervention.tsx).
-  const handleResetRecovery = (policy: string, entityId: string, tripwireIndex: number) => {
-    log(`User reset recovery tripwire for ${entityId} (policy "${policy}")`, "warn");
-    trpc.recovery.reset.mutate({ policy, entityId, tripwireIndex }).then((succeeded) => {
-      if (!succeeded) setError(`Reset failed: no active recovery runner for "${entityId}"`);
-    });
-  };
-
-  // Lancio manuale di un workflow (intervento operatore): come handleResetRecovery, non tocca
-  // il registry su disco - l'esito arriva dallo stream live di activity (source "manual-workflow").
-  const handleRunWorkflow = (cameraId: string, workflowName: string) => {
-    log(`User launched workflow "${workflowName}" on camera ${cameraId}`);
-    trpc.workflow.run.mutate({ cameraId, workflowName }).then((result) => {
-      if (!result.ok) setError(`Workflow failed: ${result.error.message}`);
-    });
-  };
-
-  // Provisioning dell'agent (intervento operatore): come handleRunWorkflow non tocca il
-  // registry su disco. Lo stato aggiornato non arriva dalla risposta ma dai fatti del dominio
-  // `agent`, che il servizio pubblica durante la convergenza sul feed già sottoscritto - qui
-  // si tiene solo il "busy" locale, che nessun feed può conoscere.
-  const [provisioning, setProvisioning] = useState<ReadonlySet<string>>(new Set());
-
-  // Senza `provisioning` in config non c'è alcun APK da installare: si legge una volta sola
-  // (è una proprietà della config del servizio, non uno stato che evolve) e finché la risposta
-  // non arriva il bottone resta nascosto.
-  const [provisioningConfigured, setProvisioningConfigured] = useState(false);
-
-  useEffect(() => {
-    trpc.provisioning.isConfigured.query().then(setProvisioningConfigured);
-  }, []);
-
-  const handleProvisionAgent = (adbTarget: string) => {
-    log(`User started agent provisioning on ${adbTarget}`, "warn");
-    setProvisioning((current) => new Set(current).add(adbTarget));
-
-    trpc.provisioning.provision
-      .mutate(adbTarget)
-      .then((result) => {
-        if (!result.ok) setError(`Provisioning failed: ${result.error.message}`);
-      })
-      .finally(() =>
-        setProvisioning((current) => {
-          const next = new Set(current);
-          next.delete(adbTarget);
-          return next;
-        }),
-      );
-  };
-
-  const handleAdd = () =>
-    mutate(async () => {
-      if (!newAdbTarget.label)
-        return { ok: false as const, error: { type: "ValidationError", message: "Label required" } };
-
-      const decoded = Network.decode(newAdbTarget.target);
-      if (E.isLeft(decoded)) return { ok: false as const, error: decoded.left };
-
-      const id = Network.format(decoded.right);
-      log(`User added ADB target ${id} ("${newAdbTarget.label}")`);
-      const result = await mutations.adb.add.mutate({ id, label: newAdbTarget.label, target: id });
-
-      if (result.ok) {
-        setAddOpen(false);
-        setNewAdbTarget(emptyNewAdbTarget);
-      }
-      return result;
-    }, setError);
-
-  const startEdit = (kind: DeviceKind, id: string, label: string) => {
-    setEditing({ kind, id, label });
-    setEditLabel(label);
-  };
-
-  const handleLinkCamera = (camera: CameraView) =>
-    setLinking({ id: camera.id, currentVideoCaptureDeviceId: O.toUndefined(camera.videoCaptureDeviceId) });
-
-  // Assegna una camera locale orfana a una TV: parte dal video-capture-device che Suitest ha
-  // già assegnato a questa TV (non scrivibile da noi), poi collega la camera scelta con la
-  // stessa mutation di sempre (`camera.update({ videoCaptureDeviceId })`).
-  const handleLinkCameraToTv = (cameraId: string) =>
-    mutate(async () => {
-      if (!linkingTv) return { ok: false as const, error: { type: "ValidationError", message: "Nothing to link" } };
-
-      const videoCaptureDeviceId = suitestVideoCaptureDeviceForTv(db, linkingTv.deviceId);
-      if (!videoCaptureDeviceId)
-        return {
-          ok: false as const,
-          error: { type: "ValidationError", message: "No Suitest video-capture-device assigned to this TV" },
-        };
-
-      log(
-        `User linked camera ${cameraId} to TV ${linkingTv.deviceId} via video-capture-device ${videoCaptureDeviceId}`,
-      );
-      const result = await mutations.camera.update.mutate({ id: cameraId, videoCaptureDeviceId });
-      if (result.ok) setLinkingTv(null);
-      return result;
-    }, setError);
-
+function useInventory(db: Database) {
   const { cuGroups, unallocatedTvs, orphanCameras } = buildHierarchy(db);
 
-  const controlUnitCount = Object.keys(db.lab.candyboxes).length;
-  const tvCount = Object.keys(db.lab.tvs).length;
-  const cameraCount = Object.keys(db.lab.cameras).length;
-  const totalDevices = controlUnitCount + cameraCount + tvCount;
+  const controlUnits = Object.keys(db.lab.candyboxes).length;
+  const tvs = Object.keys(db.lab.tvs).length;
+  const cameras = Object.keys(db.lab.cameras).length;
 
-  const totalControlled =
+  const controlled =
     Object.values(db.lab.candyboxes).filter((d) => d.controlled).length +
     Object.values(db.lab.cameras).filter((d) => d.controlled).length +
     Object.values(db.lab.tvs).filter((d) => d.controlled).length;
 
-  const usedAdbTargets = new Set(
+  return {
+    cuGroups,
+    unallocatedTvs,
+    orphanCameras,
+    counts: { controlUnits, tvs, cameras, total: controlUnits + tvs + cameras, controlled },
+  };
+}
+
+// -------------------------------------------------------------------------------------
+// Controllo device: presa in carico e rimozione
+// -------------------------------------------------------------------------------------
+
+function useDeviceControl({ log, run }: Deps) {
+  const toggle = (kind: DeviceKind, id: string, controlled: boolean) => {
+    log(`User ${controlled ? "disabled" : "enabled"} control of ${kind} ${id}`);
+    return run(() =>
+      match(kind)
+        .with("candybox", () => mutations.candybox.update.mutate({ id, controlled: !controlled }))
+        .with("camera", () => mutations.camera.update.mutate({ id, controlled: !controlled }))
+        .with("tv", () => mutations.tv.update.mutate({ deviceId: id, controlled: !controlled }))
+        .exhaustive(),
+    );
+  };
+
+  const remove = (kind: DeviceKind, id: string) => {
+    log(`User deleted ${kind} ${id}`, "warn");
+    return run(() =>
+      match(kind)
+        .with("candybox", () => mutations.candybox.remove.mutate(id))
+        .with("camera", () => mutations.camera.remove.mutate(id))
+        .with("tv", () => mutations.tv.remove.mutate(id))
+        .exhaustive(),
+    );
+  };
+
+  return { toggle, remove };
+}
+
+// -------------------------------------------------------------------------------------
+// Rinomina: dialog con label in bozza
+// -------------------------------------------------------------------------------------
+
+function useRename({ log, run }: Deps) {
+  const dialog = useDialogTarget<{ kind: DeviceKind; id: string; label: string }>();
+  const [draft, setDraft] = useState("");
+
+  const start = (kind: DeviceKind, id: string, label: string) => {
+    dialog.open({ kind, id, label });
+    setDraft(label);
+  };
+
+  const save = () =>
+    run(async () => {
+      const target = dialog.target;
+      if (!target) return invalid("Nothing to edit");
+
+      log(`User renamed ${target.kind} ${target.id} to "${draft}"`);
+      const result = await match(target.kind)
+        .with("candybox", () => mutations.candybox.update.mutate({ id: target.id, label: draft }))
+        .with("camera", () => mutations.camera.update.mutate({ id: target.id, label: draft }))
+        .with("tv", () => mutations.tv.update.mutate({ deviceId: target.id, label: draft }))
+        .exhaustive();
+      if (result.ok) dialog.close();
+      return result;
+    });
+
+  return { target: dialog.target, draft, setDraft, start, cancel: dialog.close, save };
+}
+
+// -------------------------------------------------------------------------------------
+// Target ADB: registro degli host, unica entita' registrabile a mano dalla UI
+// -------------------------------------------------------------------------------------
+
+const emptyNewAdbTarget: NewAdbTargetForm = { label: "", target: "" };
+
+function useAdbTargets({ db, log, run }: Deps, devices: readonly AdbDevice[]) {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState<NewAdbTargetForm>(emptyNewAdbTarget);
+
+  const submit = () =>
+    run(async () => {
+      if (!form.label) return invalid("Label required");
+
+      const decoded = Network.decode(form.target);
+      if (E.isLeft(decoded)) return { ok: false as const, error: decoded.left };
+
+      const id = Network.format(decoded.right);
+      log(`User added ADB target ${id} ("${form.label}")`);
+      const result = await mutations.adb.add.mutate({ id, label: form.label, target: id });
+
+      if (result.ok) {
+        setOpen(false);
+        setForm(emptyNewAdbTarget);
+      }
+      return result;
+    });
+
+  // Host gia' assegnati a una camera: esclusi dai candidati dell'assign dialog
+  const usedTargets = new Set(
     Object.values(db.lab.cameras)
       .map((c) =>
         pipe(
@@ -228,62 +178,215 @@ export function useRegistryController(
       .map((o) => o.value),
   );
 
-  const linkCandidates = linking ? cameraSuitestCandidates(db, linking.currentVideoCaptureDeviceId) : [];
+  return {
+    devices,
+    usedTargets,
+    statusFor: (target: Parameters<typeof adbStatusFor>[1]) => adbStatusFor(devices, target),
+    add: { open, setOpen, form, setForm, submit },
+  };
+}
 
-  // Candidati per "Link camera" sulla TV: camere locali orfane, mostrate solo se Suitest ha
-  // effettivamente assegnato un video-capture-device a questa TV (altrimenti non c'è nulla da
-  // collegare, vedi `suitestVideoCaptureDeviceForTv`).
-  const linkTvCandidates =
-    linkingTv && suitestVideoCaptureDeviceForTv(db, linkingTv.deviceId)
+// -------------------------------------------------------------------------------------
+// Assegnazione camera <-> host ADB
+// -------------------------------------------------------------------------------------
+
+function useAdbAssignment({ log, run }: Deps) {
+  const dialog = useDialogTarget<CameraView>();
+
+  // Upsert (idempotente, chiave = target stesso) del target nel registro `adb`, poi collega
+  // la camera via foreign key `adbId`.
+  const submit = (target: string) =>
+    run(async () => {
+      const camera = dialog.target;
+      if (!camera) return invalid("No camera");
+
+      const decoded = Network.decode(target);
+      if (E.isLeft(decoded)) return { ok: false as const, error: decoded.left };
+
+      const id = Network.format(decoded.right);
+      log(`User assigned ADB host ${id} to camera ${camera.id}`);
+      const addResult = await mutations.adb.add.mutate({ id, label: id, target: id });
+      if (!addResult.ok) return addResult;
+
+      const result = await mutations.camera.update.mutate({ id: camera.id, adbId: id });
+      if (result.ok) dialog.close();
+      return result;
+    });
+
+  return { camera: dialog.target, start: dialog.open, cancel: dialog.close, submit };
+}
+
+// -------------------------------------------------------------------------------------
+// Riconciliazione manuale: camera -> video-capture-device Suitest
+// -------------------------------------------------------------------------------------
+
+function useSuitestLinking({ db, log, run }: Deps) {
+  const dialog = useDialogTarget<LinkingTarget>();
+
+  const start = (camera: CameraView) =>
+    dialog.open({ id: camera.id, currentVideoCaptureDeviceId: O.toUndefined(camera.videoCaptureDeviceId) });
+
+  const submit = (videoCaptureDeviceId: string) =>
+    run(async () => {
+      const target = dialog.target;
+      if (!target) return invalid("Nothing to link");
+
+      log(`User linked Suitest video-capture-device ${videoCaptureDeviceId} to camera ${target.id}`);
+      const result = await mutations.camera.update.mutate({ id: target.id, videoCaptureDeviceId });
+      if (result.ok) dialog.close();
+      return result;
+    });
+
+  return {
+    target: dialog.target,
+    candidates: dialog.target ? cameraSuitestCandidates(db, dialog.target.currentVideoCaptureDeviceId) : [],
+    start,
+    cancel: dialog.close,
+    submit,
+  };
+}
+
+// -------------------------------------------------------------------------------------
+// Riconciliazione manuale invertita: TV -> camera locale orfana
+// -------------------------------------------------------------------------------------
+
+function useTvCameraLinking({ db, log, run }: Deps, orphanCameras: readonly CameraView[]) {
+  const dialog = useDialogTarget<TvView>();
+
+  // Parte dal video-capture-device che Suitest ha gia' assegnato a questa TV (non scrivibile
+  // da noi), poi collega la camera scelta con la stessa mutation di sempre.
+  const submit = (cameraId: string) =>
+    run(async () => {
+      const tv = dialog.target;
+      if (!tv) return invalid("Nothing to link");
+
+      const videoCaptureDeviceId = suitestVideoCaptureDeviceForTv(db, tv.deviceId);
+      if (!videoCaptureDeviceId) return invalid("No Suitest video-capture-device assigned to this TV");
+
+      log(`User linked camera ${cameraId} to TV ${tv.deviceId} via video-capture-device ${videoCaptureDeviceId}`);
+      const result = await mutations.camera.update.mutate({ id: cameraId, videoCaptureDeviceId });
+      if (result.ok) dialog.close();
+      return result;
+    });
+
+  // Camere locali orfane, mostrate solo se Suitest ha effettivamente assegnato un
+  // video-capture-device a questa TV (altrimenti non c'e' nulla da collegare).
+  const candidates =
+    dialog.target && suitestVideoCaptureDeviceForTv(db, dialog.target.deviceId)
       ? orphanCameras.map((c) => ({ id: c.id, primary: c.label, secondary: O.toUndefined(c.adbId) }))
       : [];
 
+  return { target: dialog.target, candidates, start: dialog.open, cancel: dialog.close, submit };
+}
+
+// -------------------------------------------------------------------------------------
+// Interventi operatore: non toccano il registry su disco, l'esito arriva dai feed live
+// -------------------------------------------------------------------------------------
+
+function useInterventions({ log, setError }: Deps, workflows: readonly { name: string }[]) {
+  // Riarma un tripwire "exhausted": a differenza delle mutation del registry non fa reload(),
+  // l'esito arriva dallo stream di recovery/activity gia' sottoscritto (RecoveryIntervention.tsx).
+  const resetRecovery = (policy: string, entityId: string, tripwireIndex: number) => {
+    log(`User reset recovery tripwire for ${entityId} (policy "${policy}")`, "warn");
+    trpc.recovery.reset.mutate({ policy, entityId, tripwireIndex }).then((succeeded) => {
+      if (!succeeded) setError(`Reset failed: no active recovery runner for "${entityId}"`);
+    });
+  };
+
+  // Lancio manuale di un workflow: l'esito arriva dallo stream di activity (source
+  // "manual-workflow").
+  const runWorkflow = (cameraId: string, workflowName: string) => {
+    log(`User launched workflow "${workflowName}" on camera ${cameraId}`);
+    trpc.workflow.run.mutate({ cameraId, workflowName }).then((result) => {
+      if (!result.ok) setError(`Workflow failed: ${result.error.message}`);
+    });
+  };
+
+  return { workflows, resetRecovery, runWorkflow };
+}
+
+// -------------------------------------------------------------------------------------
+// Provisioning dell'agent
+// -------------------------------------------------------------------------------------
+
+function useProvisioning({ log, setError }: Deps) {
+  // Lo stato aggiornato non arriva dalla risposta ma dai fatti del dominio `agent`, che il
+  // servizio pubblica durante la convergenza sul feed gia' sottoscritto - qui si tiene solo il
+  // "busy" locale, che nessun feed puo' conoscere.
+  const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
+
+  // Senza `provisioning` in config non c'e' alcun APK da installare: si legge una volta sola
+  // (e' una proprieta' della config del servizio, non uno stato che evolve) e finche' la
+  // risposta non arriva il bottone resta nascosto.
+  const [configured, setConfigured] = useState(false);
+
+  useEffect(() => {
+    trpc.provisioning.isConfigured.query().then(setConfigured);
+  }, []);
+
+  const start = (adbTarget: string) => {
+    log(`User started agent provisioning on ${adbTarget}`, "warn");
+    setBusy((current) => new Set(current).add(adbTarget));
+
+    trpc.provisioning.provision
+      .mutate(adbTarget)
+      .then((result) => {
+        if (!result.ok) setError(`Provisioning failed: ${result.error.message}`);
+      })
+      .finally(() =>
+        setBusy((current) => {
+          const next = new Set(current);
+          next.delete(adbTarget);
+          return next;
+        }),
+      );
+  };
+
+  return { configured, isBusy: (adbTarget: string) => busy.has(adbTarget), start };
+}
+
+// -------------------------------------------------------------------------------------
+// Composizione
+// -------------------------------------------------------------------------------------
+
+export function useRegistryController(
+  db: Database,
+  adbDevices: readonly AdbDevice[],
+  workflows: readonly { name: string }[],
+) {
+  const log = useServiceLogger();
+  const { message, dismiss, setError, run } = useErrorSink();
+  const deps: Deps = { db, log, run, setError };
+
+  const inventory = useInventory(db);
+  const devices = useDeviceControl(deps);
+  const rename = useRename(deps);
+  const adb = useAdbTargets(deps, adbDevices);
+  const assignAdb = useAdbAssignment(deps);
+  const linkSuitest = useSuitestLinking(deps);
+  const linkTvCamera = useTvCameraLinking(deps, inventory.orphanCameras);
+  const interventions = useInterventions(deps, workflows);
+  const provisioning = useProvisioning(deps);
+
   return {
-    error,
-    setError,
-    editing,
-    editLabel,
-    setEditLabel,
-    startEdit,
-    cancelEdit: () => setEditing(null),
-    handleSaveLabel,
-    addOpen,
-    setAddOpen,
-    newAdbTarget,
-    setNewAdbTarget,
-    handleAdd,
-    assigningCamera,
-    setAssigningCamera,
-    handleAssign,
-    linking,
-    setLinking,
-    handleLinkSuitest,
-    handleLinkCamera,
-    linkingTv,
-    setLinkingTv,
-    handleLinkCameraToTv,
-    linkTvCandidates,
-    handleToggle,
-    handleDelete,
-    handleResetRecovery,
-    handleRunWorkflow,
-    handleProvisionAgent,
-    provisioningConfigured,
-    isProvisioning: (adbTarget: string) => provisioning.has(adbTarget),
-    cuGroups,
-    unallocatedTvs,
-    orphanCameras,
-    controlUnitCount,
-    tvCount,
-    cameraCount,
-    totalDevices,
-    totalControlled,
-    usedAdbTargets,
-    linkCandidates,
-    adbDevices,
-    workflows,
-    adbStatusFor: (target: Parameters<typeof adbStatusFor>[1]) => adbStatusFor(adbDevices, target),
+    error: { message, dismiss },
+    inventory,
+    devices,
+    rename,
+    adb,
+    assignAdb,
+    linkSuitest,
+    linkTvCamera,
+    interventions,
+    provisioning,
   };
 }
 
 export type RegistryController = ReturnType<typeof useRegistryController>;
+
+// Sottoinsieme che i container di riga inoltrano lungo la gerarchia control unit -> TV ->
+// camera: un tipo solo al posto di un `Pick` duplicato per container.
+export type RegistryRowActions = Pick<
+  RegistryController,
+  "devices" | "rename" | "assignAdb" | "linkSuitest" | "linkTvCamera" | "interventions" | "provisioning"
+>;

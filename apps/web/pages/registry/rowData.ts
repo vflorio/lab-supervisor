@@ -16,8 +16,7 @@ import type { CameraView, ControlUnitView, TvView } from "./types";
 // -------------------------------------------------------------------------------------
 // Adatta le entità arricchite dal registry (hierarchy.ts) alle forme piatte richieste dai
 // componenti puri di @supervisor/ui/registry, e risolve i valori live (predicati/activity/
-// recovery) nelle prop già risolte che quei componenti si aspettano (vedi
-// packages/ui/src/domain/types.ts: "il wiring reale sostituirà questo file con gli import veri").
+// recovery) nelle prop già risolte che quei componenti si aspettano
 // -------------------------------------------------------------------------------------
 
 export const toControlUnitEntry = (cu: ControlUnitView): DomainControlUnitEntry => cu;

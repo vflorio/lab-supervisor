@@ -1,24 +1,8 @@
 import { TvRow } from "@supervisor/ui/registry/index";
 import { toTvEntry, useTvRowData } from "../rowData";
 import type { TvGroup } from "../types";
-import type { RegistryController } from "../useRegistryController";
+import type { RegistryRowActions } from "../useRegistryController";
 import { CameraRowContainer } from "./CameraRowContainer";
-
-type Controller = Pick<
-  RegistryController,
-  | "handleToggle"
-  | "startEdit"
-  | "handleDelete"
-  | "setAssigningCamera"
-  | "handleLinkCamera"
-  | "setLinkingTv"
-  | "handleRunWorkflow"
-  | "handleResetRecovery"
-  // Inoltrate a CameraRowContainer, che rende le camere figlie di questa TV
-  | "handleProvisionAgent"
-  | "provisioningConfigured"
-  | "isProvisioning"
->;
 
 export function TvRowContainer({
   group,
@@ -27,18 +11,18 @@ export function TvRowContainer({
 }: {
   group: TvGroup;
   workflows: readonly string[];
-  controller: Controller;
+  controller: RegistryRowActions;
 }) {
-  const data = useTvRowData(group.tv, controller.handleResetRecovery);
+  const data = useTvRowData(group.tv, controller.interventions.resetRecovery);
 
   return (
     <TvRow
       tv={toTvEntry(group.tv)}
       {...data}
-      onToggle={() => controller.handleToggle("tv", group.tv.deviceId, group.tv.controlled)}
-      onEdit={() => controller.startEdit("tv", group.tv.deviceId, group.tv.label)}
-      onDelete={() => controller.handleDelete("tv", group.tv.deviceId)}
-      onLinkCamera={!group.cameras.length ? () => controller.setLinkingTv(group.tv) : undefined}
+      onToggle={() => controller.devices.toggle("tv", group.tv.deviceId, group.tv.controlled)}
+      onEdit={() => controller.rename.start("tv", group.tv.deviceId, group.tv.label)}
+      onDelete={() => controller.devices.remove("tv", group.tv.deviceId)}
+      onLinkCamera={!group.cameras.length ? () => controller.linkTvCamera.start(group.tv) : undefined}
     >
       {group.cameras.map((camera) => (
         <CameraRowContainer key={camera.id} camera={camera} workflows={workflows} controller={controller} />

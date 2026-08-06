@@ -2,21 +2,7 @@ import * as Network from "@supervisor/core/network";
 import { CameraRow } from "@supervisor/ui/registry/index";
 import { toCameraEntry, useCameraRowData } from "../rowData";
 import type { CameraView } from "../types";
-import type { RegistryController } from "../useRegistryController";
-
-type Controller = Pick<
-  RegistryController,
-  | "handleToggle"
-  | "startEdit"
-  | "handleDelete"
-  | "setAssigningCamera"
-  | "handleLinkCamera"
-  | "handleRunWorkflow"
-  | "handleResetRecovery"
-  | "handleProvisionAgent"
-  | "provisioningConfigured"
-  | "isProvisioning"
->;
+import type { RegistryRowActions } from "../useRegistryController";
 
 export function CameraRowContainer({
   camera,
@@ -25,9 +11,9 @@ export function CameraRowContainer({
 }: {
   camera: CameraView;
   workflows: readonly string[];
-  controller: Controller;
+  controller: RegistryRowActions;
 }) {
-  const data = useCameraRowData(camera, controller.handleResetRecovery);
+  const data = useCameraRowData(camera, controller.interventions.resetRecovery);
   // Il provisioning si rivolge al device, non al ruolo camera: senza un host ADB assegnato
   // non c'è nulla con cui parlare, quindi niente bottone.
   const adbTarget = camera.adb ? Network.format(camera.adb.target) : undefined;
@@ -37,15 +23,15 @@ export function CameraRowContainer({
       camera={toCameraEntry(camera)}
       {...data}
       workflows={workflows}
-      provisioningConfigured={controller.provisioningConfigured}
-      provisioningBusy={adbTarget ? controller.isProvisioning(adbTarget) : false}
-      onProvisionAgent={adbTarget ? () => controller.handleProvisionAgent(adbTarget) : undefined}
-      onToggle={() => controller.handleToggle("camera", camera.id, camera.controlled)}
-      onEdit={() => controller.startEdit("camera", camera.id, camera.label)}
-      onDelete={() => controller.handleDelete("camera", camera.id)}
-      onAssignAdb={() => controller.setAssigningCamera(camera)}
-      onLinkSuitest={() => controller.handleLinkCamera(camera)}
-      onRunWorkflow={camera.adb ? (name) => controller.handleRunWorkflow(camera.id, name) : undefined}
+      provisioningConfigured={controller.provisioning.configured}
+      provisioningBusy={adbTarget ? controller.provisioning.isBusy(adbTarget) : false}
+      onProvisionAgent={adbTarget ? () => controller.provisioning.start(adbTarget) : undefined}
+      onToggle={() => controller.devices.toggle("camera", camera.id, camera.controlled)}
+      onEdit={() => controller.rename.start("camera", camera.id, camera.label)}
+      onDelete={() => controller.devices.remove("camera", camera.id)}
+      onAssignAdb={() => controller.assignAdb.start(camera)}
+      onLinkSuitest={() => controller.linkSuitest.start(camera)}
+      onRunWorkflow={camera.adb ? (name) => controller.interventions.runWorkflow(camera.id, name) : undefined}
     />
   );
 }

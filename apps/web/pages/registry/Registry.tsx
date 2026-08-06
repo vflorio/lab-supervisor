@@ -43,34 +43,33 @@ export function RegistryBody({
   workflows: readonly { name: string }[];
 }) {
   const controller = useRegistryController(db, adbDevices, workflows);
+  const { inventory, rename, adb, assignAdb, linkSuitest, linkTvCamera } = controller;
   const workflowNames = workflows.map((w) => w.name);
-  const assigningCameraTarget = controller.assigningCamera?.adb
-    ? Network.format(controller.assigningCamera.adb.target)
-    : undefined;
+  const assigningCameraTarget = assignAdb.camera?.adb ? Network.format(assignAdb.camera.adb.target) : undefined;
 
   return (
     <Box sx={{ px: 3, py: 3 }}>
       <DeviceRegistryHeader
-        controlUnitCount={controller.controlUnitCount}
-        tvCount={controller.tvCount}
-        cameraCount={controller.cameraCount}
-        controlledCount={controller.totalControlled}
-        onAddDevice={() => controller.setAddOpen(true)}
+        controlUnitCount={inventory.counts.controlUnits}
+        tvCount={inventory.counts.tvs}
+        cameraCount={inventory.counts.cameras}
+        controlledCount={inventory.counts.controlled}
+        onAddDevice={() => adb.add.setOpen(true)}
       />
 
-      {controller.error && (
-        <Alert severity="error" sx={{ mt: 2 }} onClose={() => controller.setError(null)}>
-          {controller.error}
+      {controller.error.message && (
+        <Alert severity="error" sx={{ mt: 2 }} onClose={controller.error.dismiss}>
+          {controller.error.message}
         </Alert>
       )}
 
       <Stack spacing={2} sx={{ mt: 2 }}>
-        {controller.cuGroups.map((group) => (
+        {inventory.cuGroups.map((group) => (
           <ControlUnitCardContainer key={group.cu.id} group={group} workflows={workflowNames} controller={controller} />
         ))}
 
-        <UnlinkedSection count={controller.unallocatedTvs.length + controller.orphanCameras.length}>
-          {controller.unallocatedTvs.map((tvGroup) => (
+        <UnlinkedSection count={inventory.unallocatedTvs.length + inventory.orphanCameras.length}>
+          {inventory.unallocatedTvs.map((tvGroup) => (
             <TvRowContainer
               key={tvGroup.tv.deviceId}
               group={tvGroup}
@@ -78,28 +77,28 @@ export function RegistryBody({
               controller={controller}
             />
           ))}
-          {controller.orphanCameras.map((camera) => (
+          {inventory.orphanCameras.map((camera) => (
             <CameraRowContainer key={camera.id} camera={camera} workflows={workflowNames} controller={controller} />
           ))}
         </UnlinkedSection>
       </Stack>
 
       {/* Edit label dialog */}
-      <Dialog open={controller.editing !== null} onClose={controller.cancelEdit}>
+      <Dialog open={rename.target !== null} onClose={rename.cancel}>
         <DialogTitle>Edit Label</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
             fullWidth
-            value={controller.editLabel}
-            onChange={(e) => controller.setEditLabel(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && controller.handleSaveLabel()}
+            value={rename.draft}
+            onChange={(e) => rename.setDraft(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && rename.save()}
             sx={{ mt: 1 }}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={controller.cancelEdit}>Cancel</Button>
-          <Button onClick={controller.handleSaveLabel} variant="contained">
+          <Button onClick={rename.cancel}>Cancel</Button>
+          <Button onClick={rename.save} variant="contained">
             Save
           </Button>
         </DialogActions>
@@ -107,33 +106,33 @@ export function RegistryBody({
 
       {/* Add ADB target dialog */}
       <AddDeviceDialog
-        open={controller.addOpen}
-        device={controller.newAdbTarget}
-        onChange={controller.setNewAdbTarget}
-        onAdd={controller.handleAdd}
-        onClose={() => controller.setAddOpen(false)}
+        open={adb.add.open}
+        device={adb.add.form}
+        onChange={adb.add.setForm}
+        onAdd={adb.add.submit}
+        onClose={() => adb.add.setOpen(false)}
       />
 
       {/* Assign camera <-> adb host dialog: candidati da registry.adb (non solo raggiungibili
           in questo momento) - un target appena creato manualmente non è ancora connesso finché
           non è assegnato a una camera controlled, il bridge lo connette al reconcile successivo */}
       <AssignCameraDialog
-        open={controller.assigningCamera !== null}
-        cameraLabel={controller.assigningCamera?.label}
+        open={assignAdb.camera !== null}
+        cameraLabel={assignAdb.camera?.label}
         selectedTarget={assigningCameraTarget}
         candidates={Object.values(db.lab.adb)
-          .filter((entry) => entry.id === assigningCameraTarget || !controller.usedAdbTargets.has(entry.id))
-          .map((entry) => ({ target: entry.id, status: controller.adbStatusFor(entry.target) ?? "disconnect" }))}
-        onAssign={controller.handleAssign}
-        onClose={() => controller.setAssigningCamera(null)}
+          .filter((entry) => entry.id === assigningCameraTarget || !adb.usedTargets.has(entry.id))
+          .map((entry) => ({ target: entry.id, status: adb.statusFor(entry.target) ?? "disconnect" }))}
+        onAssign={assignAdb.submit}
+        onClose={assignAdb.cancel}
       />
 
       {/* Riconciliazione manuale: collega una camera a un video-capture-device Suitest */}
       <SelectDialog
-        open={controller.linking !== null}
+        open={linkSuitest.target !== null}
         title="Link Suitest video capture device"
-        selectedId={controller.linking?.currentVideoCaptureDeviceId}
-        options={controller.linkCandidates}
+        selectedId={linkSuitest.target?.currentVideoCaptureDeviceId}
+        options={linkSuitest.candidates}
         emptyMessage={
           <>
             Nessun device Suitest disponibile per il collegamento.
@@ -141,15 +140,15 @@ export function RegistryBody({
             Verifica che la sync con Suitest sia andata a buon fine.
           </>
         }
-        onSelect={controller.handleLinkSuitest}
-        onClose={() => controller.setLinking(null)}
+        onSelect={linkSuitest.submit}
+        onClose={linkSuitest.cancel}
       />
 
       {/* Riconciliazione manuale invertita: collega una camera orfana a una TV */}
       <SelectDialog
-        open={controller.linkingTv !== null}
-        title={`Link camera${controller.linkingTv ? ` - ${controller.linkingTv.label}` : ""}`}
-        options={controller.linkTvCandidates}
+        open={linkTvCamera.target !== null}
+        title={`Link camera${linkTvCamera.target ? ` - ${linkTvCamera.target.label}` : ""}`}
+        options={linkTvCamera.candidates}
         emptyMessage={
           <>
             Nessuna camera locale orfana da collegare a questa TV.
@@ -158,8 +157,8 @@ export function RegistryBody({
             non ancora collegata.
           </>
         }
-        onSelect={controller.handleLinkCameraToTv}
-        onClose={() => controller.setLinkingTv(null)}
+        onSelect={linkTvCamera.submit}
+        onClose={linkTvCamera.cancel}
       />
     </Box>
   );
