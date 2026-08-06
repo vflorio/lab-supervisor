@@ -20,11 +20,30 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Chiave condivisa e versionata, non il debug.keystore per-macchina: cio' che conta per gli
+    // aggiornamenti non e' debug-vs-release ma se la chiave e' la stessa gia' installata. Chiave
+    // diversa => uninstall forzato => WRITE_SECURE_SETTINGS perso su tutti i device. Firmando
+    // debug e release con questa, qualunque build da qualunque macchina resta intercambiabile.
+    // Credenziali in chiaro di proposito: la rete del lab e' isolata e la chiave non protegge
+    // nulla di distribuito.
+    signingConfigs {
+        create("supervisor") {
+            storeFile = rootProject.file("keystore/supervisor-agent.p12")
+            storePassword = "supervisor"
+            keyAlias = "supervisor-agent"
+            keyPassword = "supervisor"
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("supervisor")
             optimization {
                 enable = false
             }
+        }
+        debug {
+            signingConfig = signingConfigs.getByName("supervisor")
         }
     }
     compileOptions {

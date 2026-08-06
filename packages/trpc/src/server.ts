@@ -7,6 +7,7 @@ import { registryRouter } from "./routers/device-registry";
 import { logsRouter } from "./routers/logs";
 import { loopsRouter } from "./routers/loops";
 import { notifyRouter } from "./routers/notify";
+import { provisioningRouter } from "./routers/provisioning";
 import { recoveryRouter } from "./routers/recovery";
 import { settingsRouter } from "./routers/settings";
 import { trackingRouter } from "./routers/tracking";
@@ -21,6 +22,7 @@ export * from "./result";
 
 export const appRouter = router({
   android: androidRouter,
+  provisioning: provisioningRouter,
   registry: registryRouter,
   logs: logsRouter,
   notify: notifyRouter,

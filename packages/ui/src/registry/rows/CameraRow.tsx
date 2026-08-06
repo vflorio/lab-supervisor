@@ -5,9 +5,11 @@ import { EntryRow } from "../../misc/EntryRow";
 import { AdbBridgeActivityView } from "../activity/AdbBridgeActivityView";
 import { RearmRecoveryButton, RecoveryActivityView } from "../activity/RecoveryActivityView";
 import { AdbDeviceReachableView } from "../indicators/AdbDeviceReachableView";
+import { AgentProvisionedView } from "../indicators/AgentProvisionedView";
 import { SuitestCameraConnectedView } from "../indicators/SuitestCameraConnectedView";
 import { SuitestCameraRecordingView } from "../indicators/SuitestCameraRecordingView";
 import { SuitestCameraStreamingView } from "../indicators/SuitestCameraStreamingView";
+import { ProvisionAgentButton } from "../ProvisionAgentButton";
 import { WorkflowLauncher } from "../WorkflowLauncher";
 
 export interface CameraRowProps {
@@ -16,6 +18,11 @@ export interface CameraRowProps {
   readonly recording?: boolean;
   readonly streaming?: boolean;
   readonly adbReachable?: boolean;
+  readonly agentProvisioned?: boolean;
+  readonly agentInstalled?: boolean;
+  readonly agentMissing?: readonly string[];
+  readonly provisioningConfigured?: boolean;
+  readonly provisioningBusy?: boolean;
   readonly recoveryStatus?: string;
   readonly adbActivityStatus?: string;
   readonly workflows?: readonly string[];
@@ -26,6 +33,7 @@ export interface CameraRowProps {
   readonly onLinkSuitest?: () => void;
   readonly onRunWorkflow?: (workflowName: string) => void;
   readonly onRearmRecovery?: () => void;
+  readonly onProvisionAgent?: () => void;
 }
 
 // Riga camera: foglia della gerarchia, nessun figlio. "Link Suitest" compare solo finché la
@@ -37,6 +45,11 @@ export function CameraRow({
   recording,
   streaming,
   adbReachable,
+  agentProvisioned,
+  agentInstalled,
+  agentMissing,
+  provisioningConfigured = false,
+  provisioningBusy,
   recoveryStatus,
   adbActivityStatus,
   workflows = [],
@@ -47,6 +60,7 @@ export function CameraRow({
   onLinkSuitest,
   onRunWorkflow,
   onRearmRecovery,
+  onProvisionAgent,
 }: CameraRowProps) {
   return (
     <EntryRow
@@ -60,6 +74,7 @@ export function CameraRow({
         <SuitestCameraRecordingView key="rec" value={recording} />,
         <SuitestCameraStreamingView key="stream" value={streaming} />,
         <AdbDeviceReachableView key="adb" value={adbReachable} />,
+        <AgentProvisionedView key="agent" value={agentProvisioned} missing={agentMissing} />,
       ]}
       context={
         <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap", alignItems: "center" }}>
@@ -82,6 +97,16 @@ export function CameraRow({
         <Button key="adb" size="small" variant="outlined" startIcon={<Usb fontSize="small" />} onClick={onAssignAdb}>
           {camera.adbId ? "Change ADB" : "Assign ADB"}
         </Button>,
+        onProvisionAgent && (
+          <ProvisionAgentButton
+            key="provision"
+            provisioned={agentProvisioned}
+            installed={agentInstalled}
+            configured={provisioningConfigured}
+            busy={provisioningBusy}
+            onProvision={onProvisionAgent}
+          />
+        ),
         onRunWorkflow && <WorkflowLauncher key="wf" workflows={workflows} onLaunch={onRunWorkflow} />,
         <RearmRecoveryButton key="reset" recoveryStatus={recoveryStatus} onRearmRecovery={onRearmRecovery} />,
       ]}

@@ -14,6 +14,10 @@ type Controller = Pick<
   | "setLinkingTv"
   | "handleRunWorkflow"
   | "handleResetRecovery"
+  // Inoltrate lungo la gerarchia fino a CameraRowContainer
+  | "handleProvisionAgent"
+  | "provisioningConfigured"
+  | "isProvisioning"
 >;
 
 export function ControlUnitCardContainer({

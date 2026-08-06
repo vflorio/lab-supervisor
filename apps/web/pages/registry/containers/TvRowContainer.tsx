@@ -14,6 +14,10 @@ type Controller = Pick<
   | "setLinkingTv"
   | "handleRunWorkflow"
   | "handleResetRecovery"
+  // Inoltrate a CameraRowContainer, che rende le camere figlie di questa TV
+  | "handleProvisionAgent"
+  | "provisioningConfigured"
+  | "isProvisioning"
 >;
 
 export function TvRowContainer({

@@ -47,7 +47,9 @@ export const matchDeviceState = (raw: string): O.Option<Status> =>
 // Default timeout for one-shot ADB commands (excludes waitForState; those are blocking-by-design)
 const DEFAULT_COMMAND_TIMEOUT_MS = 15_000;
 
-const run =
+// Esportata per `./provisioning`, che aggiunge verbi allo stesso target senza riscrivere
+// la gestione di `-s` e del timeout.
+export const run =
   (
     args: readonly string[],
     target?: Network.Endpoint,

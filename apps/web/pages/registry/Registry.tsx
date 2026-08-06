@@ -114,14 +114,16 @@ export function RegistryBody({
         onClose={() => controller.setAddOpen(false)}
       />
 
-      {/* Assign camera <-> adb host dialog */}
+      {/* Assign camera <-> adb host dialog: candidati da registry.adb (non solo raggiungibili
+          in questo momento) - un target appena creato manualmente non è ancora connesso finché
+          non è assegnato a una camera controlled, il bridge lo connette al reconcile successivo */}
       <AssignCameraDialog
         open={controller.assigningCamera !== null}
         cameraLabel={controller.assigningCamera?.label}
         selectedTarget={assigningCameraTarget}
-        candidates={adbDevices.filter(
-          (d) => d.target === assigningCameraTarget || !controller.usedAdbTargets.has(d.target),
-        )}
+        candidates={Object.values(db.lab.adb)
+          .filter((entry) => entry.id === assigningCameraTarget || !controller.usedAdbTargets.has(entry.id))
+          .map((entry) => ({ target: entry.id, status: controller.adbStatusFor(entry.target) ?? "disconnect" }))}
         onAssign={controller.handleAssign}
         onClose={() => controller.setAssigningCamera(null)}
       />

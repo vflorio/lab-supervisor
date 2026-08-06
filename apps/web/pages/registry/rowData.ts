@@ -1,6 +1,7 @@
 import { activityKey } from "@supervisor/core/activity/model";
 import { factKey } from "@supervisor/core/fact/model";
 import * as Network from "@supervisor/core/network";
+import * as Provisioning from "@supervisor/core/provisioning/model";
 import type {
   CameraEntry as DomainCameraEntry,
   ControlUnitEntry as DomainControlUnitEntry,
@@ -51,9 +52,27 @@ export interface CameraRowData {
   readonly recording?: boolean;
   readonly streaming?: boolean;
   readonly adbReachable?: boolean;
+  readonly agentProvisioned?: boolean;
+  readonly agentInstalled?: boolean;
+  readonly agentMissing: readonly string[];
   readonly recoveryStatus?: string;
   readonly adbActivityStatus?: string;
+  readonly provisioningStatus?: string;
   readonly onRearmRecovery?: () => void;
+}
+
+// I sei check del dominio `agent` sono indipendenti: quello aggregato dice se il device è
+// sano, i singoli dicono *come* è rotto - e da lì dipende sia il testo del bottone
+// (installare vs riparare) sia cosa mostrare nel tooltip.
+function useAgentChecks(predicates: ReturnType<typeof useFacts>["table"], adbAddress: string) {
+  const read = (name: string) =>
+    predicates.get(factKey({ domain: Provisioning.DOMAIN, entityId: adbAddress, name }))?.value as boolean | undefined;
+
+  return {
+    provisioned: read(Provisioning.PROVISIONED_FACT),
+    installed: read("agent_installed"),
+    missing: Provisioning.CHECKS.filter((check) => read(check.name) === false).map((check) => check.label),
+  };
 }
 
 export function useCameraRowData(camera: CameraView, onRearmRecovery: ResetRecovery): CameraRowData {
@@ -61,8 +80,13 @@ export function useCameraRowData(camera: CameraView, onRearmRecovery: ResetRecov
   const { table: activity } = useActivity();
   const videoCaptureDeviceId = O.toUndefined(camera.videoCaptureDeviceId) ?? "";
   const adbAddress = camera.adb ? Network.format(camera.adb.target) : "";
+  const agent = useAgentChecks(predicates, adbAddress);
 
   return {
+    agentProvisioned: agent.provisioned,
+    agentInstalled: agent.installed,
+    agentMissing: agent.missing,
+    provisioningStatus: activity.get(activityKey({ source: "provisioning", entityId: adbAddress }))?.status,
     connected: predicates.get(
       factKey({ domain: "suitest-camera", entityId: videoCaptureDeviceId, name: "suitest_camera_connected" }),
     )?.value as boolean | undefined,

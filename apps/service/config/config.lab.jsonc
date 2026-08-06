@@ -21,8 +21,22 @@
     "from": "09:00",
     "to": "23:00"
   },
+  // Provisioning dell'agent Android. L'APK va costruito prima (apps/android: ./gradlew
+  // :app:assembleRelease) ed e' firmato con la keystore versionata, non con la debug.keystore
+  // per-macchina: chiave diversa => uninstall forzato => WRITE_SECURE_SETTINGS perso.
+  // `versionCode` deve seguire quello di apps/android/app/build.gradle.kts, altrimenti il
+  // servizio non sa che l'APK sul device e' vecchio.
+  "provisioning": {
+    "apkPath": "../android/app/build/outputs/apk/release/app-release.apk",
+    "packageId": "com.vflorio.supervisoragent",
+    "activity": ".MainActivity",
+    "versionCode": 1
+  },
   "tracking": {
     "adb": { "policy": [["constantDelay", "10s"]] },
+    // Molto piu' lento degli altri: lo stato di provisioning cambia agli ordini di grandezza
+    // dei reboot, e ogni lettura e' un round trip ADB che compete con i recovery veri.
+    "agent": { "policy": [["constantDelay", "15m"]] },
     "suitestCamera": { "policy": [["constantDelay", "30s"]] },
     "suitestControlUnit": { "policy": [["constantDelay", "60s"]] },
     "suitestDevice": { "policy": [["constantDelay", "60s"]] }

@@ -18,6 +18,7 @@ import * as RA from "fp-ts/ReadonlyArray";
 import * as TE from "fp-ts/TaskEither";
 import type * as AndroidBridge from "../android-bridge/runner";
 import * as Node from "../node";
+import type * as ProvisioningRunner from "../provisioning/runner";
 
 const toDeviceSnapshot = (devices: readonly Adb.Device[]): readonly Trpc.AndroidDeviceSnapshot[] =>
   pipe(
@@ -40,6 +41,7 @@ export type Deps = {
   readonly notifyStream: Notify.NotifyFeed;
   readonly activityStream: Activity.ActivityFeed;
   readonly loopStream: TaskRunner.LoopFeed;
+  readonly provisioning: ProvisioningRunner.Handle;
   readonly resetRecovery: (policyLabel: string, entityId: string, tripwireIndex: number) => boolean;
   readonly runManualWorkflow: (
     cameraId: string,
@@ -58,6 +60,7 @@ export const create = ({
   notifyStream,
   activityStream,
   loopStream,
+  provisioning,
   resetRecovery,
   runManualWorkflow,
 }: Deps): Trpc.Services => {
@@ -69,6 +72,15 @@ export const create = ({
   return {
     logger: trpcLog.child("web"),
     android: android(trpcLog, adbDeviceStream),
+
+    // I due metodi pubblicano lo stato letto come fatti del dominio `agent`, quindi qui non
+    // c'è nulla da adattare: la UI lo riceve dal feed `tracking` come per ogni altro dominio.
+    provisioning: {
+      isConfigured: provisioning.isConfigured,
+      refresh: (target) => pipe(provisioning.refresh(target), TE.asUnit),
+      provision: (target) => pipe(provisioning.provision(target), TE.asUnit),
+    },
+
     notifications: notifyStream,
     activity: activityStream,
     loops: loopStream,

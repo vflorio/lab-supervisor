@@ -15,6 +15,8 @@ import * as TE from "fp-ts/TaskEither";
 import * as AndroidBridge from "./android-bridge/runner";
 import * as AndroidBridgeTracking from "./android-bridge/tracking";
 import * as Node from "./node";
+import type * as ProvisioningRunner from "./provisioning/runner";
+import * as ProvisioningTracking from "./provisioning/tracking";
 import * as RecoveryEngine from "./recovery/engine";
 import * as Registry from "./registry";
 import * as SuitestTracking from "./suitest/tracking";
@@ -27,6 +29,7 @@ export interface TrackingPolicies {
   readonly suitestCameraTrackingPolicy: RetryCodec.DescribedPolicy;
   readonly suitestControlUnitTrackingPolicy: RetryCodec.DescribedPolicy;
   readonly suitestDeviceTrackingPolicy: RetryCodec.DescribedPolicy;
+  readonly agentTrackingPolicy: RetryCodec.DescribedPolicy;
 }
 
 export interface Env {
@@ -45,6 +48,9 @@ export interface Env {
   readonly activityStream: Activity.ActivityStream;
   // Heartbeat dei loop di background del TaskRunner: solo l'ultimo stato (running/idle/error/...) per ogni loop
   readonly loopStream: TaskRunner.LoopStream;
+  // Creato fuori dal lifecycle (vive anche a servizio inattivo): qui serve solo la lettura
+  // periodica dello stato, non l'azione manuale di provisioning
+  readonly provisioning: ProvisioningRunner.Handle;
 }
 
 export interface ActiveLifecycle {
@@ -52,6 +58,7 @@ export interface ActiveLifecycle {
   readonly androidBridgeTracking: TaskRunner.Handle;
   readonly suitestTracking: TaskRunner.Handle;
   readonly androidBridgeReconciler: TaskRunner.Handle;
+  readonly provisioningTracking: TaskRunner.Handle;
   readonly recovery: RecoveryEngine.Handle;
 
   // Lancio manuale di un workflow (via tRPC)
@@ -173,17 +180,31 @@ const createResources =
       loopStream: env.loopStream,
     });
 
-    return { androidBridge, androidBridgeTracking, suitestTracking, androidBridgeReconciler };
+    const provisioningTracking = ProvisioningTracking.create({
+      logger: trackingLog,
+      runner: env.provisioning,
+      adbDeviceStream: env.adbDeviceStream,
+      policy: env.policies.agentTrackingPolicy.policy,
+      descriptor: {
+        id: "tracker:agent",
+        label: "Agent - Provisioning status",
+        policyLabel: env.policies.agentTrackingPolicy.label,
+      },
+      loopStream: env.loopStream,
+    });
+
+    return { androidBridge, androidBridgeTracking, suitestTracking, androidBridgeReconciler, provisioningTracking };
   };
 
 const startBackgroundTasks = ({
   androidBridgeTracking,
   suitestTracking,
   androidBridgeReconciler,
+  provisioningTracking,
 }: ActiveLifecycle): IO.IO<void> =>
   TaskRunner.detach(
     pipe(
-      [suitestTracking.start, androidBridgeTracking.start, androidBridgeReconciler.start],
+      [suitestTracking.start, androidBridgeTracking.start, androidBridgeReconciler.start, provisioningTracking.start],
       TE.traverseArray(flow(TaskRunner.detach, TE.fromIO)),
     ),
   );
@@ -193,6 +214,7 @@ const stopResources = ({
   suitestTracking,
   androidBridge,
   androidBridgeReconciler,
+  provisioningTracking,
   recovery,
 }: ActiveLifecycle): IO.IO<void> =>
   pipe(
@@ -201,6 +223,7 @@ const stopResources = ({
     IO.flatMap(() => androidBridgeTracking.stop),
     IO.flatMap(() => suitestTracking.stop),
     IO.flatMap(() => androidBridgeReconciler.stop),
+    IO.flatMap(() => provisioningTracking.stop),
     IO.flatMap(() => androidBridge.stop),
   );
 

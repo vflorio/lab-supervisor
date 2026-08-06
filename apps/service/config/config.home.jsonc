@@ -22,8 +22,15 @@
     // Max time to wait for device online after workflow-triggered reboot
     "waitForDeviceTimeout": "2m"
   },
+  "provisioning": {
+    "apkPath": "../android/app/build/outputs/apk/release/app-release.apk",
+    "packageId": "com.vflorio.supervisoragent",
+    "activity": ".MainActivity",
+    "versionCode": 1
+  },
   "tracking": {
     "adb": { "policy": [["constantDelay", "10s"]] },
+    "agent": { "policy": [["constantDelay", "15m"]] },
     "suitestCamera": { "policy": [["constantDelay", "30s"]] },
     "suitestControlUnit": { "policy": [["constantDelay", "60s"]] },
     "suitestDevice": { "policy": [["constantDelay", "60s"]] }
@@ -98,16 +105,16 @@
   "registry": {
     "dbPath": "data/device-registry.json",
     "devices": {
-      "cameras": [
-        {
-          "id": "tablet",
-          "label": "Lenovo Tab M10",
-          "controlled": true,
-          "videoCaptureDeviceId": null,
-          "adbId": "192.168.1.4:5555"
-        }
-      ],
-      "adb": [{ "id": "192.168.1.4:5555", "label": "Lenovo Tab M10", "target": "192.168.1.4:5555" }]
+      // "cameras": [
+      //   {
+      //     "id": "tablet",
+      //     "label": "Lenovo Tab M10",
+      //     "controlled": true,
+      //     "videoCaptureDeviceId": null,
+      //     "adbId": "192.168.1.4:5555"
+      //   }
+      // ],
+      // "adb": [{ "id": "192.168.1.4:5555", "label": "Lenovo Tab M10", "target": "192.168.1.4:5555" }]
     }
   }
 }

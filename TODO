@@ -90,7 +90,7 @@
 ## v0.3.0
 
 ### Android
-  - [ ] Service Provision (Sideload, PM Grant)
+  - [X] Service Provision (Sideload, System Settings PM Grant, Doze exception)
   - [X] Android Agent
     - [X] Rimane in ascolto dello stato del WiFi, il flusso deve partire quando ci colleghiamo o se la rete cambia
     - [X] Set Global Setting adb_wifi_enabled = 1

@@ -33,12 +33,18 @@ export type Slack = t.TypeOf<typeof SlackCodec>;
 
 // Configurazione dei tracker di predicati: una Policy indipendente per dominio,
 // ognuno interrogato a una cadenza propria.
-const TrackingCodec = t.type({
-  adb: t.type({ policy: Retry.PolicyJsonCodec }),
-  suitestCamera: t.type({ policy: Retry.PolicyJsonCodec }),
-  suitestControlUnit: t.type({ policy: Retry.PolicyJsonCodec }),
-  suitestDevice: t.type({ policy: Retry.PolicyJsonCodec }),
-});
+// `agent` è opzionale e ha una cadenza sua, molto più lenta: lo stato di provisioning cambia
+// agli ordini di grandezza dei reboot, non dei secondi, e ogni lettura è un round trip ADB che
+// compete con i workflow di recovery veri.
+const TrackingCodec = t.intersection([
+  t.type({
+    adb: t.type({ policy: Retry.PolicyJsonCodec }),
+    suitestCamera: t.type({ policy: Retry.PolicyJsonCodec }),
+    suitestControlUnit: t.type({ policy: Retry.PolicyJsonCodec }),
+    suitestDevice: t.type({ policy: Retry.PolicyJsonCodec }),
+  }),
+  t.partial({ agent: t.type({ policy: Retry.PolicyJsonCodec }) }),
+]);
 
 export type Tracking = t.TypeOf<typeof TrackingCodec>;
 
@@ -103,18 +109,33 @@ const RegistryCodec = t.intersection([
 
 export type Registry = t.TypeOf<typeof RegistryCodec>;
 
-const ServiceCodec = t.type({
-  activationSchedule: Activation.ActivationScheduleCodec,
-  suitest: SuitestCodec,
-  slack: SlackCodec,
-  tracking: TrackingCodec,
-  adb: AdbCodec,
-  log: LogCodec,
-  workflows: t.array(Workflow.WorkflowJsonCodec),
-  trpc: TrpcCodec,
-  registry: RegistryCodec,
-  recovery: t.array(Recovery.RecoveryPolicyCodec),
-});
+// Provisioning dell'agent Android. `versionCode` è l'unico modo di sapere se l'APK sul device
+// è più vecchio di quello sull'host: `dumpsys package` lo riporta, ma nulla lo lega al file
+// senza dichiararlo qui. Omesso = nessun aggiornamento automatico, solo prima installazione.
+const ProvisioningCodec = t.intersection([
+  t.type({ apkPath: t.string, packageId: t.string, activity: t.string }),
+  t.partial({ versionCode: t.number }),
+]);
+
+export type Provisioning = t.TypeOf<typeof ProvisioningCodec>;
+
+// `provisioning` è opzionale: senza, il servizio resta identico a prima e la UI mostra il
+// provisioning come non configurato invece di offrire un bottone che non può funzionare.
+const ServiceCodec = t.intersection([
+  t.type({
+    activationSchedule: Activation.ActivationScheduleCodec,
+    suitest: SuitestCodec,
+    slack: SlackCodec,
+    tracking: TrackingCodec,
+    adb: AdbCodec,
+    log: LogCodec,
+    workflows: t.array(Workflow.WorkflowJsonCodec),
+    trpc: TrpcCodec,
+    registry: RegistryCodec,
+    recovery: t.array(Recovery.RecoveryPolicyCodec),
+  }),
+  t.partial({ provisioning: ProvisioningCodec }),
+]);
 
 export type Service = t.TypeOf<typeof ServiceCodec>;
 

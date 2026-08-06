@@ -1,3 +1,4 @@
+import * as Network from "@supervisor/core/network";
 import { CameraRow } from "@supervisor/ui/registry/index";
 import { toCameraEntry, useCameraRowData } from "../rowData";
 import type { CameraView } from "../types";
@@ -12,6 +13,9 @@ type Controller = Pick<
   | "handleLinkCamera"
   | "handleRunWorkflow"
   | "handleResetRecovery"
+  | "handleProvisionAgent"
+  | "provisioningConfigured"
+  | "isProvisioning"
 >;
 
 export function CameraRowContainer({
@@ -24,12 +28,18 @@ export function CameraRowContainer({
   controller: Controller;
 }) {
   const data = useCameraRowData(camera, controller.handleResetRecovery);
+  // Il provisioning si rivolge al device, non al ruolo camera: senza un host ADB assegnato
+  // non c'è nulla con cui parlare, quindi niente bottone.
+  const adbTarget = camera.adb ? Network.format(camera.adb.target) : undefined;
 
   return (
     <CameraRow
       camera={toCameraEntry(camera)}
       {...data}
       workflows={workflows}
+      provisioningConfigured={controller.provisioningConfigured}
+      provisioningBusy={adbTarget ? controller.isProvisioning(adbTarget) : false}
+      onProvisionAgent={adbTarget ? () => controller.handleProvisionAgent(adbTarget) : undefined}
       onToggle={() => controller.handleToggle("camera", camera.id, camera.controlled)}
       onEdit={() => controller.startEdit("camera", camera.id, camera.label)}
       onDelete={() => controller.handleDelete("camera", camera.id)}

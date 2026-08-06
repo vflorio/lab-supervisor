@@ -7,7 +7,7 @@ import * as Schedule from "./schedule";
 
 // Formato JSON per uno Schedule componibile. Ogni step e' una coppia [op, verbo], dove verbo e'
 // una tupla [nome, ...args] (stessa idea di PolicyJson in ../retry/codec, ma con un op di
-// composizione esplicito perche' union/intersection/subtract non sono un concat automatico
+// composizione esplicito perché' union/intersection/subtract non sono un concat automatico
 // come per le retry policy).
 //
 // es: [["union", ["weekdays", "09:00", "18:00"]], ["subtract", ["day", "monday"]]]

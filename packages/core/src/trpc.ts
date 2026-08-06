@@ -33,6 +33,19 @@ interface AndroidBridge {
   };
 }
 
+// Provisioning dell'agent Android. Nessuno dei due metodi restituisce lo stato letto: lo
+// pubblicano entrambi come fatti del dominio `agent` (una riga per check), che la UI riceve
+// gia' dal feed `tracking`. Un secondo canale per lo stesso dato divergerebbe e basta.
+interface AgentProvisioning {
+  // `false` se manca la sezione `provisioning` in config: la UI mostra "non configurato"
+  // invece di offrire un bottone che fallirebbe a ogni click.
+  readonly isConfigured: boolean;
+  readonly refresh: (target: Network.Endpoint) => TE.TaskEither<Errors.AppError, void>;
+  // Converge il device allo stato provisionato (install/grant/doze/launch, solo i passi
+  // mancanti). Manuale: nessun poll la invoca. Web -> Service
+  readonly provision: (target: Network.Endpoint) => TE.TaskEither<Errors.AppError, void>;
+}
+
 interface DeviceRegistry {
   readonly getAll: () => TE.TaskEither<Db.DbError, Db.Database>;
 
@@ -91,6 +104,7 @@ interface Settings {
 
 export interface Services {
   readonly android: AndroidBridge;
+  readonly provisioning: AgentProvisioning;
   readonly registry: DeviceRegistry;
   readonly settings: Settings;
   // Questo serve per permettere di avere in logger transportato in HTTP (per loggare errori critici delle web-app)

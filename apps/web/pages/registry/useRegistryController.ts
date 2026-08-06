@@ -2,7 +2,7 @@ import * as Network from "@supervisor/core/network";
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { match } from "ts-pattern";
 import type { AdbDevice } from "../../hooks/useAdbDevices";
 import { useServiceLogger } from "../../hooks/useServiceLogger";
@@ -121,6 +121,39 @@ export function useRegistryController(
     });
   };
 
+  // Provisioning dell'agent (intervento operatore): come handleRunWorkflow non tocca il
+  // registry su disco. Lo stato aggiornato non arriva dalla risposta ma dai fatti del dominio
+  // `agent`, che il servizio pubblica durante la convergenza sul feed già sottoscritto - qui
+  // si tiene solo il "busy" locale, che nessun feed può conoscere.
+  const [provisioning, setProvisioning] = useState<ReadonlySet<string>>(new Set());
+
+  // Senza `provisioning` in config non c'è alcun APK da installare: si legge una volta sola
+  // (è una proprietà della config del servizio, non uno stato che evolve) e finché la risposta
+  // non arriva il bottone resta nascosto.
+  const [provisioningConfigured, setProvisioningConfigured] = useState(false);
+
+  useEffect(() => {
+    trpc.provisioning.isConfigured.query().then(setProvisioningConfigured);
+  }, []);
+
+  const handleProvisionAgent = (adbTarget: string) => {
+    log(`User started agent provisioning on ${adbTarget}`, "warn");
+    setProvisioning((current) => new Set(current).add(adbTarget));
+
+    trpc.provisioning.provision
+      .mutate(adbTarget)
+      .then((result) => {
+        if (!result.ok) setError(`Provisioning failed: ${result.error.message}`);
+      })
+      .finally(() =>
+        setProvisioning((current) => {
+          const next = new Set(current);
+          next.delete(adbTarget);
+          return next;
+        }),
+      );
+  };
+
   const handleAdd = () =>
     mutate(async () => {
       if (!newAdbTarget.label)
@@ -234,6 +267,9 @@ export function useRegistryController(
     handleDelete,
     handleResetRecovery,
     handleRunWorkflow,
+    handleProvisionAgent,
+    provisioningConfigured,
+    isProvisioning: (adbTarget: string) => provisioning.has(adbTarget),
     cuGroups,
     unallocatedTvs,
     orphanCameras,
