@@ -3,64 +3,54 @@ import * as ActivationSchedule from "@supervisor/core/activation/schedule";
 import * as Activity from "@supervisor/core/activity/stream";
 import type * as ConfigModel from "@supervisor/core/config";
 import * as Errors from "@supervisor/core/errors";
+import * as Facts from "@supervisor/core/fact/index";
 import * as LogStream from "@supervisor/core/logger/log-stream";
 import * as Logger from "@supervisor/core/logger/logger";
 import * as Notify from "@supervisor/core/notify/stream";
-import * as Predicates from "@supervisor/core/predicates/index";
 import * as Recovery from "@supervisor/core/recovery/index";
-import * as RetryPolicy from "@supervisor/core/retry/retry";
-import type * as Schedule from "@supervisor/core/schedule";
+import * as RetryCodec from "@supervisor/core/retry/codec";
+import type * as Schedule from "@supervisor/core/schedule/schedule";
+import * as TaskRunner from "@supervisor/core/task-runner/index";
 import type * as Validation from "@supervisor/core/validation";
+import * as WorkflowInterpreter from "@supervisor/core/workflow/interpreter";
 import * as E from "fp-ts/Either";
-import { constFalse, pipe } from "fp-ts/function";
+import { constVoid, pipe } from "fp-ts/function";
 import * as IO from "fp-ts/IO";
+import * as IORef from "fp-ts/IORef";
 import * as O from "fp-ts/Option";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
-import * as AdbStream from "./adb/adb-stream";
+import * as AndroidBridge from "./android-bridge/runner";
 import * as Config from "./config";
 import * as ServiceLogger from "./logger";
 import type * as Node from "./node";
 import * as ServiceLifecycle from "./service-lifecycle";
-import * as Trpc from "./trpc";
-import * as TrpcServices from "./trpc-services";
+import * as Trpc from "./trpc/server";
+import * as TrpcServices from "./trpc/services";
 
 export interface Env {
   readonly logger: Logger.Tagged;
-  readonly configFetcher: Config.ConfigFetcher;
   readonly process: Node.Process;
+  readonly configFetcher: Config.ConfigFetcher;
+  readonly configPath: O.Option<string>;
 }
 
 type Effect<A> = RTE.ReaderTaskEither<
   Env,
-  Validation.ValidationError | Config.FetchError | RetryPolicy.PolicyDecodeError | Activation.StartError,
+  Validation.ValidationError | Config.FetchError | RetryCodec.PolicyDecodeError | Activation.StartError,
   A
 >;
 
-const logInfo = (message: string): Effect<void> =>
-  pipe(
-    RTE.ask<Env>(),
-    RTE.tapIO((env) => env.logger.info(message)),
-    RTE.asUnit,
-  );
-
 const loadConfig: Effect<ConfigModel.Service> = (env) => Config.load(env.configFetcher);
 
-const parseConfigPolicies = (
-  config: ConfigModel.Service,
-): Effect<{
-  adbTrackingPolicy: RetryPolicy.Policy;
-  suitestCameraTrackingPolicy: RetryPolicy.Policy;
-  suitestControlUnitTrackingPolicy: RetryPolicy.Policy;
-  suitestDeviceTrackingPolicy: RetryPolicy.Policy;
-}> =>
+const parseConfigPolicies = (config: ConfigModel.Service): Effect<ServiceLifecycle.TrackingPolicies> =>
   pipe(
     E.Do,
-    E.bind("adbTrackingPolicy", () => RetryPolicy.decode(config.tracking.adb.policy)),
-    E.bind("suitestCameraTrackingPolicy", () => RetryPolicy.decode(config.tracking.suitestCamera.policy)),
-    E.bind("suitestControlUnitTrackingPolicy", () => RetryPolicy.decode(config.tracking.suitestControlUnit.policy)),
-    E.bind("suitestDeviceTrackingPolicy", () => RetryPolicy.decode(config.tracking.suitestDevice.policy)),
+    E.bind("androidBridgeTrackingPolicy", () => RetryCodec.described(config.tracking.adb.policy)),
+    E.bind("suitestCameraTrackingPolicy", () => RetryCodec.described(config.tracking.suitestCamera.policy)),
+    E.bind("suitestControlUnitTrackingPolicy", () => RetryCodec.described(config.tracking.suitestControlUnit.policy)),
+    E.bind("suitestDeviceTrackingPolicy", () => RetryCodec.described(config.tracking.suitestDevice.policy)),
     RTE.fromEither,
   );
 
@@ -80,15 +70,16 @@ export interface ServiceHandle {
 }
 
 export const create: Effect<ServiceHandle> = pipe(
-  logInfo("Loading config..."),
+  RTE.Do,
   RTE.bind("config", () => loadConfig),
   RTE.bind("policies", ({ config }) => parseConfigPolicies(config)),
+  RTE.bind("configPath", () => RTE.asks((env: Env) => env.configPath)),
 
-  RTE.map(({ config, policies }) => {
+  RTE.map(({ config, policies, configPath }) => {
     const logStream = LogStream.createLogStream();
     const logger = pipe(ServiceLogger.create(config.log, [logStream.transport]), Logger.tagged("Service"));
 
-    const activationSchedule = constFalse()
+    const activationSchedule = import.meta.env.DEV_ACTIVATION_SCHEDULE
       ? devActivationSchedule()
       : ActivationSchedule.toSchedule(config.activationSchedule);
 
@@ -96,20 +87,32 @@ export const create: Effect<ServiceHandle> = pipe(
 
     const activationLog = logger.child("Activation");
 
-    const predicateStream = Predicates.createPredicateStream();
-    const adbDeviceStream = AdbStream.createAdbDeviceStream();
+    const factStream = Facts.createFactStream();
+    const adbDeviceStream = AndroidBridge.createAdbDeviceStream();
     const recoveryStream = Recovery.createRecoveryStream();
     const notifyStream = Notify.createNotifyStream();
     const activityStream = Activity.createActivityStream();
+    const loopStream = TaskRunner.createLoopStream();
 
-    let active: O.Option<ServiceLifecycle.ActiveLifecycle> = O.none;
+    const isActive = IORef.newIORef<O.Option<ServiceLifecycle.ActiveLifecycle>>(O.none)();
 
-    // Il motore di recovery esiste solo mentre il servizio è "active": senza, non c'è nulla da riarmare.
+    // tRPC
     const resetRecovery = (policyLabel: string, entityId: string, tripwireIndex: number): boolean =>
       pipe(
-        active,
-        O.map((lifecycle) => lifecycle.recovery.reset(policyLabel, entityId, tripwireIndex)),
+        isActive.read(),
+        O.map((lifecycle) => lifecycle.recovery.rearmTripwire(policyLabel, entityId, tripwireIndex)),
         O.getOrElse(() => false),
+      );
+
+    // Il runner manuale esiste solo mentre il servizio è "active" (stessa ragione di resetRecovery).
+    const runManualWorkflow = (
+      cameraId: string,
+      workflowName: string,
+    ): TE.TaskEither<WorkflowInterpreter.WorkflowError, void> =>
+      pipe(
+        isActive.read(),
+        O.map((lifecycle) => lifecycle.runWorkflow(cameraId, workflowName)),
+        O.getOrElse(() => TE.left(WorkflowInterpreter.workflowError("Service not active"))),
       );
 
     const trpcLog = logger.child("tRPC");
@@ -119,25 +122,26 @@ export const create: Effect<ServiceHandle> = pipe(
       logger: trpcLog,
       services: TrpcServices.create({
         config,
+        configPath,
         trpcLog,
         logStream,
         adbDeviceStream,
-        predicateStream,
+        factStream,
         recoveryStream,
         notifyStream,
         activityStream,
+        loopStream,
         resetRecovery,
+        runManualWorkflow,
       }),
     });
 
-    const clearActive: IO.IO<void> = () => {
-      active = O.none;
-    };
+    const clearActive: IO.IO<void> = isActive.write(O.none);
 
     const deactivateIfActive: IO.IO<void> = () =>
       pipe(
-        active,
-        O.match(() => IO.of(undefined), ServiceLifecycle.deactivateActiveLifecycle),
+        isActive.read(),
+        O.match(() => constVoid, ServiceLifecycle.deactivateActiveLifecycle),
       )();
 
     const activationRunner = Activation.create(activationLog, activationSchedule, {
@@ -146,15 +150,14 @@ export const create: Effect<ServiceHandle> = pipe(
           logger: activationLog,
           config,
           policies,
-          predicateStream,
+          factStream,
           adbDeviceStream,
           recoveryStream,
           notifyStream,
           activityStream,
+          loopStream,
         }),
-        TE.tapIO((lifecycle) => () => {
-          active = O.some(lifecycle);
-        }),
+        TE.tapIO((lifecycle) => isActive.write(O.some(lifecycle))),
         TE.asUnit,
         TE.getOrElse((error) => T.fromIO(activationLog.error(`Activation flow failed: ${Errors.format(error)}`))),
       ),

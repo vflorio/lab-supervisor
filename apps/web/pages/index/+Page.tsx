@@ -1,5 +1,5 @@
-import { RegistryView } from "../registry/Registry";
+import { RegistryHeartbeatView } from "../registry/RegistryHeartbeat";
 
 export default function Page() {
-  return <RegistryView />;
+  return <RegistryHeartbeatView />;
 }

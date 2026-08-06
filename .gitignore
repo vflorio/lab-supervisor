@@ -30,11 +30,15 @@ dist-ssr
 AdManager.js
 .env.stage
 
+# Storybook
+storybook-static
+
 # Playwright
 /test-results/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+.playwright-cli/
 
 data/

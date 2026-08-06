@@ -24,7 +24,6 @@
 
 ### Candybox
 - [X] Suitest Public API client (auth, reboot, power on/off)
-- [ ] Candybox recovery workflow: detect -> wait grace period -> reboot (smartplug) -> verify reachability
 
 ### Android Camera
 - [X] ADB over TCP client
@@ -68,19 +67,28 @@
 ## v0.2.0
 
 ### Service
+- [X] Web: Dashboard, Controls & Settings 
 - [ ] Docker/PM2 per ambiente production
 
 ### Candybox
 - [ ] Shared-host failure detection: se tutti i device appartenenti allo stesso Candybox risultano OFFLINE, riavvia del Candybox
+- [ ] Candybox recovery workflow: detect -> wait grace period -> reboot (smartplug) -> verify reachability
 
 ### Android Camera
 
 - [ ] Workflow / scripting engine
   - [ ] Coordinate relative per inputTap: supportare coordinate normalizzate (`0.0–1.0`) oltre a quelle assolute
-  - [ ] Sistema di predicati/guard per l'esecuzione condizionale dei comandi in un workflow
-- [ ] Comando ensureOrientation: forza uno specifico orientamento (es. ensureOrientation(Landscape))
+  - [X] Sistema di predicati/guard per l'esecuzione condizionale dei comandi in un workflow
+    - [X] `BooleanTree<Leaf>` generico nel core: FactExpression e Condition sono due istanze, non due copie - un predicate di tripwire è già una Condition valida
+    - [X] `Condition` = fatti tracciati + probe sul device, stessa algebra and/or/not, valutazione effettuale in short-circuit
+    - [X] Probe (letture del device): screenOn, keyguardShowing, activityResumed, orientation
+    - [X] Comando `await`: attende che una Condition diventi vera (timeout = comando fallito), così l'esito di un ramo di pipeline significa "ha guarito" e non "i comandi sono andati a buon fine" - senza, un `or` non escala mai
+    - [X] Comando `when`: esegue un workflow solo se la Condition regge, con ramo else opzionale
+    - [X] Foglia `condition` nella Pipeline: precondizione di una recovery policy (es. non riavviare mentre registra), scritta dove si legge la policy
+    - [X] Bound di profondità su run/when: un ciclo in config fallisce invece di girare per sempre
+
 - [X] Comando wait/sleep nella config workflow (per tap-scripting e timing)
-- [ ] Comando wakeUp dovrebbe controllare lo schermo prima di mandare lo swipe
+- [X] Comando wakeUp dovrebbe controllare lo schermo prima di mandare lo swipe (guard `["probe", "keyguardShowing"]`)
 
 ## v0.3.0
 
@@ -105,13 +113,20 @@
 
 ### Scheduled TV Recording Sessions
 
+- [ ] Refactor activationSchedule come policy libera componibile
+  - [ ] Estrarre activationSchedule dal modello Schedule attuale
+  - [ ] Rendere componibile per supportare fasce notturne e giornaliere separatamente
+  - [ ] Permettere combinazione via monoid/combinator (es. union, intersection di fasce orarie)
 - [ ] Recording session model
   - [ ] Definire `start time`, `end time`, `target device`, `input/channel`
   - [ ] Definire strategia di storage delle registrazioni (path locale e naming convention)
+  - [ ] Integrare activationSchedule policy per determinare finestre di esecuzione valide
 - [ ] Scheduling UI
   - [ ] Interfaccia per creare e modificare recording sessions
+  - [ ] Supporto per configurare fasce notturne e giornaliere
 - [ ] Session runner
   - [ ] Eseguire workflow: power on -> selezione input -> avvio registrazione -> stop -> salvataggio -> power off opzionale
+  - [ ] Rispettare activation policy per avvio/stop della registrazione
 
 ### Misc
 

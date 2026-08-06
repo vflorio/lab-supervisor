@@ -5,19 +5,15 @@ import * as O from "fp-ts/Option";
 import * as RA from "fp-ts/ReadonlyArray";
 import * as S from "fp-ts/string";
 import { match } from "ts-pattern";
-import * as AdbTracking from "../adb/adb-tracking";
+import * as AndroidBridge from "../android-bridge/tracking";
 import * as SuitestCamera from "../suitest/suitest-camera";
 
-// Risolve l'entityId di un dominio tracciato nel Network.Endpoint ADB per le CommandCapabilities
-// di una pipeline di recovery. Pura, nessun I/O; un dominio non ancora ADB-capable ritorna
-// semplicemente O.none, non un errore.
+// Risolve l'entityId di un dominio tracciato nel Network.Endpoint ADB per i Commands
+// di una pipeline di recovery
 
 export const resolveTarget = (domain: string, entityId: string, registry: Db.LabRegistry): O.Option<Network.Endpoint> =>
   match(domain)
-    // Dominio "adb": l'entityId è già Network.format(target)
-    .with(AdbTracking.DOMAIN, () => O.fromEither(Network.decode(entityId)))
-    // Dominio "suitest-camera": l'entityId è il videoCaptureDeviceId Suitest, risolto via
-    // CameraEntry.videoCaptureDeviceId -> CameraEntry.adbId -> registry.adb[adbId].target
+    .with(AndroidBridge.DOMAIN, () => O.fromEither(Network.decode(entityId)))
     .with(SuitestCamera.DOMAIN, () => resolveCameraTarget(entityId, registry))
     .otherwise(() => O.none);
 
@@ -44,14 +40,14 @@ const findCameraByAdbId = (adbId: string, registry: Db.LabRegistry): O.Option<Db
     RA.findFirst((camera) => O.elem(S.Eq)(adbId)(camera.adbId)),
   );
 
-// Risolve l'entityId di un dominio tracciato nell'id camera usato dall'AndroidBridgeOrchestrator
+// Risolve l'entityId di un dominio tracciato nell'id camera usato dall'AndroidBridge
 // (chiave = CameraEntry.id) - a differenza di resolveTarget, che dà l'endpoint ADB, qui serve
 // l'identità stabile locale per interrogare acceptsCommands/awaitIdle.
 
 export const resolveAndroidBridgeId = (domain: string, entityId: string, registry: Db.LabRegistry): O.Option<string> =>
   match(domain)
     // Dominio "adb": l'entityId è Network.format(target) == la stessa chiave di registry.adb[adbId]
-    .with(AdbTracking.DOMAIN, () =>
+    .with(AndroidBridge.DOMAIN, () =>
       pipe(
         findCameraByAdbId(entityId, registry),
         O.map((camera) => camera.id),
@@ -79,7 +75,7 @@ const UNKNOWN = "unknown";
 
 const resolveLabel = (domain: string, entityId: string, registry: Db.LabRegistry): O.Option<string> =>
   match(domain)
-    .with(AdbTracking.DOMAIN, () => O.fromNullable(registry.adb[entityId]?.label))
+    .with(AndroidBridge.DOMAIN, () => O.fromNullable(registry.adb[entityId]?.label))
     .with(SuitestCamera.DOMAIN, () =>
       pipe(
         findCameraByVideoCaptureDeviceId(entityId, registry),

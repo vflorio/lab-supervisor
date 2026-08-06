@@ -1,14 +1,14 @@
 import * as E from "fp-ts/Either";
 import * as TE from "fp-ts/TaskEither";
 import { describe, expect, it } from "vitest";
-import type { PredicateLookup } from "../predicates/expression";
+import type { FactLookup } from "../fact";
 import * as Machine from "../state-machine/machine";
 import * as TripwireMachine from "./tripwire-machine";
 
 const GRACE = 1000;
 
 // Non usato dal reducer (pura logica di stato): serve solo a soddisfare il tipo di Observe/RunRecovery.
-const lookup: PredicateLookup = () => undefined;
+const lookup: FactLookup = () => undefined;
 
 describe("recovery/tripwire-machine reduce", () => {
   const reduce = TripwireMachine.reduce(GRACE);
@@ -32,7 +32,11 @@ describe("recovery/tripwire-machine reduce", () => {
   it("fires (recovering) exactly when the grace boundary is reached, emitting runRecovery", () => {
     const pending: TripwireMachine.TripwireState = { tag: "pending", since: 100 };
     const result = reduce(pending, { tag: "observe", healthy: false, now: 100 + GRACE, lookup });
-    expect(result).toStrictEqual(Machine.transition({ tag: "recovering" }, [{ tag: "runRecovery", lookup }]));
+    expect(result).toStrictEqual(
+      Machine.transition({ tag: "recovering", since: 100 + GRACE }, [
+        { tag: "runRecovery", attempt: 100 + GRACE, lookup },
+      ]),
+    );
   });
 
   it("resets to healthy from pending on a healthy observation", () => {
@@ -42,34 +46,51 @@ describe("recovery/tripwire-machine reduce", () => {
   });
 
   it("stays recovering (no re-fire) while observed again before the outcome arrives", () => {
-    const recovering: TripwireMachine.TripwireState = { tag: "recovering" };
+    const recovering: TripwireMachine.TripwireState = { tag: "recovering", since: 1100 };
     const result = reduce(recovering, { tag: "observe", healthy: false, now: 999_999, lookup });
     expect(result).toStrictEqual(Machine.transition(recovering));
   });
 
-  it("resets to healthy from recovering once the predicate recovers", () => {
-    const recovering: TripwireMachine.TripwireState = { tag: "recovering" };
+  // `recovering` è l'unico stato che descrive un effetto in corso: un predicate tornato sano non
+  // chiude l'episodio, perché la pipeline (es. un reboot) sta ancora girando. A chiuderlo è il
+  // suo esito - che rivaluta il predicate e tornerà "succeeded". Senza questa regola un predicate
+  // che flappa porterebbe a un secondo tentativo in parallelo al primo.
+  it("stays recovering even on a healthy observation: only the attempt's outcome closes the episode", () => {
+    const recovering: TripwireMachine.TripwireState = { tag: "recovering", since: 1100 };
     const result = reduce(recovering, { tag: "observe", healthy: true, now: 999_999, lookup });
-    expect(result).toStrictEqual(Machine.transition(TripwireMachine.initial));
+    expect(result).toStrictEqual(Machine.transition(recovering));
   });
 
   it("moves to healthy on a succeeded recoveryOutcome from recovering", () => {
-    const recovering: TripwireMachine.TripwireState = { tag: "recovering" };
-    const result = reduce(recovering, { tag: "recoveryOutcome", outcome: "succeeded" });
+    const recovering: TripwireMachine.TripwireState = { tag: "recovering", since: 1100 };
+    const result = reduce(recovering, { tag: "recoveryOutcome", attempt: 1100, outcome: "succeeded" });
     expect(result).toStrictEqual(Machine.transition(TripwireMachine.initial));
   });
 
   it("moves to exhausted on an exhausted recoveryOutcome from recovering", () => {
-    const recovering: TripwireMachine.TripwireState = { tag: "recovering" };
-    const result = reduce(recovering, { tag: "recoveryOutcome", outcome: "exhausted" });
+    const recovering: TripwireMachine.TripwireState = { tag: "recovering", since: 1100 };
+    const result = reduce(recovering, { tag: "recoveryOutcome", attempt: 1100, outcome: "exhausted" });
     expect(result).toStrictEqual(Machine.transition({ tag: "exhausted" }));
   });
 
   it("moves to fatalError, carrying the error, on a fatalError recoveryOutcome from recovering", () => {
-    const recovering: TripwireMachine.TripwireState = { tag: "recovering" };
+    const recovering: TripwireMachine.TripwireState = { tag: "recovering", since: 1100 };
     const error = { type: "WorkflowError", message: "boom" };
-    const result = reduce(recovering, { tag: "recoveryOutcome", outcome: "fatalError", error });
+    const result = reduce(recovering, { tag: "recoveryOutcome", attempt: 1100, outcome: "fatalError", error });
     expect(result).toStrictEqual(Machine.transition({ tag: "fatalError", error }));
+  });
+
+  // Scenario: reset manuale mentre la pipeline è ancora in volo, predicate di nuovo falso, nuovo
+  // tentativo partito. L'esito del primo arriva in ritardo e non deve toccare il secondo.
+  it("ignores the outcome of an attempt that is no longer the current one", () => {
+    const recovering: TripwireMachine.TripwireState = { tag: "recovering", since: 5000 };
+    const result = reduce(recovering, { tag: "recoveryOutcome", attempt: 1100, outcome: "exhausted" });
+    expect(result).toStrictEqual(Machine.transition(recovering));
+  });
+
+  it("ignores a late outcome once the episode has been closed by a manual reset", () => {
+    const result = reduce(TripwireMachine.initial, { tag: "recoveryOutcome", attempt: 1100, outcome: "exhausted" });
+    expect(result).toStrictEqual(Machine.transition(TripwireMachine.initial));
   });
 
   it("stays exhausted (no re-fire) while observations remain unhealthy", () => {

@@ -1,9 +1,12 @@
 {
   "suitest": {
+    //"baseUrl": "https://the.suite.st/api/public/v4",
+    "baseUrl": "http://localhost:3002/v1/suitest",
     "tokenId": "dev-suitest-token-id",
     "tokenPassword": "dev-suitest-token-password"
   },
   "slack": {
+    "active": false,
     "botToken": "dev-slack-token"
   },
   "trpc": {
@@ -16,61 +19,51 @@
   "activationSchedule": {
     "days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
     "from": "09:00",
-    "to": "18:00"
+    "to": "23:00"
   },
   "tracking": {
-    "adb": { "polling": [["constantDelay", "5s"]] }, // poll locale, nessun costo esterno
-    "suitestCamera": { "polling": [["constantDelay", "20s"]] },
-    "suitestControlUnit": { "polling": [["constantDelay", "20s"]] },
-    "suitestDevice": { "polling": [["constantDelay", "20s"]] }
+    "adb": { "policy": [["constantDelay", "10s"]] },
+    "suitestCamera": { "policy": [["constantDelay", "30s"]] },
+    "suitestControlUnit": { "policy": [["constantDelay", "60s"]] },
+    "suitestDevice": { "policy": [["constantDelay", "60s"]] }
   },
   "log": {
     "level": "debug" // "error" | "warn" | "info" | "debug"
   },
   "adb": {
     "port": 5555,
-    // Pazienza di waitForDevice: quanto un workflow attende la riconnessione (già in corso in
-    // background) prima di arrendersi. La forma dei singoli tentativi non è configurabile.
+    // Timeout for device reconnection; individual retry form is fixed
     "waitForDeviceTimeout": "90s"
   },
   "workflows": [
     [
-      // Avviando l'applicazione la connessione è automatica, bisogna eseguire questo flow manualmente in alcuni casi
+      // Auto-connects on app start; run manually in some cases
       "suitest-connect",
       [
-        ["inputTap", { "x": 0.9, "y": 0.1 }], // tap connect button
-        ["inputTap", { "x": 0.5, "y": 0.5 }] // tap confirm
+        ["inputTap", { "x": 0.9, "y": 0.1 }], // connect button
+        ["inputTap", { "x": 0.5, "y": 0.5 }] // confirm
       ]
     ],
     [
       "suitest-set-experimental-profile",
       [
-        ["inputTap", { "x": 2200, "y": 160 }], // tap  right-top corner icon (settings)
-        ["inputTap", { "x": 1000, "y": 440 }], // tap first setting (profile)
-        ["inputTap", { "x": 1000, "y": 640 }], // tap third entry (profile: experimental)
-        ["inputTap", { "x": 180, "y": 180 }] // tap left-top corner icon (back)
+        ["inputTap", { "x": 2200, "y": 160 }], // settings (top-right)
+        ["inputTap", { "x": 1000, "y": 440 }], // profile
+        ["inputTap", { "x": 1000, "y": 640 }], // profile: experimental
+        ["inputTap", { "x": 180, "y": 180 }] // back (top-left)
       ]
     ],
     [
-      "android-suitest-test",
-      [
-        // wake screen up
-        ["wakeUp"],
-        // Ensure App is running (start if not opened)
-        ["ensureActivity", "st.suite.camera", "st.suite.android.suitestcamera.MainActivity"],
-        ["run", "suitest-set-experimental-profile"]
-      ]
-    ],
-    [
-      "android-suitest-camera",
+      "suitest-camera-restart",
       [
         ["restartApp", "com.suitest.android.camera"],
-        ["waitForActivity", "com.suitest.android.camera.CameraActivity"],
+        ["await", ["probe", "activityResumed", "com.suitest.android.camera.CameraActivity"], "5s"],
+        ["run", "suitest-set-experimental-profile"],
         ["run", "suitest-connect"]
       ]
     ],
     [
-      "android-suitest-camera-reboot",
+      "suitest-camera-reboot",
       [
         ["reboot"],
         ["waitForDevice"],
@@ -78,6 +71,44 @@
         ["run", "suitest-set-experimental-profile"],
         ["run", "suitest-connect"]
       ]
+    ],
+    [
+      "suitest-camera-restart-verified",
+      [["run", "suitest-camera-restart"], ["await", ["truthy", "suitest_camera_connected"], "45s"]]
+    ],
+    [
+      "suitest-camera-reboot-verified",
+      [["run", "suitest-camera-reboot"], ["await", ["truthy", "suitest_camera_connected"], "60s"]]
     ]
+  ],
+
+  "recovery": [
+    {
+      "domain": "suitest-camera",
+      "label": "Suitest Camera Connection",
+      "tripwires": [
+        {
+          // Grace period before intervention; above one poll cycle
+          "grace": "60s",
+          "predicate": ["truthy", "suitest_camera_connected"],
+          // Escalation sequenziale: prima prova con riavvio app, poi reboot del device
+          "pipeline": [
+            "or",
+            ["workflow", "suitest-camera-restart-verified"],
+            ["workflow", "suitest-camera-reboot-verified"]
+          ],
+          // Delay ritenta ogni 2m per altre 2 volte prima di notificare
+          "retry": [["constantDelay", "2m"], ["limitRetries", 2]],
+          "notify": [
+            {
+              "type": ["slack"],
+              "channel": "#lab-supervisor",
+              "message": "{{label}} ({{ip}}) suitest connection failed, manual intervention required",
+              "policy": ["exhausted"]
+            }
+          ]
+        }
+      ]
+    }
   ]
 }

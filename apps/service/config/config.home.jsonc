@@ -15,11 +15,11 @@
   "log": {
     "level": "debug", // "error" | "warn" | "info" | "debug"
     "path": "data/logs.jsonl", // JSON Lines files
-    "network": false // stampa le risposte HTTP (get/post, singole o paginate) indipendentemente da "tripwire"
+    "network": false // log HTTP responses (get/post, single or paginated)
   },
   "adb": {
     "port": 5555,
-    // Se un workflow manda in reboot un device, questo timeout è il tempo massimo che aspettiamo il device per tornare online
+    // Max time to wait for device online after workflow-triggered reboot
     "waitForDeviceTimeout": "2m"
   },
   "tracking": {
@@ -31,7 +31,7 @@
 
   // Applicative
 
-  // Periodo di attivazione del servizio
+  // Service activation schedule
   "activationSchedule": {
     "days": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
     "from": "00:00",
@@ -43,11 +43,13 @@
     [
       "open-chrome",
       [
-        // TODO: Questa dovrebbe controllare perché altrimenti manda uno scroll
-        ["wakeUp"],
-        ["ensureActivity", "com.android.chrome", "com.google.android.apps.chrome.Main"]
+        // Unlock swipe only if keyguard present; on unlocked screen would scroll foreground app
+        ["when", ["probe", "keyguardShowing"], "unlock"],
+        ["ensureActivity", "com.android.chrome", "com.google.android.apps.chrome.Main"],
+        ["run", "open-developer-settings"]
       ]
     ],
+    ["unlock", [["wakeUp"]]],
     [
       "open-chrome-reboot",
       [
@@ -57,7 +59,14 @@
         ["ensureActivity", "com.android.chrome", "com.google.android.apps.chrome.Main"]
       ]
     ],
-    ["open-developer-settings", [["wakeUp"], ["openDeveloperSettings"]]]
+    ["open-developer-settings", [["wakeUp"], ["openDeveloperSettings"]]],
+
+    // "async" variants for recovery pipelines: same workflow + predicate confirmation
+    ["open-chrome-async", [["run", "open-chrome"], ["await", ["truthy", "suitest_camera_connected"], "45s"]]],
+    [
+      "open-chrome-reboot-async",
+      [["run", "open-chrome-reboot"], ["await", ["truthy", "suitest_camera_connected"], "60s"]]
+    ]
   ],
 
   "recovery": [
@@ -66,17 +75,14 @@
       "label": "camera-recovery-demo",
       "tripwires": [
         {
-          // Quanto tempo il predicate deve rimanere falso prima di scattare la pipeline
+          // What to observe
+          "predicate": ["truthy", "suitest_camera_connected"],
+          // How long predicate must be false before pipeline triggers
           "grace": "10s",
-          // Cosa osservare
-          "predicate": ["ref", "suitest_camera_connected"],
-          // Cosa fare quando il predicate resta falso per >= grace
-          //"pipeline": ["workflow", "open-chrome-reboot"],
-          "pipeline": ["or", ["workflow", "open-chrome"], ["workflow", "open-chrome-reboot"]],
-          // Cosa fare se la pipeline fallisce (es. crash, timeout, ecc.) il delay deve superare:
-          // - adb.waitForDeviceTimeout (attesa massima di reboot)
-          // - tracking.suitestCamera.polling (polling di aggiornamento dei predicati)
-          "retry": [["constantDelay", "3m"], ["limitRetries", 3]],
+          // Action on predicate false >= grace; sequential escalation
+          "pipeline": ["or", ["workflow", "open-chrome-async"], ["workflow", "open-chrome-reboot-async"]],
+          // If escalation fails; delay between retry cycles (confirmed predictions already in workflows)
+          "retry": [["constantDelay", "2m"], ["limitRetries", 2]],
           "notify": [
             {
               "type": ["slack"],
@@ -101,7 +107,6 @@
           "adbId": "192.168.1.4:5555"
         }
       ],
-      "tvs": [{ "deviceId": "tv-001", "label": "TV_1", "controlled": false, "ip": "192.168.2.1" }],
       "adb": [{ "id": "192.168.1.4:5555", "label": "Lenovo Tab M10", "target": "192.168.1.4:5555" }]
     }
   }

@@ -1,6 +1,6 @@
+import { BugReport } from "@mui/icons-material";
 import {
   Alert,
-  Box,
   Button,
   Checkbox,
   MenuItem,
@@ -17,12 +17,9 @@ import {
 } from "@mui/material";
 import type { ControlUnit, Device, DeviceStatus, VideoCaptureDevice } from "@supervisor/core/adapters/suitest";
 import { useEffect, useState } from "react";
+import { Panel } from "../../layout/Panel";
 
-// -------------------------------------------------------------------------------------
-// Form di debug: serve solo a smanettare a runtime con i dati del mock server (apps/mocks)
-// per vedere i predicati di tracking (apps/service/src/tracking) cambiare in tempo reale.
-// -------------------------------------------------------------------------------------
-
+// Debug form: manipulate mock server state at runtime to test predicates
 const BASE = "/api/mocks";
 
 interface MockState {
@@ -97,23 +94,31 @@ export function MockDataForm() {
 
   if (error) {
     return (
-      <Alert severity="error">
-        Mock server unreachable ({error}). È in esecuzione <code>bun mock-services:start</code> su :3002?
-      </Alert>
+      <Panel title="Mock data" icon={<BugReport fontSize="small" />}>
+        <Alert severity="error">
+          Mock server unreachable ({error}). È in esecuzione <code>bun mock-services:start</code> su :3002?
+        </Alert>
+      </Panel>
     );
   }
 
-  if (!state) return <Typography color="text.secondary">Loading…</Typography>;
+  if (!state)
+    return (
+      <Panel title="Mock data" icon={<BugReport fontSize="small" />}>
+        <Typography color="textSecondary">Loading…</Typography>
+      </Panel>
+    );
 
   return (
-    <Box>
-      <Typography variant="h5" sx={{ mb: 2 }}>
-        Mock data (debug)
-      </Typography>
-      <Button variant="outlined" onClick={reset} sx={{ mb: 3 }}>
-        Reset all to seed
-      </Button>
-
+    <Panel
+      title="Mock data"
+      icon={<BugReport fontSize="small" />}
+      actions={
+        <Button variant="outlined" size="small" onClick={reset}>
+          Reset all to seed
+        </Button>
+      }
+    >
       <Typography variant="h6" sx={{ mb: 1 }}>
         Video Capture Devices
       </Typography>
@@ -227,6 +232,6 @@ export function MockDataForm() {
           </TableBody>
         </Table>
       </TableContainer>
-    </Box>
+    </Panel>
   );
 }

@@ -97,3 +97,14 @@ export const durationToMs = (duration: DurationString): number => {
 
   return value * (DURATION_MULTIPLIERS?.[unit] ?? 0);
 };
+
+export type DurationUnit = "ms" | "s" | "m" | "h";
+
+export const decomposeDuration = (duration: DurationString): { value: number; unit: DurationUnit } => {
+  const results = DURATION_REGEX.exec(duration);
+  if (!results?.[1] || !results?.[2]) return { value: 0, unit: "ms" }; // non raggiungibile dopo validazione
+
+  return { value: Number.parseFloat(results[1]), unit: results[2] as DurationUnit };
+};
+
+export const formatDuration = (value: number, unit: DurationUnit): DurationString => `${value}${unit}`;

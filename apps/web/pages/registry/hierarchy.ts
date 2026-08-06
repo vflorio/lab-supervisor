@@ -107,3 +107,13 @@ export function cameraSuitestCandidates(db: Database, currentVideoCaptureDeviceI
     .filter((v) => !usedElsewhere.has(v.id))
     .map((v) => ({ id: v.id, primary: v.customName || v.name, secondary: v.assignedDeviceId }));
 }
+
+// Riconciliazione manuale invertita ("Link camera" sulla riga TV, non "Link Suitest" sulla riga
+// camera): Suitest ha già assegnato un video-capture-device a questa TV
+// (`assignedDeviceId === tv.deviceId`), ma nessuna camera locale lo rivendica ancora. Riusa
+// `cameraSuitestCandidates` (stessa nozione di "non usato altrove") filtrando sul deviceId della
+// TV corrente. Assume al più un match per TV - se Suitest ne assegna più di uno allo stesso
+// device, va rivisto.
+export function suitestVideoCaptureDeviceForTv(db: Database, tvDeviceId: string): string | undefined {
+  return cameraSuitestCandidates(db, undefined).find((c) => c.secondary === tvDeviceId)?.id;
+}

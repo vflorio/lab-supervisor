@@ -1,7 +1,8 @@
 import * as E from "fp-ts/Either";
 import * as TE from "fp-ts/TaskEither";
 import { describe, expect, it } from "vitest";
-import { createPredicateStream } from "../predicates/feed";
+import * as Condition from "../fact/condition";
+import { createFactStream } from "../fact/stream";
 import * as Retry from "../retry/retry";
 import type * as Interpreter from "../workflow/interpreter";
 import type { RecoveryPolicy } from "./model";
@@ -18,22 +19,24 @@ const noopLogger = {
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-const noopCapabilities = (): Interpreter.CommandCapabilities => ({
+const noopCapabilities = (): Interpreter.Commands => ({
   restartApp: () => TE.right(undefined),
   ensureActivity: () => TE.right(undefined),
+  launchApp: () => TE.right(undefined),
+  forceStopApp: () => TE.right(undefined),
+  dismissKeyguard: () => TE.right(undefined),
   openUrl: () => TE.right(undefined),
   openDeveloperSettings: () => TE.right(undefined),
   reboot: () => TE.right(undefined),
   wakeUp: () => TE.right(undefined),
   inputTap: () => TE.right(undefined),
   waitForDevice: () => TE.right(undefined),
-  waitForActivity: () => TE.right(undefined),
 });
 
 describe("recovery/runner", () => {
   it("discovers a new entity from the stream and fires recovery once its grace elapses", async () => {
     const fired: string[] = [];
-    const stream = createPredicateStream();
+    const stream = createFactStream();
 
     const policy: RecoveryPolicy = {
       label: "test-policy",
@@ -41,7 +44,7 @@ describe("recovery/runner", () => {
       tripwires: [
         {
           grace: "10ms",
-          predicate: { type: "ref", name: "healthy" },
+          predicate: Condition.truthy("healthy"),
           pipeline: { type: "workflow", workflowName: "fix" },
           retry: [
             ["constantDelay", "1ms"],
@@ -55,7 +58,7 @@ describe("recovery/runner", () => {
       logger: noopLogger as any,
       stream,
       workflows: [{ name: "fix", commands: [{ type: "wakeUp" }] }],
-      capabilitiesFor: (entityId) => ({
+      commandsFor: (entityId) => ({
         ...noopCapabilities(),
         wakeUp: () => {
           fired.push(entityId);
@@ -63,6 +66,7 @@ describe("recovery/runner", () => {
         },
       }),
       tickPolicy: Retry.constantDelay(5),
+      descriptor: { id: "recovery-test", label: "recovery-test", policyLabel: "constant 5ms" },
     });
 
     expect(E.isRight(result)).toBe(true);
@@ -78,7 +82,7 @@ describe("recovery/runner", () => {
 
   it("tracks two entities in the same domain independently", async () => {
     const fired: string[] = [];
-    const stream = createPredicateStream();
+    const stream = createFactStream();
 
     const policy: RecoveryPolicy = {
       label: "test-policy",
@@ -86,7 +90,7 @@ describe("recovery/runner", () => {
       tripwires: [
         {
           grace: "10ms",
-          predicate: { type: "ref", name: "healthy" },
+          predicate: Condition.truthy("healthy"),
           pipeline: { type: "workflow", workflowName: "fix" },
           retry: [
             ["constantDelay", "1ms"],
@@ -100,7 +104,7 @@ describe("recovery/runner", () => {
       logger: noopLogger as any,
       stream,
       workflows: [{ name: "fix", commands: [{ type: "wakeUp" }] }],
-      capabilitiesFor: (entityId) => ({
+      commandsFor: (entityId) => ({
         ...noopCapabilities(),
         wakeUp: () => {
           fired.push(entityId);
@@ -108,6 +112,7 @@ describe("recovery/runner", () => {
         },
       }),
       tickPolicy: Retry.constantDelay(5),
+      descriptor: { id: "recovery-test", label: "recovery-test", policyLabel: "constant 5ms" },
     });
 
     expect(E.isRight(result)).toBe(true);
@@ -125,7 +130,7 @@ describe("recovery/runner", () => {
 
   it("ignores facts from other domains", async () => {
     const fired: string[] = [];
-    const stream = createPredicateStream();
+    const stream = createFactStream();
 
     const policy: RecoveryPolicy = {
       label: "test-policy",
@@ -133,7 +138,7 @@ describe("recovery/runner", () => {
       tripwires: [
         {
           grace: "10ms",
-          predicate: { type: "ref", name: "healthy" },
+          predicate: Condition.truthy("healthy"),
           pipeline: { type: "workflow", workflowName: "fix" },
           retry: [
             ["constantDelay", "1ms"],
@@ -147,7 +152,7 @@ describe("recovery/runner", () => {
       logger: noopLogger as any,
       stream,
       workflows: [{ name: "fix", commands: [{ type: "wakeUp" }] }],
-      capabilitiesFor: (entityId) => ({
+      commandsFor: (entityId) => ({
         ...noopCapabilities(),
         wakeUp: () => {
           fired.push(entityId);
@@ -155,6 +160,7 @@ describe("recovery/runner", () => {
         },
       }),
       tickPolicy: Retry.constantDelay(5),
+      descriptor: { id: "recovery-test", label: "recovery-test", policyLabel: "constant 5ms" },
     });
 
     expect(E.isRight(result)).toBe(true);
@@ -168,15 +174,73 @@ describe("recovery/runner", () => {
     expect(fired).toEqual([]);
   });
 
+  // Il tick è l'unico a poter far scattare un grace scaduto (il predicate feed emette solo sui
+  // cambi di valore): se aspettasse le osservazioni, una pipeline di recovery in corso su e1 lo
+  // congelerebbe, e il grace di e2 - già scaduto - non scatterebbe mai.
+  it("keeps ticking for the other entities while a recovery pipeline is in flight", async () => {
+    const fired: string[] = [];
+    const stream = createFactStream();
+    let releaseE1: () => void = () => {};
+    const e1Blocked = new Promise<void>((resolve) => {
+      releaseE1 = resolve;
+    });
+
+    const policy: RecoveryPolicy = {
+      label: "test-policy",
+      domain: "test-domain",
+      tripwires: [
+        {
+          grace: "10ms",
+          predicate: Condition.truthy("healthy"),
+          pipeline: { type: "workflow", workflowName: "fix" },
+          retry: [
+            ["constantDelay", "1ms"],
+            ["limitRetries", 1],
+          ],
+        },
+      ],
+    };
+
+    const result = Runner.start(policy, {
+      logger: noopLogger as any,
+      stream,
+      workflows: [{ name: "fix", commands: [{ type: "wakeUp" }] }],
+      commandsFor: (entityId) => ({
+        ...noopCapabilities(),
+        wakeUp: () =>
+          TE.fromTask(async () => {
+            fired.push(entityId);
+            if (entityId === "e1") await e1Blocked; // la recovery di e1 non finisce mai, da sola
+          }),
+      }),
+      tickPolicy: Retry.constantDelay(5),
+      descriptor: { id: "recovery-test", label: "recovery-test", policyLabel: "constant 5ms" },
+    });
+
+    expect(E.isRight(result)).toBe(true);
+    if (E.isLeft(result)) return;
+
+    stream.emit({ domain: "test-domain", entityId: "e1", name: "healthy", value: false });
+    await sleep(30); // e1 è ora appesa dentro la propria pipeline
+
+    stream.emit({ domain: "test-domain", entityId: "e2", name: "healthy", value: false });
+    await sleep(60); // il fatto porta e2 solo a `pending`: a farla scattare deve essere il tick
+
+    releaseE1();
+    result.right.stop();
+
+    expect(fired).toContain("e2");
+  });
+
   it("fails fast when the policy's retry config is malformed", () => {
-    const stream = createPredicateStream();
+    const stream = createFactStream();
     const policy: RecoveryPolicy = {
       label: "broken",
       domain: "test-domain",
       tripwires: [
         {
           grace: "10ms",
-          predicate: { type: "ref", name: "healthy" },
+          predicate: Condition.truthy("healthy"),
           pipeline: { type: "workflow", workflowName: "fix" },
           retry: [],
         },
@@ -187,8 +251,9 @@ describe("recovery/runner", () => {
       logger: noopLogger as any,
       stream,
       workflows: [],
-      capabilitiesFor: () => noopCapabilities(),
+      commandsFor: () => noopCapabilities(),
       tickPolicy: Retry.constantDelay(5),
+      descriptor: { id: "recovery-test", label: "recovery-test", policyLabel: "constant 5ms" },
     });
 
     expect(E.isLeft(result)).toBe(true);

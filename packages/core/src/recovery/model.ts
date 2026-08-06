@@ -1,6 +1,6 @@
 import type { DurationString } from "../date-time";
+import type { Condition } from "../fact/condition";
 import type { NotifyRule } from "../notify/model";
-import type { PredicateExpression } from "../predicates/expression";
 import type { PolicyJson } from "../retry/codec";
 import type { Pipeline } from "../workflow/pipeline";
 
@@ -12,7 +12,7 @@ import type { Pipeline } from "../workflow/pipeline";
 
 export interface RecoveryTripwire {
   readonly grace: DurationString;
-  readonly predicate: PredicateExpression;
+  readonly predicate: Condition;
   readonly pipeline: Pipeline;
   readonly retry: PolicyJson;
   readonly notify?: readonly NotifyRule[];

@@ -22,7 +22,7 @@ export function RecoveryProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     let unsubscribe = () => {};
 
-    // Stessa cautela di usePredicates/useActivity: la snapshot iniziale va attesa prima di
+    // Stessa cautela di useFacts/useActivity: la snapshot iniziale va attesa prima di
     // avviare la subscription, altrimenti risolvendo dopo un aggiornamento di `tail`
     // sovrascriverebbe la tabella con dati più vecchi.
     trpc.recovery.snapshot.query().then((entries) => {

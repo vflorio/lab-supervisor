@@ -88,14 +88,20 @@ export const init =
       }),
     );
 
-// Sync da Suitest: sostituisce integralmente il mirror `suitest` e auto-importa le control
-// unit nel dominio `lab` (identità condivisa, nessuna riconciliazione manuale necessaria).
-// TV e Camera non vengono toccate: la loro associazione a un'entità Suitest è manuale, via UI.
+// Sync da Suitest: sostituisce integralmente il mirror `suitest` e auto-importa control unit,
+// TV e camere nel dominio `lab` (identità condivisa con Suitest, nessuna riconciliazione
+// manuale necessaria). Le entry esistenti mantengono i campi locali (label/controlled/ip/adbId);
+// il filtro per tipologia/org (es. escludere smart plug o CU non nostri) è demandato a valle.
 
 export const syncFromSuitest =
   (path: string) =>
   (incoming: SuitestLists): ((env: Fs.Env) => TE.TaskEither<DbError, Database>) =>
     modify(path)((db) => ({
       suitest: SuitestStoreDomain.replaceFromSuitest(incoming),
-      lab: Lab.upsertCandyboxesFromSuitestControlUnits(incoming.controlUnits)(db.lab),
+      lab: pipe(
+        db.lab,
+        Lab.upsertCandyboxesFromSuitestControlUnits(incoming.controlUnits),
+        Lab.upsertTvsFromSuitestDevices(incoming.devices),
+        Lab.upsertCamerasFromSuitestVideoCaptureDevices(incoming.videoCaptureDevices),
+      ),
     }));

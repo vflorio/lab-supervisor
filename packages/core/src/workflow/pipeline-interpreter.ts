@@ -1,14 +1,12 @@
 import { pipe } from "fp-ts/function";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import { match } from "ts-pattern";
+import * as Condition from "./condition";
 import { type Effect, interpretCommands, type WorkflowEnv, workflowError } from "./interpreter";
 import type { Pipeline } from "./pipeline";
 import { findWorkflow, type Workflow } from "./workflow";
 
-// Risolve un nome workflow, lo esegue e converte l'esito in booleano (successo -> true,
-// comando fallito -> false: un tentativo di recovery fallito non è un errore). Un riferimento
-// a un workflow inesistente resta un Left (config rotta). and/or sequenziano con
-// short-circuit (rispettivamente su false/true, come &&/||); not nega.
+// Look up workflow by name, execute, convert outcome to bool (failure ≠ error); unknown workflow is Left (config error)
 
 const interpretLeaf = (workflowName: string): Effect<boolean> =>
   pipe(
@@ -24,7 +22,7 @@ const interpretLeaf = (workflowName: string): Effect<boolean> =>
     ),
   );
 
-// Tutti devono risolvere true, in sequenza; si ferma al primo false (come &&)
+// All must resolve true in sequence; stops at first false (like &&)
 const interpretAnd = (pipelines: readonly Pipeline[], index: number): Effect<boolean> => {
   if (index >= pipelines.length) return RTE.right(true);
 
@@ -34,7 +32,7 @@ const interpretAnd = (pipelines: readonly Pipeline[], index: number): Effect<boo
   );
 };
 
-// Prova in sequenza, si ferma al primo true (come ||) - rimpiazza l'escalation primary/secondary
+// Try in sequence; stops at first true (like ||)
 const interpretOr = (pipelines: readonly Pipeline[], index: number): Effect<boolean> => {
   if (index >= pipelines.length) return RTE.right(false);
 
@@ -47,6 +45,13 @@ const interpretOr = (pipelines: readonly Pipeline[], index: number): Effect<bool
 export const interpretPipeline = (pipeline: Pipeline): Effect<boolean> =>
   match(pipeline)
     .with({ type: "workflow" }, ({ workflowName }) => interpretLeaf(workflowName))
+    // Like workflow leaves: config errors are Left, probe failures are not; unevaluable condition becomes false
+    .with({ type: "condition" }, ({ condition }) =>
+      pipe(
+        Condition.evaluate(condition),
+        RTE.orElse(() => RTE.right(false)),
+      ),
+    )
     .with({ type: "and" }, ({ pipelines }) => interpretAnd(pipelines, 0))
     .with({ type: "or" }, ({ pipelines }) => interpretOr(pipelines, 0))
     .with({ type: "not" }, ({ pipeline: inner }) =>

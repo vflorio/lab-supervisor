@@ -1,66 +1,81 @@
-import type * as AndroidBridge from "@supervisor/core/android-bridge/machine";
+import type * as AndroidBridgeMachine from "@supervisor/core/android-bridge/machine";
 import * as Errors from "@supervisor/core/errors";
 import type * as Logger from "@supervisor/core/logger/logger";
+import type * as Network from "@supervisor/core/network";
 import * as WorkflowInterpreter from "@supervisor/core/workflow/interpreter";
+import type * as WorkflowProbe from "@supervisor/core/workflow/probe";
 import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
-import type * as AndroidBridgeOrchestrator from "../android-bridge";
+import type * as AndroidBridge from "../android-bridge/runner";
 import * as Registry from "../registry";
-import * as Workflow from "../workflow";
-import { resolveAndroidBridgeId, resolveTarget } from "./target";
+import * as AdbCapabilities from "./adb-capabilities";
+import * as Target from "./target";
 
-// CommandCapabilities per una RecoveryPolicy: risolve il target ADB dell'entityId leggendo il
-// registry fresco ad ogni comando, mai da una cache - Registry.read è già economico e una
-// pipeline esegue pochi comandi per tentativo, non serve un cache dedicato.
+// Commands for a RecoveryPolicy; resolves ADB target fresh per command (no cache needed)
 
 export interface Env {
   readonly logger: Logger.Tagged;
   readonly registryEnv: Registry.RegistrySyncEnv;
-  readonly workflowEnv: Workflow.WorkflowRunnerEnv;
-  readonly androidBridge: AndroidBridgeOrchestrator.Handle;
+  readonly workflowEnv: AdbCapabilities.Env;
+  readonly androidBridge: AndroidBridge.Handle;
   readonly waitForDeviceTimeoutMs: number;
 }
 
-export const capabilitiesFor =
-  (domain: string, env: Env) =>
-  (entityId: string): WorkflowInterpreter.CommandCapabilities => {
-    // Risolve l'id camera per questo entityId; O.none se non tracciata (no-op per i chiamanti,
-    // non un errore).
-    const androidBridgeId = (): TE.TaskEither<WorkflowInterpreter.WorkflowError, O.Option<string>> =>
-      pipe(
-        Registry.read(env.registryEnv),
-        TE.mapLeft((error) => WorkflowInterpreter.workflowError(`Registry read failed: ${Errors.format(error)}`)),
-        TE.map((db) => resolveAndroidBridgeId(domain, entityId, db.lab)),
-      );
+// Bridge lifecycle: shared by commands and probes (both resolve same entityId, same error reporting)
+const bridgeFor = (domain: string, env: Env, entityId: string) => {
+  // Resolve bridge id for entityId (none if not tracked, not an error)
+  const androidBridgeId = (): TE.TaskEither<WorkflowInterpreter.WorkflowError, O.Option<string>> =>
+    pipe(
+      Registry.read(env.registryEnv),
+      TE.mapLeft((error) => WorkflowInterpreter.workflowError(`Registry read failed: ${Errors.format(error)}`)),
+      TE.map((db) => Target.resolveAndroidBridgeId(domain, entityId, db.lab)),
+    );
 
-    // Notifica un evento alla macchina della camera, se tracciata. Best-effort: un id non
-    // risolvibile o un fallimento qui non alterano mai l'esito del comando.
-    const notifyBridge = (event: AndroidBridge.AndroidBridgeEvent): TE.TaskEither<never, void> =>
-      pipe(
-        androidBridgeId(),
-        TE.flatMap(
-          (id): TE.TaskEither<never, void> =>
-            O.isSome(id) ? env.androidBridge.dispatch(id.value, event) : TE.right(undefined),
-        ),
-        TE.orElse((): TE.TaskEither<never, void> => TE.right(undefined)),
-      );
+  // Notify bridge event if tracked (best-effort; unresolvable id or failure doesn't affect command outcome)
+  const notifyBridge = (event: AndroidBridgeMachine.AndroidBridgeEvent): TE.TaskEither<never, void> =>
+    pipe(
+      androidBridgeId(),
+      TE.flatMap(
+        (id): TE.TaskEither<never, void> =>
+          O.isSome(id) ? env.androidBridge.dispatch(id.value, event) : TE.right(undefined),
+      ),
+      TE.orElse((): TE.TaskEither<never, void> => TE.right(undefined)),
+    );
 
-    // Traduce il fallimento di un comando in un evento per la macchina; oggi solo CommandTimeout
-    // è azionabile (transport ADB incastrato, invisibile alla liveness-detection). Va agganciato
-    // con TE.tapError, mai TE.flatMap: non deve sostituire l'errore del comando.
-    const remediate = (error: WorkflowInterpreter.WorkflowError): TE.TaskEither<never, void> =>
+  // Translate command failure to bridge event (only CommandTimeout is actionable); use tapError, not flatMap
+  const remediate =
+    (kind: string) =>
+    (error: WorkflowInterpreter.WorkflowError): TE.TaskEither<never, void> =>
       match(error.cause)
         .with({ type: "CommandTimeout" }, () =>
-          notifyBridge({ _tag: "TransportSuspect", reason: `command timed out: ${error.message}` }),
+          notifyBridge({ _tag: "TransportSuspect", reason: `${kind} timed out: ${error.message}` }),
         )
         .otherwise((): TE.TaskEither<never, void> => TE.right(undefined));
 
-    // Gate: rifiuta subito un comando se l'AndroidBridge sa già che la camera non accetta
-    // comandi, invece di scoprirlo dopo un timeout pieno. Un id non risolvibile non blocca.
-    // Lo stato è in-memory e non istantaneo: può dare un falso negativo (accettabile, c'è
-    // retry a monte) ma mai un falso positivo.
+  const resolveEndpoint = <A>(
+    use: (target: Network.Endpoint) => TE.TaskEither<WorkflowInterpreter.WorkflowError, A>,
+  ): TE.TaskEither<WorkflowInterpreter.WorkflowError, A> =>
+    pipe(
+      Registry.read(env.registryEnv),
+      TE.mapLeft((error) => WorkflowInterpreter.workflowError(`Registry read failed: ${Errors.format(error)}`)),
+      TE.flatMapOption(
+        (db) => Target.resolveTarget(domain, entityId, db.lab),
+        () => WorkflowInterpreter.workflowError(`No ADB target resolved for ${domain}/${entityId}`),
+      ),
+      TE.flatMap(use),
+    );
+
+  return { androidBridgeId, notifyBridge, remediate, resolveEndpoint };
+};
+
+export const commandsFor =
+  (domain: string, env: Env) =>
+  (entityId: string): WorkflowInterpreter.Commands => {
+    const { androidBridgeId, notifyBridge, remediate, resolveEndpoint } = bridgeFor(domain, env, entityId);
+
+    // Gate: reject early if AndroidBridge knows camera won't accept commands; in-memory state can give false negatives but never false positives
     const requireAccepting = (): TE.TaskEither<WorkflowInterpreter.WorkflowError, void> =>
       pipe(
         androidBridgeId(),
@@ -80,30 +95,16 @@ export const capabilitiesFor =
     // `gate: false` per i comandi che devono funzionare anche a camera non Idle (reboot):
     // gatarli rifiuterebbe esattamente ciò di cui una recovery ha bisogno.
     const withTarget = <A>(
-      run: (
-        capabilities: WorkflowInterpreter.CommandCapabilities,
-      ) => TE.TaskEither<WorkflowInterpreter.WorkflowError, A>,
+      run: (capabilities: WorkflowInterpreter.Commands) => TE.TaskEither<WorkflowInterpreter.WorkflowError, A>,
       gate: boolean = true,
     ): TE.TaskEither<WorkflowInterpreter.WorkflowError, A> =>
       pipe(
         gate ? requireAccepting() : TE.right(undefined),
-        TE.flatMap(() =>
-          pipe(
-            Registry.read(env.registryEnv),
-            TE.mapLeft((error) => WorkflowInterpreter.workflowError(`Registry read failed: ${Errors.format(error)}`)),
-          ),
-        ),
-        TE.flatMapOption(
-          (db) => resolveTarget(domain, entityId, db.lab),
-          () => WorkflowInterpreter.workflowError(`No ADB target resolved for ${domain}/${entityId}`),
-        ),
-        TE.map((target) => Workflow.makeCapabilities(env.workflowEnv, target)),
-        TE.flatMap(run),
-        TE.tapError(remediate),
+        TE.flatMap(() => resolveEndpoint((target) => run(AdbCapabilities.makeCommands(env.workflowEnv, target)))),
+        TE.tapError(remediate("command")),
       );
 
-    // A differenza degli altri comandi, waitForDevice non si fida della porta ADB (può essere
-    // congelata dopo un reboot): attende che la camera torni Idle via AndroidBridge.
+    // Unlike other commands, waitForDevice doesn't trust ADB port (may freeze post-reboot); waits for bridge Idle
     const waitForDevice = (): TE.TaskEither<WorkflowInterpreter.WorkflowError, void> =>
       pipe(
         androidBridgeId(),
@@ -119,9 +120,7 @@ export const capabilitiesFor =
         ),
       );
 
-    // Un reboot riuscito è una disconnessione attesa: senza notificarlo, lo stato camera
-    // resterebbe Idle (stale) finché il poll non se ne accorge da solo, e un waitForDevice
-    // successivo tornerebbe subito senza aver atteso davvero.
+    // Notify bridge on successful reboot (expected disconnect); prevents stale state in next waitForDevice
     const reboot = (): TE.TaskEither<WorkflowInterpreter.WorkflowError, void> =>
       pipe(
         withTarget((c) => c.reboot(), false),
@@ -131,12 +130,36 @@ export const capabilitiesFor =
     return {
       restartApp: (packageId) => withTarget((c) => c.restartApp(packageId)),
       ensureActivity: (packageId, activity) => withTarget((c) => c.ensureActivity(packageId, activity)),
+      launchApp: (packageId) => withTarget((c) => c.launchApp(packageId)),
+      forceStopApp: (packageId) => withTarget((c) => c.forceStopApp(packageId)),
+      dismissKeyguard: () => withTarget((c) => c.dismissKeyguard()),
       openUrl: (url) => withTarget((c) => c.openUrl(url)),
       openDeveloperSettings: () => withTarget((c) => c.openDeveloperSettings()),
       reboot,
       wakeUp: () => withTarget((c) => c.wakeUp()),
       inputTap: (coords) => withTarget((c) => c.inputTap(coords)),
       waitForDevice,
-      waitForActivity: (activity) => withTarget((c) => c.waitForActivity(activity)),
+    };
+  };
+
+// Probes for a RecoveryPolicy; same target resolution as commands but no AndroidBridge gate (reads are safe, and gating would block decision conditions)
+export const probesFor =
+  (domain: string, env: Env) =>
+  (entityId: string): WorkflowProbe.Probes => {
+    const { remediate, resolveEndpoint } = bridgeFor(domain, env, entityId);
+
+    const withTarget = <A>(
+      read: (probes: WorkflowProbe.Probes) => TE.TaskEither<WorkflowInterpreter.WorkflowError, A>,
+    ): TE.TaskEither<WorkflowInterpreter.WorkflowError, A> =>
+      pipe(
+        resolveEndpoint((target) => read(AdbCapabilities.makeProbes(env.workflowEnv, target))),
+        TE.tapError(remediate("probe")),
+      );
+
+    return {
+      screenOn: () => withTarget((p) => p.screenOn()),
+      keyguardShowing: () => withTarget((p) => p.keyguardShowing()),
+      activityResumed: (activity) => withTarget((p) => p.activityResumed(activity)),
+      orientation: (expected) => withTarget((p) => p.orientation(expected)),
     };
   };

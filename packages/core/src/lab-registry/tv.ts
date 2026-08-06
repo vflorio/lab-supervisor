@@ -1,5 +1,7 @@
+import type { Device } from "@supervisor/core/adapters/suitest";
 import * as Validation from "@supervisor/core/validation";
 import type { Endomorphism } from "fp-ts/Endomorphism";
+import * as O from "fp-ts/Option";
 import * as t from "io-ts";
 import type { LabRegistry } from "./registry";
 
@@ -48,3 +50,26 @@ export const findTvByDeviceId =
   (deviceId: string) =>
   (registry: LabRegistry): TvEntry | undefined =>
     registry.tvs[deviceId];
+
+// Auto-import dalla sync Suitest: come i Candybox, l'identità coincide con quella Suitest.
+// Nessun filtro per tipologia/org qui (arriverà a parte); le entry esistenti mantengono
+// label/controlled/ip locali, i device nuovi vengono aggiunti con controlled:false.
+export const upsertTvsFromSuitestDevices =
+  (devices: readonly Device[]): Endomorphism<LabRegistry> =>
+  (registry) => ({
+    ...registry,
+    tvs: {
+      ...registry.tvs,
+      ...Object.fromEntries(
+        devices.map((device) => [
+          device.deviceId,
+          registry.tvs[device.deviceId] ?? {
+            deviceId: device.deviceId,
+            label: device.customName || device.model,
+            controlled: false,
+            ip: O.fromNullable(device.ipAddress || undefined),
+          },
+        ]),
+      ),
+    },
+  });

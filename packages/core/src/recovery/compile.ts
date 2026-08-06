@@ -1,7 +1,7 @@
 import * as E from "fp-ts/Either";
-import type { Predicate } from "fp-ts/Predicate";
+import type * as P from "fp-ts/Predicate";
 import { durationToMs } from "../date-time";
-import { compile as compilePredicate, type PredicateLookup } from "../predicates/expression";
+import { compileCondition, type FactLookup } from "../fact/condition";
 import { decode as decodeRetryPolicy, type PolicyDecodeError } from "../retry/codec";
 import type { Policy } from "../retry/retry";
 import type { Pipeline } from "../workflow/pipeline";
@@ -13,7 +13,7 @@ import type { RecoveryTripwire } from "./model";
 
 export interface CompiledTripwire {
   readonly graceMs: number;
-  readonly predicate: Predicate<PredicateLookup>;
+  readonly predicate: P.Predicate<FactLookup>;
   readonly pipeline: Pipeline;
   readonly retryPolicy: Policy;
 }
@@ -29,7 +29,7 @@ export const compileTripwires = (
 
     compiled.push({
       graceMs: durationToMs(tripwire.grace),
-      predicate: compilePredicate(tripwire.predicate),
+      predicate: compileCondition(tripwire.predicate),
       pipeline: tripwire.pipeline,
       retryPolicy: retryPolicy.right,
     });

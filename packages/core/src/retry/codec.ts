@@ -57,6 +57,22 @@ export const formatPolicyJson = (json: PolicyJson): string => `[PolicyJson: ${JS
 
 export interface PolicyDecodeError extends AppError<"PolicyDecodeError"> {}
 
+// Metadata per la UI: quali step esistono e che argomenti prendono, senza duplicare i
+// registri runtime sotto.
+export type PolicyStepArgKind = "duration" | "number";
+
+export interface PolicyStepSchema {
+  readonly name: string;
+  readonly args: readonly { label: string; kind: PolicyStepArgKind }[];
+}
+
+export const POLICY_STEP_SCHEMA: readonly PolicyStepSchema[] = [
+  { name: "constantDelay", args: [{ label: "delay", kind: "duration" }] },
+  { name: "limitRetries", args: [{ label: "count", kind: "number" }] },
+  { name: "exponentialBackoff", args: [{ label: "delay", kind: "duration" }] },
+  { name: "capDelay", args: [{ label: "max", kind: "duration" }] },
+];
+
 // Registro delle primitive supportate
 const PRIMITIVES: Record<string, ((...args: number[]) => Policy) | undefined> = {
   constantDelay: (delay: number) => constantDelay(delay),
@@ -120,3 +136,50 @@ export const decode = (json: PolicyJson): E.Either<PolicyDecodeError, Policy> =>
 
   return E.right(acc!);
 };
+
+// -------------------------------------------------------------------------------------
+// Human summary - per il `policyLabel` dei loop visualizzati in UI: deriva sempre dallo
+// stesso PolicyJson decodificato da `decode`, così label e comportamento non possono divergere.
+// -------------------------------------------------------------------------------------
+
+export interface DescribedPolicy {
+  readonly policy: Policy;
+  readonly label: string;
+}
+
+const STEP_PREFIX: Record<string, string> = {
+  constantDelay: "constant",
+  exponentialBackoff: "exp",
+  capDelay: "cap",
+};
+
+const formatMsCompact = (ms: number): string => {
+  if (ms % 3_600_000 === 0) return `${ms / 3_600_000}h`;
+  if (ms % 60_000 === 0) return `${ms / 60_000}m`;
+  if (ms % 1_000 === 0) return `${ms / 1_000}s`;
+  return `${ms}ms`;
+};
+
+// "constantDelay"/"exponentialBackoff"/"capDelay" prendono un delay (number o DurationString,
+// vedi resolveArg) - "limitRetries" prende invece un conteggio puro, mai formattato come durata.
+const describeStep = (step: PolicyStepJson): string => {
+  const [name, ...rawArgs] = step;
+  if (name === "limitRetries") return `max ${rawArgs[0]}`;
+
+  const argsText = rawArgs.map((arg) => formatMsCompact(resolveArg(arg))).join(" ");
+  return `${STEP_PREFIX[name] ?? name} ${argsText}`;
+};
+
+export const describe = (json: PolicyJson): string => json.map(describeStep).join(" → ");
+
+export const described = (json: PolicyJson): E.Either<PolicyDecodeError, DescribedPolicy> => {
+  const result = decode(json);
+  return E.isLeft(result) ? result : E.right({ policy: result.right, label: describe(json) });
+};
+
+// Per le cadenze non configurabili, hardcoded nel servizio (es. reconcile ADB, tick di
+// recovery) - stessa label che avrebbe un `PolicyJson` equivalente, senza doverne costruire uno.
+export const describedConstant = (ms: number): DescribedPolicy => ({
+  policy: constantDelay(ms),
+  label: `constant ${formatMsCompact(ms)}`,
+});

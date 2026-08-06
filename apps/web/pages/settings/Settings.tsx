@@ -1,27 +1,28 @@
-import Editor from "@monaco-editor/react";
-import { Box, Typography } from "@mui/material";
+import { Settings as SettingsIcon } from "@mui/icons-material";
+import { Stack } from "@mui/material";
+import { useState } from "react";
 import { useData } from "vike-react/useData";
+import { Panel } from "../../layout/Panel";
 import type { Data } from "./+data";
+import { ActivationScheduleCard } from "./components/ActivationScheduleCard";
+import { InfraConfigCard } from "./components/InfraConfigCard";
+import { RecoveryCard } from "./components/RecoveryCard";
+import { WorkflowsCard } from "./components/WorkflowsCard";
 
-// Sola lettura: la config viene già servita redatta dal service (vedi ConfigModel.redact) -
-// nessun segreto reale arriva mai qui, ma il valore resta comunque non modificabile via UI.
+export type Config = Data["config"];
+
 export function Settings() {
-  const { config } = useData<Data>();
+  const { config: initialConfig } = useData<Data>();
+  const [config, setConfig] = useState(initialConfig);
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <Typography variant="h5" sx={{ fontWeight: 600 }}>
-        Settings
-      </Typography>
-      <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, overflow: "hidden" }}>
-        <Editor
-          height="calc(100vh - 180px)"
-          language="json"
-          theme="vs-dark"
-          value={JSON.stringify(config, null, 2)}
-          options={{ readOnly: true, minimap: { enabled: false }, fontSize: 13 }}
-        />
-      </Box>
-    </Box>
+    <Panel title="Settings" icon={<SettingsIcon sx={{ fontSize: 16 }} />}>
+      <Stack spacing={2}>
+        <ActivationScheduleCard config={config} onSaved={setConfig} />
+        <WorkflowsCard config={config} onSaved={setConfig} />
+        <RecoveryCard config={config} onSaved={setConfig} />
+        <InfraConfigCard config={config} onSaved={setConfig} />
+      </Stack>
+    </Panel>
   );
 }

@@ -103,6 +103,76 @@ export const dispatch =
     );
   };
 
+// Riferimento allo stato "vivo" di una macchina: `dispatchTo` lo legge e lo scrive invece di
+// threadare lo stato dentro il fold.
+export interface StateRef<S> {
+  readonly get: () => S;
+  readonly set: (state: S) => void;
+}
+
+// Variante store-based di `dispatch`: stessa logica, ma la transizione viene applicata alla
+// StateRef PRIMA di eseguire i comandi, e ogni evento di follow-up riparte dallo stato
+// corrente invece che da quello catturato all'avvio del comando. Serve quando un comando è a
+// lunga durata (es. una pipeline di recovery con retry, minuti) e nel frattempo possono
+// arrivare altri eventi: con `dispatch` lo stato osservabile resterebbe fermo a quello di
+// partenza per tutta la durata dell'effetto - un secondo evento lo ridurrebbe da uno stato
+// stale, e l'esito tardivo sovrascriverebbe quanto successo nel frattempo. Il reducer resta
+// l'unico a decidere: è il solo a vedere lo stato aggiornato, incluso il caso "l'esito non è
+// più pertinente".
+export const dispatchTo =
+  <Environment, Error, State, Event, Command>(machine: Machine<Environment, Error, State, Event, Command>) =>
+  (ref: StateRef<State>) =>
+  (event: Event): RTE.ReaderTaskEither<Environment, Error, State> => {
+    // Un solo IO sincrono: leggi -> riduci -> scrivi, senza await in mezzo, così due dispatch
+    // concorrenti non possono partire entrambi dallo stesso stato.
+    const applied: RTE.ReaderTaskEither<Environment, Error, Applied<State, Command>> = RTE.fromIO(() => {
+      const from = ref.get();
+      const { state: to, commands } = machine.reduce(from, event);
+      ref.set(to);
+      return { from, to, commands };
+    });
+
+    const runCommand = (command: Command): RTE.ReaderTaskEither<Environment, Error, State> =>
+      pipe(
+        machine.handle(command),
+        RTE.flatMap((followUpEvents) =>
+          followUpEvents.reduce<RTE.ReaderTaskEither<Environment, Error, State>>(
+            (acc, followUp) =>
+              pipe(
+                acc,
+                RTE.flatMap(() => dispatchTo(machine)(ref)(followUp)),
+              ),
+            RTE.fromIO(ref.get),
+          ),
+        ),
+      );
+
+    return pipe(
+      applied,
+      RTE.flatMap(({ from, to, commands }) =>
+        pipe(
+          machine.onTransition ? machine.onTransition(from, event, to) : RTE.right<Environment, Error, void>(undefined),
+          RTE.flatMap(() =>
+            commands.reduce<RTE.ReaderTaskEither<Environment, Error, State>>(
+              (acc, command) =>
+                pipe(
+                  acc,
+                  RTE.flatMap(() => runCommand(command)),
+                ),
+              RTE.fromIO(ref.get),
+            ),
+          ),
+        ),
+      ),
+    );
+  };
+
+interface Applied<S, C> {
+  readonly from: S;
+  readonly to: S;
+  readonly commands: readonly C[];
+}
+
 // Applica una sequenza di eventi esterni in ordine, facendo avanzare lo stato ad ogni step
 export const run =
   <Env, Err, S, E, C>(machine: Machine<Env, Err, S, E, C>) =>

@@ -2,6 +2,7 @@ import * as Errors from "@supervisor/core/errors";
 import * as Logger from "@supervisor/core/logger/logger";
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
+import * as O from "fp-ts/Option";
 import * as Args from "./args";
 import * as Config from "./config";
 import * as ServiceLogger from "./logger";
@@ -29,6 +30,7 @@ const main = () => {
     logger: initLogger,
     process: nodeProcess,
     configFetcher: Config.toFetcher(args.config),
+    configPath: args.config.type === "file" ? O.some(args.config.path) : O.none,
   };
 
   env.logger.info(

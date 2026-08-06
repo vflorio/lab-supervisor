@@ -4,7 +4,7 @@ import * as M from "fp-ts/Monoid";
 import * as Ord from "fp-ts/Ord";
 import * as t from "io-ts";
 import * as DateTime from "../date-time";
-import * as Schedule from "../schedule";
+import * as Schedule from "../schedule/schedule";
 
 // Schedule di lavoro: giorni attivi e range orario
 const ActivationScheduleRaw = t.type({
