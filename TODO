@@ -73,8 +73,7 @@
 
 ### Android Camera
 
-- [ ] Workflow / scripting engine
-  - [ ] Coordinate relative per inputTap: supportare coordinate normalizzate (`0.0–1.0`) oltre a quelle assolute
+- [X] Workflow / scripting engine
   - [X] Sistema di predicati/guard per l'esecuzione condizionale dei comandi in un workflow
     - [X] `BooleanTree<Leaf>` generico nel core: FactExpression e Condition sono due istanze, non due copie - un predicate di tripwire è già una Condition valida
     - [X] `Condition` = fatti tracciati + probe sul device, stessa algebra and/or/not, valutazione effettuale in short-circuit
@@ -101,6 +100,9 @@
 ### Candybox
 - [ ] Shared-host failure detection: se tutti i device appartenenti allo stesso Candybox risultano OFFLINE, riavvia del Candybox
 - [ ] Candybox recovery workflow: detect -> wait grace period -> reboot (smartplug) -> verify reachability
+
+### Workflow
+  - [ ] InputTap: coordinate relative/normalizzate (`0.0–1.0`) oltre a quelle assolute
 
 ## v0.5.0
 
