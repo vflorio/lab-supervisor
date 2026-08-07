@@ -74,7 +74,6 @@ export function LoopWidget({
         <Typography variant="monoEyebrow" color="textSecondary" sx={{ lineHeight: 1.3 }}>
           {label}
         </Typography>
-        <StatusPill label={state} tone={tone} />
       </Stack>
 
       <Box sx={{ height: 2, borderRadius: 999, overflow: "hidden", bgcolor: "divider" }}>
@@ -90,7 +89,7 @@ export function LoopWidget({
         ) : null}
       </Box>
 
-      <Stack direction="row" sx={{ gap: 2 }}>
+      <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", gap: 1 }}>
         <Box>
           <Typography variant="monoEyebrow" color="textSecondary" sx={{ display: "block" }}>
             Tick
@@ -119,14 +118,19 @@ export function LoopWidget({
         )}
       </Stack>
 
-      <Typography variant="monoLabel" color="textSecondary" noWrap>
-        {policyLabel}
-      </Typography>
-      {detail && (
-        <Typography variant="monoLabel" color="textSecondary" noWrap>
-          {detail}
-        </Typography>
-      )}
+      <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", gap: 1 }}>
+        <Stack>
+          <Typography variant="monoLabel" color="textSecondary" noWrap>
+            {policyLabel}
+          </Typography>
+          {detail && (
+            <Typography variant="monoLabel" color="textSecondary" noWrap>
+              {detail}
+            </Typography>
+          )}
+        </Stack>
+        <StatusPill label={state} tone={tone} />
+      </Stack>
     </Stack>
   );
 }

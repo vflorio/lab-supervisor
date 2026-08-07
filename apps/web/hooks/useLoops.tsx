@@ -57,22 +57,7 @@ export function useLoops(): Loops {
     };
   }, []);
 
-  // Sort the loops by priority: tracker first, then android-bridge, then recovery, then the rest alphabetically.
-  const sorted = Array.from(table.values()).toSorted((a, b) => {
-    const aPrefix = a.id.split(":")[0];
-    const bPrefix = b.id.split(":")[0];
-
-    if (aPrefix === "tracker" && bPrefix !== "tracker") return -1;
-    if (aPrefix !== "tracker" && bPrefix === "tracker") return 1;
-
-    if (aPrefix === "android-bridge" && bPrefix !== "android-bridge") return -1;
-    if (aPrefix !== "android-bridge" && bPrefix === "android-bridge") return 1;
-
-    if (aPrefix === "recovery" && bPrefix !== "recovery") return -1;
-    if (aPrefix !== "recovery" && bPrefix === "recovery") return 1;
-
-    return a.label.localeCompare(b.label);
-  });
+  const sorted = Array.from(table.values()).toSorted((a, b) => a.label.localeCompare(b.label));
 
   return { status, table, sorted };
 }

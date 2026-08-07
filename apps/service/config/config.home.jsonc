@@ -79,7 +79,7 @@
   "recovery": [
     {
       "domain": "suitest-camera",
-      "label": "camera-recovery-demo",
+      "label": "camera-demo",
       "tripwires": [
         {
           // What to observe

@@ -187,7 +187,7 @@ const createResources =
       policy: env.policies.agentTrackingPolicy.policy,
       descriptor: {
         id: "tracker:agent",
-        label: "Agent - Provisioning status",
+        label: "Agent - Provisioning",
         policyLabel: env.policies.agentTrackingPolicy.label,
       },
       loopStream: env.loopStream,

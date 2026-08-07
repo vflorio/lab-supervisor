@@ -24,7 +24,7 @@
   "scripts": {
     "dev": "tsc --noEmit --watch",
     "service:dev": "bun --watch run src/index.ts --config config/config.home.jsonc",
-    "service:start": "bun run src/index.ts --config config/config.home.jsonc"
+    "service:start": "bun run src/index.ts --config config/config.lab.jsonc"
   },
   "type": "module"
 }

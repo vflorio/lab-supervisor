@@ -9,11 +9,11 @@ import * as Network from "@supervisor/core/network";
 import * as Provisioning from "@supervisor/core/provisioning/model";
 import type * as Shell from "@supervisor/core/shell";
 import { pipe } from "fp-ts/function";
+import * as IO from "fp-ts/IO";
 import * as O from "fp-ts/Option";
 import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
-
 // Convergente: legge stato, applica passi mancanti, rilegge. Non distruttivo come lo script.
 
 export interface ProvisioningError extends Errors.AppError<"ProvisioningError"> {}
@@ -58,9 +58,8 @@ export const create = ({ logger, spawn, config, factStream, activityStream }: De
     );
 
   // Indicizzato per target ADB (come dominio `adb`), non per ruolo camera
-  const publish = (target: Network.Endpoint, status: AdbProvisioning.AgentStatus): void => {
-    for (const fact of Provisioning.factsFor(Network.format(target), status)) factStream.emit(fact);
-  };
+  const publish = (target: Network.Endpoint, status: AdbProvisioning.AgentStatus) =>
+    Provisioning.factsFor(Network.format(target), status).forEach(factStream.emit);
 
   const activity = (target: Network.Endpoint, status: string): void =>
     activityStream.emit({ entityId: Network.format(target), source: "provisioning", status });
@@ -139,20 +138,28 @@ export const create = ({ logger, spawn, config, factStream, activityStream }: De
           TE.tapIO(() => () => activity(target, "provisioning")),
           TE.flatMap(() => readStatus(settings, target)),
           TE.flatMap(converge(settings, target, 1)),
-          TE.tapIO((status) => () => {
-            activity(target, "provisioned");
-            logger.info(
-              `Provisioning completed for ${Network.format(target)} (versionCode ${pipe(
-                status.versionCode,
-                O.map(String),
-                O.getOrElse(() => "unknown"),
-              )})`,
-            )();
-          }),
-          TE.orElseFirstIOK((error) => () => {
-            activity(target, "failed");
-            logger.error(`Provisioning failed for ${Network.format(target)}: ${Errors.format(error)}`)();
-          }),
+          TE.tapIO((status) =>
+            pipe(
+              () => activity(target, "provisioned"),
+              IO.flatMap(() =>
+                logger.info(
+                  `Provisioning completed for ${Network.format(target)} (versionCode ${pipe(
+                    status.versionCode,
+                    O.map(String),
+                    O.getOrElse(() => "unknown"),
+                  )})`,
+                ),
+              ),
+            ),
+          ),
+          TE.orElseFirstIOK((error) =>
+            pipe(
+              () => activity(target, "failed"),
+              IO.flatMap(() =>
+                logger.error(`Provisioning failed for ${Network.format(target)}: ${Errors.format(error)}`),
+              ),
+            ),
+          ),
         ),
       ),
   };
