@@ -17,8 +17,8 @@ import * as O from "fp-ts/Option";
 import * as RA from "fp-ts/ReadonlyArray";
 import * as TE from "fp-ts/TaskEither";
 import type * as AndroidBridge from "../android-bridge/runner";
+import type * as ProvisioningRunner from "../android-provisioning/runner";
 import * as Node from "../node";
-import type * as ProvisioningRunner from "../provisioning/runner";
 
 const toDeviceSnapshot = (devices: readonly Adb.Device[]): readonly Trpc.AndroidDeviceSnapshot[] =>
   pipe(

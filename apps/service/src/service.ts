@@ -2,7 +2,6 @@ import * as Activation from "@supervisor/core/activation/runner";
 import * as ActivationSchedule from "@supervisor/core/activation/schedule";
 import * as Activity from "@supervisor/core/activity/stream";
 import type * as ConfigModel from "@supervisor/core/config";
-import * as DateTime from "@supervisor/core/date-time";
 import * as Errors from "@supervisor/core/errors";
 import * as Facts from "@supervisor/core/fact/index";
 import * as LogStream from "@supervisor/core/logger/log-stream";
@@ -23,10 +22,10 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
 import * as AndroidBridge from "./android-bridge/runner";
+import * as Provisioning from "./android-provisioning/runner";
 import * as Config from "./config";
 import * as ServiceLogger from "./logger";
 import * as Node from "./node";
-import * as Provisioning from "./provisioning/runner";
 import * as ServiceLifecycle from "./service-lifecycle";
 import * as Trpc from "./trpc/server";
 import * as TrpcServices from "./trpc/services";
@@ -46,26 +45,14 @@ type Effect<A> = RTE.ReaderTaskEither<
 
 const loadConfig: Effect<ConfigModel.Service> = (env) => Config.load(env.configFetcher);
 
-// Lo stato di provisioning cambia agli ordini di grandezza dei reboot: senza una policy
-// esplicita in config si polla di rado, non alla cadenza degli altri tracker.
-const DEFAULT_AGENT_TRACKING_POLICY = RetryCodec.describedConstant(DateTime.durationToMs("15m"));
-
 const parseConfigPolicies = (config: ConfigModel.Service): Effect<ServiceLifecycle.TrackingPolicies> =>
   pipe(
     E.Do,
-    E.bind("androidBridgeTrackingPolicy", () => RetryCodec.described(config.tracking.adb.policy)),
-    E.bind("suitestCameraTrackingPolicy", () => RetryCodec.described(config.tracking.suitestCamera.policy)),
-    E.bind("suitestControlUnitTrackingPolicy", () => RetryCodec.described(config.tracking.suitestControlUnit.policy)),
-    E.bind("suitestDeviceTrackingPolicy", () => RetryCodec.described(config.tracking.suitestDevice.policy)),
-    E.bind("agentTrackingPolicy", () =>
-      pipe(
-        O.fromNullable(config.tracking.agent),
-        O.match(
-          () => E.right(DEFAULT_AGENT_TRACKING_POLICY),
-          ({ policy }) => RetryCodec.described(policy),
-        ),
-      ),
-    ),
+    E.bind("androidBridge", () => RetryCodec.described(config.tracking.adb.policy)),
+    E.bind("androidAgent", () => RetryCodec.described(config.tracking.agent.policy)),
+    E.bind("suitestCamera", () => RetryCodec.described(config.tracking.suitestCamera.policy)),
+    E.bind("suitestControlUnit", () => RetryCodec.described(config.tracking.suitestControlUnit.policy)),
+    E.bind("suitestDevice", () => RetryCodec.described(config.tracking.suitestDevice.policy)),
     RTE.fromEither,
   );
 

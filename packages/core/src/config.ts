@@ -31,20 +31,13 @@ const SlackCodec = t.type({
 
 export type Slack = t.TypeOf<typeof SlackCodec>;
 
-// Configurazione dei tracker di predicati: una Policy indipendente per dominio,
-// ognuno interrogato a una cadenza propria.
-// `agent` è opzionale e ha una cadenza sua, molto più lenta: lo stato di provisioning cambia
-// agli ordini di grandezza dei reboot, non dei secondi, e ogni lettura è un round trip ADB che
-// compete con i workflow di recovery veri.
-const TrackingCodec = t.intersection([
-  t.type({
-    adb: t.type({ policy: Retry.PolicyJsonCodec }),
-    suitestCamera: t.type({ policy: Retry.PolicyJsonCodec }),
-    suitestControlUnit: t.type({ policy: Retry.PolicyJsonCodec }),
-    suitestDevice: t.type({ policy: Retry.PolicyJsonCodec }),
-  }),
-  t.partial({ agent: t.type({ policy: Retry.PolicyJsonCodec }) }),
-]);
+const TrackingCodec = t.type({
+  adb: t.type({ policy: Retry.PolicyJsonCodec }),
+  suitestCamera: t.type({ policy: Retry.PolicyJsonCodec }),
+  suitestControlUnit: t.type({ policy: Retry.PolicyJsonCodec }),
+  suitestDevice: t.type({ policy: Retry.PolicyJsonCodec }),
+  agent: t.type({ policy: Retry.PolicyJsonCodec }),
+});
 
 export type Tracking = t.TypeOf<typeof TrackingCodec>;
 

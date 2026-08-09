@@ -15,7 +15,7 @@ export const initialStatus: Status = {
   previousDelay: null, // Indichiamo c
 };
 
-// Una Policy è una funzione che dato uno Status restituisce un delay in millisecondi
+// Una Policy è una funzione che dato uno Status restituisce un delay in millisecondi;
 // con null indichiamo che la policy ha terminato i tentativi
 export type Policy = (status: Status) => number | null;
 
