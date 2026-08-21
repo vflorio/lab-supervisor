@@ -2,27 +2,12 @@
   "$schema": "https://v2-10-4.turborepo.dev/schema.json",
   "concurrency": "64",
   "tasks": {
-    "build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
-    },
-    "dev": {
-      "cache": false,
-      "persistent": true
-    },
-    "storybook": {
-      "cache": false,
-      "persistent": true
-    },
     "clean": {
       "cache": false
     },
-    "test": {
-      "dependsOn": ["^build"]
-    },
-    "lint": {
-      "dependsOn": ["^build"]
-    },
+    "test": {},
+    "check-types": {},
+    "lint": {},
     "format": {
       "cache": false
     }

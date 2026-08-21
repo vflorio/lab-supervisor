@@ -1,0 +1,26 @@
+{
+  "name": "@lab/recovery",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./domain/*": "./src/domain/*.ts",
+    "./ports/*": "./src/ports/*.ts",
+    "./application/*": "./src/application/*.ts",
+    "./application/policies/*": "./src/application/policies/*.ts",
+    "./testing": "./src/testing/index.ts",
+    "./testing/*": "./src/testing/*.ts"
+  },
+  "dependencies": {
+    "@lab/kernel": "workspace:*",
+    "@lab/monitoring": "workspace:*",
+    "@lab/registry": "workspace:*",
+    "fp-ts": "2.16.11",
+    "ts-pattern": "5.9.0"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "check-types": "tsc --noEmit"
+  }
+}

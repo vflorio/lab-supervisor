@@ -1,0 +1,21 @@
+{
+  "name": "@lab/hardware-control",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@lab/kernel": "workspace:*",
+    "@lab/monitoring": "workspace:*",
+    "@lab/recovery": "workspace:*",
+    "@lab/registry": "workspace:*",
+    "fp-ts": "2.16.11",
+    "io-ts": "2.2.22"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "check-types": "tsc --noEmit"
+  }
+}

@@ -4,39 +4,21 @@
   "author": {
     "name": "vflorio & ai"
   },
-  "dependencies": {
-    "storybook": "10.5.5"
-  },
   "devDependencies": {
     "@biomejs/biome": "2.5.0",
-    "@playwright/test": "^1.61.1",
     "@tsconfig/bun": "^1.0.10",
-    "@tsconfig/vite-react": "^7.0.2",
     "@types/bun": "^1.3.14",
     "@vitest/ui": "^4.0.16",
-    "jsdom": "^27.3.0",
-    "syncpack": "^13.0.4",
     "turbo": "^2.10.4",
     "vitest": "^4.0.16"
-  },
-  "overrides": {
-    "@docusaurus/theme-common": "3.10.2",
-    "@docusaurus/theme-classic": "3.10.2"
   },
   "packageManager": "bun@1.3.14",
   "private": true,
   "scripts": {
-    "build": "turbo run build",
-    "build-no-cache": "turbo run build --force",
-    "clean": "turbo run clean && rm -rf dist && rm -rf apps/*/dist && rm -rf packages/*/dist",
-    "dev": "turbo run dev",
+    "check-types": "turbo run check-types",
+    "clean": "turbo run clean && rm -rf dist && rm -rf packages/*/dist",
     "format": "turbo run format && bunx @biomejs/biome format --write",
     "lint": "turbo run lint && bunx @biomejs/biome check --write",
-    "syncpack:check": "syncpack list-mismatches",
-    "syncpack:fix": "syncpack fix-mismatches",
-    "syncpack:format": "syncpack format",
-    "syncpack:list": "syncpack list",
-    "test:e2e": "playwright test apps/tests --headed --ui",
     "test:unit": "turbo run test"
   },
   "type": "module",

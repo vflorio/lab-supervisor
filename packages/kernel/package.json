@@ -1,0 +1,23 @@
+{
+  "name": "@lab/kernel",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./Brand": "./src/Brand.ts",
+    "./Instant": "./src/Instant.ts",
+    "./Duration": "./src/Duration.ts",
+    "./DomainEvent": "./src/DomainEvent.ts",
+    "./Decider": "./src/Decider.ts",
+    "./Clock": "./src/Clock.ts",
+    "./testing/*": "./src/testing/*.ts"
+  },
+  "dependencies": {
+    "fp-ts": "2.16.11"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "check-types": "tsc --noEmit"
+  }
+}
