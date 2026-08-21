@@ -36,11 +36,13 @@ esistente (bun + turbo + vitest + biome, fp-ts 2.16, io-ts, ts-pattern).
 e `testing/` dei bounded context, più gli scenari di accettazione, tutto verde e tutto eseguibile **senza
 hardware, senza rete e senza l'orologio di sistema**.
 
-**Consegna in un colpo solo.** Scrivi i file nel repository e chiudi con un report finale (§8.3). Non
-chiedere conferme intermedie, non consegnare a rate, non lasciare `TODO` nel core: se un punto ti sembra
+**Consegna in due checkpoint.** Scrivi i file nel repository e chiudi con un report finale (§8.3). Non
+chiedere conferme intermedie per ambiguità, non lasciare `TODO` nel core: se un punto ti sembra
 sottospecificato, prendi la decisione più conservativa, implementala, e **elencala nel report** sotto
-"assunzioni". Il costo di una assunzione sbagliata è una riga di revisione; il costo di un giro di
-chiarimenti è la qualità di tutto il resto.
+"assunzioni" — il costo di un'assunzione sbagliata è una riga di revisione, il costo di un giro di
+chiarimenti è la qualità di tutto il resto. I due checkpoint dell'ordine di lavoro qui sotto sono un'altra
+cosa: non chiedono un chiarimento, fermano il lavoro perché quello che viene dopo è costoso da disfare se
+quello che viene prima è sbagliato. Fuori da quei due punti non ci si ferma per nessuna ragione.
 
 **Cosa leggere.** Questo documento e `README.md` (il ticket originale, che dà il contesto di business) sono
 **necessari e sufficienti**: dove i due divergono, vince questo documento, più recente e già passato per un
@@ -55,11 +57,24 @@ prima che il dominio sappia decidere.
 1. `@lab/kernel` — `Brand`, `Instant`, `Duration`, `DomainEvent`, `Decider`, `Clock` + `FakeClock`.
 2. `@lab/registry` — value object, aggregato `Device`, `Topology`, `Custody`, porta e fake.
 3. `@lab/monitoring` — `Facet`, `FacetHealth`, anti-flapping, `HealthSnapshot`, porte e fake.
+
+   **⏸ Checkpoint 1.** Verde su `bun run test` e `tsc --noEmit`. Scrivi un riepilogo breve (i tipi
+   introdotti, le scelte di dettaglio che il documento lasciava a te) e **fermati**: la fondazione è a
+   basso rischio da sola, ma tutto il resto ci si appoggia sopra, e questo è il punto più economico per
+   correggerla se qualcosa non torna. Aspetta un messaggio esplicito dell'utente prima di procedere.
+
 4. `@lab/recovery` / `domain/` — i value object, poi `correlateOutage`, poi `RecoverySession` con le sue
    invarianti e un test per ciascuna.
+
+   **⏸ Checkpoint 2.** Tutte e 13 le invarianti verdi, ciascuna con almeno un test che la dimostra. Stesso
+   rituale del checkpoint 1: riepilogo breve, **fermati**, aspetta il via libera. Questo è l'80% dello
+   sforzo di modellazione (§5 A-1): da qui in poi ports, application e scenari sono in gran parte
+   traduzione meccanica di ciò che il dominio ha già deciso — se il dominio è giusto qui, il resto è a
+   basso rischio, ed è per questo che dopo questo checkpoint si corre fino alla fine senza altre pause.
+
 5. `@lab/recovery` / `ports/` + `testing/` — porte e adapter finti.
 6. `@lab/recovery` / `application/` — use case e policy.
-7. `test/scenarios/` — gli scenari S1–S22 della §7.
+7. `test/scenarios/` — gli scenari S1–S22 della §7, poi il report finale di §8.3.
 
 **Regole anti-deriva.** Sono la ragione per cui questo documento esiste. Violarne una è un difetto di
 consegna, non un'opinione.
