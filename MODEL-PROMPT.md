@@ -112,8 +112,14 @@ AndroidCamera  ────Observes────────────┘   (la
   morta. Riavviare la CU non ripara mai una camera.
 - **FATTO-4** — Se una CU cade, le TV che pilota risultano irraggiungibili **di conseguenza**: è un guasto
   solo, non cinque.
-- **FATTO-5** — Nel lab esistono anche smart plug. Il servizio **non deve poterli comandare**, per nessuna
-  ragione, nemmeno per errore, nemmeno passando da Suitest.
+- **FATTO-5** — Nel lab esistono anche smart plug. Oggi il servizio **non li comanda affatto**: la vecchia
+  formulazione ("non deve poterli comandare, mai, per nessuna ragione") non è più il requisito — sul ticket
+  è stata sostituita perché non più veritiera. Una futura estensione userà uno smart plug come rimedio di
+  ultima istanza per ridare corrente a una CU o a una TV quando Suitest non basta più (fuori scope in questo
+  giro, NF-3). L'unico vincolo che conta, ed è vero da subito e per sempre: se un plug risulta **spento a
+  mano**, non lo si riaccende — potrebbe essere lì per manutenzione. Non è una regola nuova da inventare: è
+  FATTO-15 (mai scavalcare uno spegnimento manuale) applicato a un canale di potenza invece che a un
+  comando software, e il modello la eredita gratis da `Custody` (M-2) il giorno in cui il plug arriverà.
 
 ### Come si osserva (verità di lettura)
 
@@ -166,7 +172,7 @@ coniare sinonimi, non tradurre in inglese diverso, non abbreviare.
 | Nome | Contesto | Cos'è |
 |---|---|---|
 | `DeviceId` | registry | Identità di un device, condivisa fra tutti i contesti |
-| `DeviceKind` | registry | `"ControlUnit" \| "Tv" \| "AndroidCamera"` — **niente smart plug** |
+| `DeviceKind` | registry | `"ControlUnit" \| "Tv" \| "AndroidCamera"` — lo smart plug non è ancora un kind (NF-3) |
 | `ControlUnitType` | registry | `"candybox" \| "drive" \| "personal-pi" \| "solo-candy"` |
 | `Capability` | registry | Cosa quel device *sa* fare: `PowerOn`, `RebootHardware`, `AppControl`, `AdbTcp` |
 | `Endpoints` | registry | Dove lo si raggiunge. Dato **opaco**: il dominio lo passa, non lo interpreta |
@@ -231,7 +237,8 @@ Sono quattro, e sono **tutto** l'ambito. Il modello si giudica su questi.
 - **Scala**: un solo gradino, `RebootHardware` via Suitest — verifica `Reachable`, assestamento 45s,
   scadenza 3 min, 2 tentativi con backoff fisso di 1 minuto.
 - **Nota**: `PowerOn` **non** entra nel playbook della CU. Una CU spenta non ha accensione fuori banda che
-  ci sia lecito usare (gli smart plug sono vietati, FATTO-5): se il reboot Suitest non è accettato, l'esito
+  ci sia lecito usare **in questo giro** — lo smart plug come rimedio di ultima istanza esiste solo sulla
+  carta finché non arriva la sua estensione (FATTO-5, NF-3): se il reboot Suitest non è accettato, l'esito
   è `Unreachable`, si esaurisce la scala e serve una mano umana. È il comportamento corretto, non una lacuna.
 - **Capability**: se la CU non dichiara `RebootHardware` (FATTO-1), il dispaccio torna `Unsupported` e la
   sessione si arrende **subito, senza ritentare**: ritentare una cosa che quel device non saprà mai fare è
@@ -288,8 +295,12 @@ Due conseguenze che invece vanno rispettate **da subito**, perché costano nulla
   Questo è il meccanismo con cui si dice "sorvegliato ma non curato": non serve altro.
 - **NF-2** — Tre camere giù, appese via `Observes` a tre TV della stessa CU, **non** devono mai produrre un
   reboot della CU (FATTO-3). Tre bersagli `Device`, punto.
-- **NF-3** — Gli smart plug non sono esprimibili: nessun `DeviceKind`, nessuna `Capability`, nessun
-  `Remedy`, nessuna porta. Il divieto è una proprietà della forma del modello, non un `if`.
+- **NF-3** — Il controllo degli smart plug è **fuori scope in questo giro**, non vietato (FATTO-5): non si
+  scrive nessun `DeviceKind`, `Capability`, `Remedy` o porta che li riguardi. Quando arriverà, non servirà
+  un'invariante nuova per la sicurezza: "non riaccendere un plug spento a mano" è già coperto da `Custody`
+  e da FATTO-15, esattamente come per una CU o una TV. Se il giorno in cui lo implementi ti serve un `if`
+  in più per farlo rispettare, è un segno che quel giorno il modello ha smesso di reggere — non aggiungerlo
+  qui per prevenirlo: non è oggi il giorno.
 
 ---
 
@@ -620,7 +631,8 @@ type RetryPolicy = { readonly maxAttempts: number; readonly backoff: Backoff }
 `Remedy` è il linguaggio con cui il dominio parla all'ACL: `RestartApp` **non** è `adb shell am force-stop`,
 quella è una delle sue attuazioni e vive in `hardware-control`. `RelaunchSuite` è la sequenza completa di
 messa online dell'app di cattura (avvio, profilo, connect), non un secondo `RestartApp`: la sua complessità
-è dell'ACL (FATTO-11). Nessuna variante esprime gli smart plug, e non è una dimenticanza (NF-3).
+è dell'ACL (FATTO-11). Nessuna variante esprime ancora gli smart plug: sono fuori scope in questo giro,
+non vietati (NF-3, FATTO-5).
 
 `RemedyOutcome` è l'esito del **dispaccio**: `Accepted` significa "il comando è stato preso in carico", non
 "il device è guarito". La guarigione la stabilisce solo la verifica (INV-5). Nessun `statusCode`, nessuno
@@ -855,8 +867,8 @@ La consegna è da rifare, non da correggere, se anche uno solo di questi è vero
 - **NO-6** — Esistono due sessioni attive che condividono un device (INV-1).
 - **NO-7** — Esiste una fase attiva che non chiede tick, o un percorso in cui una sessione resta appesa
   per sempre (INV-10).
-- **NO-8** — Compare un concetto per gli smart plug: un `DeviceKind`, una `Capability`, un `Remedy`, una
-  porta, o anche solo un `if` che li esclude (NF-3).
+- **NO-8** — Il modello implementa il controllo degli smart plug in questo giro — `DeviceKind`,
+  `Capability`, `Remedy`, porta o adapter — invece di lasciarlo fuori scope come il resto di NF-3.
 - **NO-9** — Il dominio contiene una diramazione su `DeviceKind` per scegliere una tecnologia, o la parola
   "adb", "suitest", "slack", "sqlite", "http" fuori dai package adapter.
 - **NO-10** — Un errore tecnico (status code, `stderr`, eccezione di libreria) attraversa una porta (A-6).
