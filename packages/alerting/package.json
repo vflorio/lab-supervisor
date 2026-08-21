@@ -4,16 +4,20 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts",
+    "./testing/*": "./src/testing/*.ts"
   },
   "dependencies": {
     "@lab/kernel": "workspace:*",
+    "@lab/monitoring": "workspace:*",
     "@lab/recovery": "workspace:*",
+    "@lab/registry": "workspace:*",
     "fp-ts": "2.16.11",
     "io-ts": "2.2.22"
   },
   "scripts": {
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "check-types": "tsc --noEmit"
   }
 }

@@ -39,8 +39,7 @@ Supported recovery actions include:
 
 #### Candyboxes
 
-- Use Suitest Private APIs for hardware control
-- Reboot devices when applicable
+- Reboot the control unit through the Suitest Public API, when that unit supports it
 - Verify the device becomes reachable again
 
 #### Android Cameras
@@ -120,13 +119,10 @@ This feature would enable unattended recordings for demos, regression testing, o
 ---
 
 ## Other Information
-The Private API currently used by [Suitest](http://the.suite.st/)  already exposes hardware control operations such as:
+The only hardware write operation [Suitest](http://the.suite.st/) exposes is rebooting a control unit
+(`POST /control-units/{id}/reboot`, Public API v4), and only for units that report `reboot: true`.
 
-- power on
-- power off
-- reboot
-for TVs and Candyboxes.
-
-These capabilities are currently unavailable through the Public API (API-key based).
+There is no power on, no power off, and no command of any kind towards a TV. Anything the Public API does
+not cover will go through a smart plug instead; that channel is not part of the current scope.
 
 ---

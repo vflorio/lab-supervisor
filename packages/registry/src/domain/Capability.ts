@@ -11,8 +11,10 @@ import type { DeviceKind } from "./DeviceKind";
 
 export type Capability = "PowerOn" | "RebootHardware" | "AppControl" | "AdbTcp";
 
+// Ciò che quel tipo di device può *mai* fare, non ciò che oggi sappiamo attuare: Suitest espone solo
+// il reboot di una CU (FATTO-10), e il resto arriverà con lo smart plug (FATTO-5, NF-3). Il
+// soprainsieme resta quello vero, e chi non ha ancora un canale risponde `Unsupported` al dispaccio.
 const byKind: Record<DeviceKind, ReadonlyArray<Capability>> = {
-  // CU e TV si comandano solo attraverso la Private API di Suitest (FATTO-10).
   ControlUnit: ["PowerOn", "RebootHardware"],
   Tv: ["PowerOn", "RebootHardware"],
   // Una camera si comanda solo via adb (FATTO-11) e non ha accensione remota: è un telefono.

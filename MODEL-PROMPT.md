@@ -129,9 +129,10 @@ AndroidCamera  ────Observes────────────┘   (la
   solo, non cinque.
 - **FATTO-5** — Nel lab esistono anche smart plug. Oggi il servizio **non li comanda affatto**: la vecchia
   formulazione ("non deve poterli comandare, mai, per nessuna ragione") non è più il requisito — sul ticket
-  è stata sostituita perché non più veritiera. Una futura estensione userà uno smart plug come rimedio di
-  ultima istanza per ridare corrente a una CU o a una TV quando Suitest non basta più (fuori scope in questo
-  giro, NF-3). L'unico vincolo che conta, ed è vero da subito e per sempre: se un plug risulta **spento a
+  è stata sostituita perché non più veritiera. Lo smart plug è **il** canale previsto per accendere e
+  riavviare ciò che la Public API di Suitest non copre, cioè le TV e l'accensione delle CU (FATTO-10):
+  non è un'ipotesi elegante, è l'unica risposta che resta. Resta comunque fuori scope in questo giro
+  (NF-3). L'unico vincolo che conta, ed è vero da subito e per sempre: se un plug risulta **spento a
   mano**, non lo si riaccende — potrebbe essere lì per manutenzione. Non è una regola nuova da inventare: è
   FATTO-15 (mai scavalcare uno spegnimento manuale) applicato a un canale di potenza invece che a un
   comando software, e il modello la eredita gratis da `Custody` (M-2) il giorno in cui il plug arriverà.
@@ -154,8 +155,12 @@ AndroidCamera  ────Observes────────────┘   (la
 
 ### Come si comanda (verità di scrittura)
 
-- **FATTO-10** — CU e TV si comandano **solo** attraverso la Private API di Suitest: power on, power off,
-  reboot. La Public API non espone queste operazioni.
+- **FATTO-10** — L'unica scrittura hardware che Suitest espone è il **reboot di una ControlUnit**
+  (`POST /control-units/{id}/reboot`, Public API v4). Non esiste altro: né power on, né power off, né alcun
+  comando verso una TV. La Private API che in una vecchia formulazione compariva qui **non si usa**, ed è
+  stata cancellata dal ticket: non è un canale che abbiamo. Ciò che la Public API non copre — accendere una
+  CU, comandare una TV — passerà dallo smart plug (FATTO-5), che è fuori scope in questo giro (NF-3). Finché
+  non c'è, il dispaccio di quei rimedi è `Unsupported`: non una lacuna dell'adapter, ma come sta il mondo.
 - **FATTO-11** — Le camere si comandano **solo** via **adb over TCP**. Il device espone adb su una porta
   prefissata dopo il boot. I rimedi disponibili sono: riconnettere il transport, riavviare l'app di
   cattura, riavviare il device, rieseguire la sequenza di avvio post-boot (lancio app, profilo
@@ -252,9 +257,10 @@ Sono quattro, e sono **tutto** l'ambito. Il modello si giudica su questi.
 - **Scala**: un solo gradino, `RebootHardware` via Suitest — verifica `Reachable`, assestamento 45s,
   scadenza 3 min, 2 tentativi con backoff fisso di 1 minuto.
 - **Nota**: `PowerOn` **non** entra nel playbook della CU. Una CU spenta non ha accensione fuori banda che
-  ci sia lecito usare **in questo giro** — lo smart plug come rimedio di ultima istanza esiste solo sulla
-  carta finché non arriva la sua estensione (FATTO-5, NF-3): se il reboot Suitest non è accettato, l'esito
-  è `Unreachable`, si esaurisce la scala e serve una mano umana. È il comportamento corretto, non una lacuna.
+  ci sia lecito usare **in questo giro**: Suitest non espone alcun power on (FATTO-10) e lo smart plug, che
+  è il canale previsto, arriverà con la sua estensione (FATTO-5, NF-3). Se il reboot Suitest non è accettato,
+  l'esito è `Unreachable`, si esaurisce la scala e serve una mano umana. È il comportamento corretto, non
+  una lacuna.
 - **Capability**: se la CU non dichiara `RebootHardware` (FATTO-1), il dispaccio torna `Unsupported` e la
   sessione si arrende **subito, senza ritentare**: ritentare una cosa che quel device non saprà mai fare è
   solo rumore.
@@ -822,7 +828,8 @@ l'esagono.
 ### M-10 · `hardware-control` e `alerting` — solo firme
 
 Crea i file con il docblock e la **firma** dell'adapter, senza implementazione: `RoutingDeviceControl`
-(smista su `(kind, remedy)`, A-Ext-2), `SuitestDeviceControl` (`PowerOn`, `RebootHardware`),
+(smista su `(kind, remedy)`, A-Ext-2), `SuitestDeviceControl` (solo `RebootHardware` su una CU — è
+l'unica scrittura che l'API espone, FATTO-10; tutto il resto è `Unsupported`),
 `AdbDeviceControl` (`ReconnectTransport` → `adb connect`; `RestartApp` → force-stop + start;
 `RebootHardware` → `adb reboot`; `RelaunchSuite` → sequenza post-boot), le sonde per faccia, e
 `SlackNotifier` + `IncidentMessage`. Nel docblock di ciascuno scrivi **da dove si travasa** il codice
