@@ -26,7 +26,8 @@ export const execute = (
         RecoverySession.decide(session, { _tag: "Abort", reason: AbortReason.outOfWindow, now }),
       );
       return pipe(
-        RTE.traverseArray((decision: (typeof decisions)[number]) => Sessions.save(decision.state))(decisions),
+        decisions,
+        RTE.traverseArray((decision) => Sessions.save(decision.state)),
         RTE.map(() => decisions.flatMap((decision) => [...decision.events])),
       );
     }),

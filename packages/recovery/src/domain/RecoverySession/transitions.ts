@@ -35,7 +35,7 @@ export const closeLast = (
   at: Instant,
 ): ReadonlyArray<AttemptRecord.AttemptRecord> => {
   const last = session.history.length - 1;
-  return last >= 0 && AttemptRecord.isOpen(session.history[last] as AttemptRecord.AttemptRecord)
+  return last >= 0 && AttemptRecord.isOpen(session.history[last])
     ? session.history.map((record, index) => (index === last ? AttemptRecord.close(record, verdict, at) : record))
     : session.history;
 };

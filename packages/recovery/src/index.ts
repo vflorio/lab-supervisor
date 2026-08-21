@@ -4,6 +4,7 @@
 // l'esagono (M-8).
 
 export * as AbortRecovery from "./application/AbortRecovery";
+export * as ComposedSupervision from "./application/ComposedSupervision";
 export * as ConfigureSupervisionProfile from "./application/ConfigureSupervisionProfile";
 export * as OpenRecoveryForConfirmedOutage from "./application/OpenRecoveryForConfirmedOutage";
 export * as onFacetBecameUnhealthy from "./application/policies/onFacetBecameUnhealthy";

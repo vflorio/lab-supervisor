@@ -18,11 +18,11 @@ import * as InMemoryDeviceRepository from "@lab/registry/testing/InMemoryDeviceR
 import * as E from "fp-ts/Either";
 import * as O from "fp-ts/Option";
 import type { ReaderTaskEither } from "fp-ts/ReaderTaskEither";
+import * as ComposedSupervision from "../../src/application/ComposedSupervision";
 import * as onFacetBecameUnhealthy from "../../src/application/policies/onFacetBecameUnhealthy";
 import * as TickDueSessions from "../../src/application/TickDueSessions";
 import type { SupervisionProfile } from "../../src/domain/SupervisionProfile";
 import * as InMemoryRecoverySessionRepository from "../../src/testing/InMemoryRecoverySessionRepository";
-import * as InMemorySupervision from "../../src/testing/InMemorySupervision";
 import * as InMemorySupervisionProfileRepository from "../../src/testing/InMemorySupervisionProfileRepository";
 import * as RecordingNotifier from "../../src/testing/RecordingNotifier";
 import * as ScriptedDeviceControl from "../../src/testing/ScriptedDeviceControl";
@@ -73,7 +73,7 @@ export const makeLab = (options: LabOptions = {}) => {
     clock.advance,
     (deviceId) => deviceRepository.all().find((device) => device.id === deviceId)?.capabilities,
   );
-  const supervision = InMemorySupervision.make({
+  const supervision = ComposedSupervision.make({
     devices: deviceRepository,
     health: facetHealthRepository,
     profiles: supervisionProfileRepository,

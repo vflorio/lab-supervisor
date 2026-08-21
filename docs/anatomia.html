@@ -384,7 +384,7 @@
     <p class="meta"><!--stats:meta--><span>6 package</span>
       <span>13 invarianti</span>
       <span>22 scenari</span>
-      <span>188 test</span>
+      <span>198 test</span>
       <span>zero hardware</span><!--/stats:meta--></p>
   </header>
 
@@ -569,6 +569,11 @@
     period, non conosce criticità, e non emette mai un evento tipo <code>RecoveryNeeded</code> — significherebbe che sta
     decidendo al posto del core.</p>
 
+  <p>Anche <em>chi</em> si sonda è una domanda del monitoring, non dell'app: <code>ProbeMonitoredFacets</code> legge
+    dall'anagrafica i device monitorati, li espande nelle facce del loro kind con <code>facetsOf</code> e consegna il
+    lotto all'anti-flapping. Fuori, nel composition root, resta solo il <code>setInterval</code>: la cadenza è un
+    adapter driving, <em>cosa</em> osservare no.</p>
+
   <figure>
     <svg viewBox="0 0 860 340" role="img" aria-label="Le sonde producono ProbeOutcome, l'anti-flapping li conferma in HealthStatus con un since, la fotografia entra nel SupervisionContext e arriva all'aggregato. Recovery non possiede sonde.">
       <defs>
@@ -593,6 +598,7 @@
       <text x="530" y="318" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="currentColor">il confine che regge tutto</text>
 
       <!-- stage 1 -->
+      <text x="106" y="82" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">ProbeMonitoredFacets</text>
       <rect x="36" y="92" width="140" height="60" rx="3" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"></rect>
       <text x="106" y="116" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="600" fill="currentColor">sonda</text>
       <text x="106" y="134" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">tcp · adb · Suitest</text>
@@ -972,7 +978,7 @@ adapters/     (cfg) =&gt; Partial&lt;AppEnv&gt;                    <span class="
     escalation passano in millisecondi, perché il ticker che batte il tempo e il clock che lo legge sono due cose
     diverse.</p>
 
-  <p class="colophon">Lab Supervisor · branch <code>model/ddd-v2</code> · <!--stats:colophon-->6 package, 118 file sorgente, 188 test verdi<!--/stats:colophon--><br>
+  <p class="colophon">Lab Supervisor · branch <code>model/ddd-v2</code> · <!--stats:colophon-->6 package, 119 file sorgente, 198 test verdi<!--/stats:colophon--><br>
     Le sigle citate (FATTO-n, FL-n, INV-n, NF-n, §n) rimandano a <code>MODEL-PROMPT.md</code>, la specifica del
     modello.</p>
 

@@ -1,8 +1,10 @@
-// L'unico fake con della composizione dentro: mette insieme anagrafica, salute e profili per
-// rispondere alle due domande che una sessione fa al mondo. È anche la dimostrazione che il
-// confine di §4.1 regge — la salute che arriva qui è quella **confermata** dal monitoring, e
-// recovery non ha modo di sondare per conto suo.
-// La custodia e la finestra si leggono a ogni chiamata: sono le sole cose che restano live a
+// L'implementazione di `SupervisionPort`: compone anagrafica, salute confermata e profili per
+// rispondere alle due domande che una sessione fa al mondo. Non è un fake e non ha niente di
+// in-memory — le tre porte sotto sono quelle che il composition root le passa, fake nei test e
+// adapter veri in produzione: è il percorso di produzione, e per questo vive in `application/`.
+// È anche il punto in cui il confine di §4.1 si vede: la salute che arriva qui è quella
+// **confermata** dal monitoring, e recovery non ha modo di sondare per conto suo.
+// La custodia e la finestra si rileggono a ogni chiamata: sono le sole cose che restano live a
 // recupero iniziato (INV-13).
 
 import * as HealthSnapshot from "@lab/monitoring/domain/HealthSnapshot";
