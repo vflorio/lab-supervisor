@@ -15,7 +15,7 @@
     "io-ts": "2.2.22"
   },
   "scripts": {
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "check-types": "tsc --noEmit"
   }
 }

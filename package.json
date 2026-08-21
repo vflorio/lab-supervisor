@@ -17,6 +17,8 @@
   "scripts": {
     "check-types": "turbo run check-types",
     "clean": "turbo run clean && rm -rf dist && rm -rf packages/*/dist",
+    "docs:check": "bun run docs/refresh.ts --check",
+    "docs:refresh": "bun run docs/refresh.ts",
     "format": "turbo run format && bunx @biomejs/biome format --write",
     "lint": "turbo run lint && bunx @biomejs/biome check --write",
     "test:unit": "turbo run test"
