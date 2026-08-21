@@ -43,7 +43,7 @@ const keys = (targets: ReadonlyArray<{ target: RecoveryTarget.RecoveryTarget }>)
   targets.map((entry) => RecoveryTarget.key(entry.target));
 
 describe("correlateOutage · la CU come colpevole (FL-3)", () => {
-  it("tutte le TV giù ⇒ un solo bersaglio cluster, zero bersagli sulle TV", () => {
+  it("all TVs down ⇒ one cluster target, zero targets on the TVs", () => {
     const targets = correlateOutage(
       snapshot(tvs.map((tv, index) => [tv, 10 * index] as const)),
       topology,
@@ -53,7 +53,7 @@ describe("correlateOutage · la CU come colpevole (FL-3)", () => {
     expect(RecoveryTarget.actsOn(targets[0]!.target)).toBe(cu.id);
   });
 
-  it("l'outage del cluster comincia quando il quorum è raggiunto, non al primo caduto", () => {
+  it("the cluster outage begins when quorum is reached, not at the first failure", () => {
     const targets = correlateOutage(
       snapshot([
         [tvs[0]!, 0],
@@ -67,7 +67,7 @@ describe("correlateOutage · la CU come colpevole (FL-3)", () => {
     expect(targets[0]!.outageSince).toEqual(t(90));
   });
 
-  it("con MinChildren il quorum è l'istante del figlio che lo completa", () => {
+  it("with MinChildren the quorum is the instant of the child that completes it", () => {
     const targets = correlateOutage(
       snapshot([
         [tvs[0]!, 0],
@@ -80,7 +80,7 @@ describe("correlateOutage · la CU come colpevole (FL-3)", () => {
     expect(targets[0]!.outageSince).toEqual(t(30));
   });
 
-  it("meno figli del quorum ⇒ nessun cluster, ogni TV è un guasto suo", () => {
+  it("fewer children than quorum ⇒ no cluster, each TV is its own failure", () => {
     const targets = correlateOutage(
       snapshot([
         [tvs[0]!, 0],
@@ -92,7 +92,7 @@ describe("correlateOutage · la CU come colpevole (FL-3)", () => {
     expect(keys(targets)).toEqual(["device:tv-1", "device:tv-2"]);
   });
 
-  it("se è la CU stessa a essere giù la regola non si applica: i figli sono danno collaterale", () => {
+  it("if it's the CU itself that's down the rule does not apply: children are collateral damage", () => {
     const targets = correlateOutage(
       snapshot([
         [cu, 5],
@@ -105,14 +105,14 @@ describe("correlateOutage · la CU come colpevole (FL-3)", () => {
     expect(targets[0]!.outageSince).toEqual(t(5));
   });
 
-  it("la sola CU giù, senza figli giù, è un device e non un cluster", () => {
+  it("the only CU down, without children down, is a device not a cluster", () => {
     const targets = correlateOutage(snapshot([[cu, 5]]), topology, CorrelationRule.allChildren);
     expect(keys(targets)).toEqual(["device:cu-1"]);
   });
 });
 
 describe("correlateOutage · gli archi che non si attraversano (INV-11, NF-2)", () => {
-  it("camere giù appese via Observes non producono mai un bersaglio sulla CU (FATTO-3)", () => {
+  it("cameras down suspended via Observes never produce a target on the CU (FACT-3)", () => {
     const targets = correlateOutage(
       snapshot(cameras.map((camera) => [camera, 0] as const)),
       topology,
@@ -146,14 +146,14 @@ describe("correlateOutage · gli archi che non si attraversano (INV-11, NF-2)", 
   });
 });
 
-describe("correlateOutage · proprietà (M-5)", () => {
+describe("correlateOutage · properties (M-5)", () => {
   // Su ogni sottoinsieme possibile di device giù: bersagli a due a due disgiunti, e ogni device
   // giù reso conto da esattamente un bersaglio. 128 combinazioni, esaustive e deterministiche.
   // Nota sulla parola "esattamente": i membri di un cluster includono la CU anche quando la CU
   // risponde, perché è il device su cui si *agisce* e INV-1 deve impedire che qualcun altro apra
   // una sessione su di lei nel frattempo. La copertura si legge quindi sui device giù: nessuno
   // scoperto, nessuno contato due volte.
-  it("i bersagli sono disgiunti e ogni device giù è reso conto una volta sola", () => {
+  it("targets are disjoint and every device down is accounted once only", () => {
     for (let mask = 0; mask < 2 ** all.length; mask++) {
       const downDevices = all.filter((_, index) => (mask >> index) & 1);
       const targets = correlateOutage(
@@ -175,7 +175,7 @@ describe("correlateOutage · proprietà (M-5)", () => {
     }
   });
 
-  it("l'ordine di uscita è deterministico, non quello di iterazione di un Set", () => {
+  it("the exit order is deterministic, not the order of Set iteration", () => {
     const first = correlateOutage(
       snapshot([
         [cameras[1]!, 0],

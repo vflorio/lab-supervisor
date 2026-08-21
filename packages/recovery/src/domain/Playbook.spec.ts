@@ -19,7 +19,7 @@ const step = (remedy: Remedy.Remedy, verifies: "StreamAvailable" | "AdbTransport
   });
 
 describe("Playbook", () => {
-  it("un playbook vuoto non è una scala", () => {
+  it("an empty playbook is not a sequence", () => {
     expect(Playbook.make([], "StreamAvailable")).toEqual(E.left({ _tag: "EmptyPlaybook" }));
   });
 

@@ -3,6 +3,12 @@
 // e i suoi casi d'uso si esportano perché il composition root deve poterli montare; le porte
 // perché sono contratti, non implementazioni.
 
+export * as AttachDevice from "./application/AttachDevice";
+export * as GrantCustody from "./application/GrantCustody";
+export * as LiftMaintenanceHold from "./application/LiftMaintenanceHold";
+export * as PlaceMaintenanceHold from "./application/PlaceMaintenanceHold";
+export * as RegisterDevice from "./application/RegisterDevice";
+export * as ReleaseCustody from "./application/ReleaseCustody";
 export * as Attachment from "./domain/Attachment";
 export type { Capability as CapabilityName } from "./domain/Capability";
 export * as Capability from "./domain/Capability";

@@ -16,7 +16,7 @@ describe("RetryPolicy", () => {
     expect(Duration.toMillis(RetryPolicy.delayAfter(backoff, RetryPolicy.attemptNo(9)))).toBe(60_000);
   });
 
-  it("una sola funzione risponde a 'si può ritentare?' (INV-2)", () => {
+  it("a single function answers 'can we retry?' (INV-2)", () => {
     const policy = RetryPolicy.make(2, RetryPolicy.fixed(Duration.seconds(30)));
     expect(RetryPolicy.hasAttemptsLeft(policy, RetryPolicy.attemptNo(1))).toBe(true);
     expect(RetryPolicy.hasAttemptsLeft(policy, RetryPolicy.attemptNo(2))).toBe(false);

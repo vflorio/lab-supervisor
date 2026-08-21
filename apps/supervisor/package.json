@@ -1,0 +1,21 @@
+{
+  "name": "@lab/supervisor",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@lab/alerting": "workspace:*",
+    "@lab/hardware-control": "workspace:*",
+    "@lab/kernel": "workspace:*",
+    "@lab/monitoring": "workspace:*",
+    "@lab/recovery": "workspace:*",
+    "@lab/registry": "workspace:*",
+    "fp-ts": "2.16.11",
+    "io-ts": "2.2.22"
+  },
+  "scripts": {
+    "start": "bun run src/index.ts --config config/config.lab.jsonc",
+    "test": "vitest run",
+    "check-types": "tsc --noEmit"
+  }
+}

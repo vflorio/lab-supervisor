@@ -28,14 +28,14 @@ export const isAccepted = (outcome: RemedyOutcome): boolean => outcome._tag === 
 export const describe = (outcome: RemedyOutcome): string => {
   switch (outcome._tag) {
     case "Accepted":
-      return "comando preso in carico";
+      return "accepted";
     case "Rejected":
-      return `comando rifiutato: ${outcome.reason}`;
+      return `command rejected: ${outcome.reason}`;
     case "Unreachable":
-      return "device irraggiungibile";
+      return "device unreachable";
     case "Unsupported":
-      return "il device non dichiara la capability richiesta";
+      return "device does not declare required capability";
     case "TransportError":
-      return `errore di trasporto: ${outcome.detail}`;
+      return `transport error: ${outcome.detail}`;
   }
 };

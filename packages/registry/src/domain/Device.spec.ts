@@ -28,7 +28,7 @@ describe("Device · anagrafica", () => {
     );
   });
 
-  it("un'istanza non dichiara capability che il suo tipo non potrà mai avere (FATTO-1)", () => {
+  it("an instance does not declare capability that its type can never have (FACT-1)", () => {
     const absurd = Device.register(
       { id: DeviceId.of("tv-3"), kind: "Tv", capabilities: Capability.setOf("AdbTcp") },
       t0,
@@ -36,7 +36,7 @@ describe("Device · anagrafica", () => {
     expect(E.isLeft(absurd)).toBe(true);
   });
 
-  it("una CU può non dichiarare RebootHardware: è la verità della singola unità (FATTO-1)", () => {
+  it("a CU may not declare RebootHardware: it is the truth of the single unit (FACT-1)", () => {
     const unit = registered({
       id: DeviceId.of("cu-3"),
       kind: "ControlUnit",
@@ -77,13 +77,13 @@ describe("Device · custodia", () => {
     expect(held.events.map((event) => event._tag)).toEqual(["MaintenanceHoldPlaced"]);
   });
 
-  it("non si concede la custodia di un device che è già in mano a un operatore", () => {
+  it("custody is not granted to a device already in an operator's hands", () => {
     const held = Device.placeMaintenanceHold(tv, "manutenzione", t0).state;
     const granted = Device.grantCustody(held, Custody.recorder(RecordingSessionId.of("rec-1"), t0), t0);
     expect(E.isLeft(granted)).toBe(true);
   });
 
-  it("togliere un hold che non c'è non è un errore: è un non-fatto", () => {
+  it("removing a hold that is not there is not an error: it is a non-fact", () => {
     expect(Device.liftMaintenanceHold(tv, t0).events).toEqual([]);
   });
 

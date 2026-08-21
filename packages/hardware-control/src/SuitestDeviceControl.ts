@@ -44,11 +44,11 @@ const toOutcome = (failure: Http.HttpFailure): RemedyOutcome.RemedyOutcome => {
         ? RemedyOutcome.rejected(`Suitest ${failure.status}: ${failure.body.slice(0, 200)}`)
         : RemedyOutcome.transportError(`Suitest ${failure.status}`);
     case "Timeout":
-      return RemedyOutcome.transportError(`nessuna risposta da Suitest entro ${failure.afterMs}ms`);
+      return RemedyOutcome.transportError(`no response from Suitest within ${failure.afterMs}ms`);
     case "Unreachable":
-      return RemedyOutcome.transportError(`Suitest irraggiungibile: ${failure.detail}`);
+      return RemedyOutcome.transportError(`Suitest unreachable: ${failure.detail}`);
     case "Malformed":
-      return RemedyOutcome.transportError(`risposta Suitest non conforme: ${failure.detail}`);
+      return RemedyOutcome.transportError(`Suitest response not conforming: ${failure.detail}`);
   }
 };
 

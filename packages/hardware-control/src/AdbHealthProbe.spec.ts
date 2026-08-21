@@ -56,7 +56,7 @@ const run = async (port: ReturnType<typeof AdbHealthProbe.make>, ref: FacetRef.F
 };
 
 describe("AdbHealthProbe", () => {
-  it("un transport elencato e vivo è sano", async () => {
+  it("a listed and alive transport is healthy", async () => {
     const device = camera(endpoint);
     const adb = FakeAdb.make([{ endpoint, state: "device" }]);
     const probe = AdbHealthProbe.make(config, { lookup: lookupOf(device), clock, spawn: adb.spawn });
@@ -64,7 +64,7 @@ describe("AdbHealthProbe", () => {
     expect((await run(probe, FacetRef.make(device.id, "AdbTransport"))).ok).toBe(true);
   });
 
-  it("un transport assente da `adb devices` è giù, e lo dice", async () => {
+  it("a transport absent from `adb devices` is down, and it says so", async () => {
     const device = camera(endpoint);
     const adb = FakeAdb.make();
     const probe = AdbHealthProbe.make(config, { lookup: lookupOf(device), clock, spawn: adb.spawn });
@@ -74,7 +74,7 @@ describe("AdbHealthProbe", () => {
     expect(outcome.detail).toEqual(O.some("transport assente da `adb devices`"));
   });
 
-  it("un transport elencato in stato `offline` non è sano", async () => {
+  it("a transport listed in `offline` state is not healthy", async () => {
     const device = camera(endpoint);
     const adb = FakeAdb.make([{ endpoint, state: "offline" }]);
     const probe = AdbHealthProbe.make(config, { lookup: lookupOf(device), clock, spawn: adb.spawn });
@@ -96,7 +96,7 @@ describe("AdbHealthProbe", () => {
     expect(outcome.detail).toEqual(O.some("comando appeso oltre 15000ms"));
   });
 
-  it("adb assente dalla macchina è un esito con la ragione scritta, non un'eccezione (A-6)", async () => {
+  it("adb absent from the machine is an outcome with the reason written, not an exception (A-6)", async () => {
     const device = camera(endpoint);
     const adb = FakeAdb.make();
     adb.failOn("devices", { _tag: "SpawnFailed", detail: "adb: command not found" });

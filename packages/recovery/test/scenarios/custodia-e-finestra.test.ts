@@ -28,7 +28,7 @@ describe("S15 · il device torna sano durante il grace (INV-7)", () => {
   });
 });
 
-describe("S16 · maintenance hold a metà recupero (FATTO-15)", () => {
+describe("S16 · maintenance hold mid-recovery (FACT-15)", () => {
   it("la sessione abortisce, nessun comando dopo, nessun incidente", async () => {
     const { lab, camera } = cameraDown();
     await lab.detect("StreamAvailable");
@@ -66,7 +66,7 @@ describe("S16 · maintenance hold a metà recupero (FATTO-15)", () => {
 });
 
 describe("S17 · il cooldown dopo una resa (INV-9)", () => {
-  it("non si riapre nulla sugli stessi device finché non è passato, e poi sì", async () => {
+  it("nothing reopens on the same devices until it passes, and then yes", async () => {
     const lab = makeLab();
     lab.face(lab.cu.id, "Reachable", "down", 0);
     await lab.detect("Reachable");
@@ -105,7 +105,7 @@ describe("S18 · fuori dalla finestra (FATTO-14, INV-3)", () => {
     expect(lab.sessions()[0]?.phase).toMatchObject({ _tag: "Aborted", reason: { _tag: "OutOfWindow" } });
   });
 
-  it("una sessione già in corso si ferma quando la finestra si chiude", async () => {
+  it("an ongoing session stops when the window closes", async () => {
     const { lab } = cameraDown();
     await lab.detect("StreamAvailable");
     await lab.until(180);

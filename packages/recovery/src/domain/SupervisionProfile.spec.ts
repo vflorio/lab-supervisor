@@ -38,7 +38,7 @@ const draft = (kind: "Tv" | "ControlUnit", remedies: ReadonlyArray<Remedy.Remedy
 };
 
 describe("SupervisionProfile.make", () => {
-  it("chiedere AdbTcp a una TV è assurdo e si vede subito", () => {
+  it("asking AdbTcp from a TV is absurd and you see it right away", () => {
     const result = SupervisionProfile.make(
       draft("Tv", [Remedy.reconnectTransport]),
       Capability.capabilitiesOfKind("Tv"),
@@ -47,7 +47,7 @@ describe("SupervisionProfile.make", () => {
     expect(E.isLeft(result) && result.left.missing).toEqual(["AdbTcp"]);
   });
 
-  it("il reboot di una CU è nel soprainsieme del kind, e passa (FATTO-1)", () => {
+  it("rebooting a CU is in the kind's superset, and passes (FACT-1)", () => {
     const result = SupervisionProfile.make(
       draft("ControlUnit", [Remedy.rebootHardware]),
       Capability.capabilitiesOfKind("ControlUnit"),
@@ -55,7 +55,7 @@ describe("SupervisionProfile.make", () => {
     expect(E.isRight(result)).toBe(true);
   });
 
-  it("il soprainsieme del kind non dice nulla sulla singola unità: quella risponde Unsupported", () => {
+  it("the kind's superset says nothing about the single unit: it responds Unsupported", () => {
     // `capabilitiesOfKind` è una guardia, non la verità: la verità è `device.capabilities`, e il
     // controllo avviene al dispaccio (FL-2).
     expect(Capability.capabilitiesOfKind("ControlUnit").has("RebootHardware")).toBe(true);

@@ -35,13 +35,13 @@ export const malformed = (detail: string): HttpFailure => ({ _tag: "Malformed", 
 export const describe = (failure: HttpFailure): string => {
   switch (failure._tag) {
     case "Unreachable":
-      return `host irraggiungibile: ${failure.detail}`;
+      return `host unreachable: ${failure.detail}`;
     case "Timeout":
-      return `nessuna risposta entro ${failure.afterMs}ms`;
+      return `no response within ${failure.afterMs}ms`;
     case "BadStatus":
-      return `risposta ${failure.status}: ${failure.body.slice(0, 200)}`;
+      return `response ${failure.status}: ${failure.body.slice(0, 200)}`;
     case "Malformed":
-      return `risposta non conforme: ${failure.detail}`;
+      return `response not conforming: ${failure.detail}`;
   }
 };
 

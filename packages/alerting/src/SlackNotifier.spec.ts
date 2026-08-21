@@ -36,7 +36,7 @@ const incident: Incident = {
 type Payload = { readonly channel: string; readonly text: string; readonly blocks: ReadonlyArray<{ type: string }> };
 
 describe("SlackNotifier", () => {
-  it("pubblica sul canale configurato, con testo semplice e blocchi", async () => {
+  it("publishes on the configured channel, with plain text and blocks", async () => {
     const slack = RecordingSlack.make();
     const notifier = SlackNotifier.make(config, slack.transport);
 
@@ -47,12 +47,12 @@ describe("SlackNotifier", () => {
     const payload = slack.posted()[0]!.body as Payload;
     expect(slack.posted()[0]!.url).toBe("https://slack.com/api/chat.postMessage");
     expect(payload.channel).toBe("#lab-alerts");
-    // Il testo semplice è ciò che compare nella notifica push: senza, sul telefono si vede vuoto.
-    expect(payload.text).toContain("cam-1 non recuperato");
+    // Plain text is what appears in push notification: without it, the phone shows nothing.
+    expect(payload.text).toContain("cam-1 not recovered");
     expect(payload.blocks.map((block) => block.type)).toEqual(["header", "section", "context"]);
   });
 
-  it("un `ok: false` dentro un 200 è un fallimento, non una consegna riuscita", async () => {
+  it("an `ok: false` inside a 200 is a failure, not a successful delivery", async () => {
     const slack = RecordingSlack.make();
     slack.rejectWith("channel_not_found");
     const notifier = SlackNotifier.make(config, slack.transport);
@@ -62,14 +62,14 @@ describe("SlackNotifier", () => {
     expect(result).toEqual(E.left({ _tag: "NotifyFailed", detail: "channel_not_found" }));
   });
 
-  it("una notifica non consegnata finisce nel canale d'errore: è un guasto del canale, non un esito del recupero (A-6)", async () => {
+  it("an undelivered notification ends in the error channel: it is a channel failure, not a recovery outcome (A-6)", async () => {
     const slack = RecordingSlack.make();
     slack.failWith({ _tag: "Timeout", afterMs: 5_000 });
     const notifier = SlackNotifier.make(config, slack.transport);
 
     const result = await notifier.publish(incident)();
 
-    expect(result).toEqual(E.left({ _tag: "NotifyFailed", detail: "nessuna risposta entro 5000ms" }));
+    expect(result).toEqual(E.left({ _tag: "NotifyFailed", detail: "no response within 5000ms" }));
     expect(slack.posted()).toEqual([]);
   });
 });

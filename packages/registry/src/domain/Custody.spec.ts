@@ -18,7 +18,7 @@ describe("Custody", () => {
     expect(Custody.isMaintenanceHold(hold)).toBe(true);
   });
 
-  it("una custodia del registratore scaduta non è più una custodia", () => {
+  it("an expired custody of the recorder is no longer a custody", () => {
     const until = Instant.plus(t0, Duration.minutes(10));
     const custody = Custody.recorder(RecordingSessionId.of("rec-1"), until);
     expect(Custody.allowsSupervisor(custody, Instant.plus(t0, Duration.minutes(5)))).toBe(false);

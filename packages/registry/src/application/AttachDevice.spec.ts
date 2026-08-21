@@ -29,7 +29,7 @@ const run = (seed: ReadonlyArray<Device.Device>, input: AttachDevice.Input) => {
 };
 
 describe("AttachDevice", () => {
-  it("una quinta TV sulla stessa CU è una topologia impossibile (FATTO-2)", async () => {
+  it("a fifth TV on the same CU is an impossible topology (FACT-2)", async () => {
     const fifth = build({ id: DeviceId.of("tv-5"), kind: "Tv" });
     const result = await run([cu, ...fourTvs, fifth], {
       deviceId: fifth.id,
@@ -39,7 +39,7 @@ describe("AttachDevice", () => {
     expect(E.isLeft(result) && result.left._tag).toBe("TooManyDependents");
   });
 
-  it("riattaccare una TV già attaccata alla stessa CU resta lecito: non è un quinto figlio", async () => {
+  it("reattaching a TV already attached to the same CU is allowed: it is not a fifth child", async () => {
     const result = await run([cu, ...fourTvs], {
       deviceId: fourTvs[0]!.id,
       parent: cu.id,
@@ -54,13 +54,13 @@ describe("AttachDevice", () => {
     expect(E.isLeft(result) && result.left._tag).toBe("InvalidAttachment");
   });
 
-  it("attaccare a un device che non esiste è un errore di dominio, non un crash", async () => {
+  it("attaching to a nonexistent device is a domain error, not a crash", async () => {
     const tv = build({ id: DeviceId.of("tv-9"), kind: "Tv" });
     const result = await run([tv], { deviceId: tv.id, parent: DeviceId.of("cu-ignoto"), relation: "DependsOn" });
     expect(E.isLeft(result) && result.left._tag).toBe("DeviceNotFound");
   });
 
-  it("l'attacco riuscito è persistito e pubblica il fatto", async () => {
+  it("successful attachment is persisted and publishes the fact", async () => {
     const tv = build({ id: DeviceId.of("tv-6"), kind: "Tv" });
     const deviceRepository = InMemoryDeviceRepository.make([cu, tv]);
     const result = await AttachDevice.execute(

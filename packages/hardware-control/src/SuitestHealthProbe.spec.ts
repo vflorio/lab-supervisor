@@ -58,7 +58,7 @@ const run = async (port: ReturnType<typeof SuitestHealthProbe.make>, ref: FacetR
 };
 
 describe("SuitestHealthProbe", () => {
-  it("legge `online` per unità come faccia Reachable di una control unit (FATTO-6)", async () => {
+  it("reads `online` for units as Reachable facet of a control unit (FACT-6)", async () => {
     const cu = registered("cu-1", "ControlUnit", "candy-1");
     const suitest = FakeSuitest.make({
       ...FakeSuitest.emptyLab,
@@ -129,7 +129,7 @@ describe("SuitestHealthProbe", () => {
     expect(outcome.detail).toEqual(O.some("online=false, streamActive=true"));
   });
 
-  it("una camera senza riferimento Suitest è un esito, non un'eccezione (FATTO-9)", async () => {
+  it("a camera without Suitest reference is an outcome, not an exception (FACT-9)", async () => {
     const camera = registered("cam-2", "AndroidCamera");
     const suitest = FakeSuitest.make();
     const { clock } = frozenClock();
@@ -166,7 +166,7 @@ describe("SuitestHealthProbe", () => {
     expect(outcome.detail).toEqual(O.some("nessuna risposta entro 5000ms"));
   });
 
-  it("più facce nello stesso tick condividono una sola lettura di Suitest", async () => {
+  it("multiple facets in the same tick share a single Suitest read", async () => {
     const cu = registered("cu-4", "ControlUnit", "candy-4");
     const tv = registered("tv-4", "Tv", "dev-4");
     const camera = registered("cam-4", "AndroidCamera", "vcd-4");
@@ -200,7 +200,7 @@ describe("SuitestHealthProbe", () => {
     expect(suitest.reads()).toHaveLength(6);
   });
 
-  it("l'istante dell'esito è quello della fotografia, non quello della domanda", async () => {
+  it("the outcome's instant is that of the snapshot, not of the query", async () => {
     const cu = registered("cu-5", "ControlUnit", "candy-5");
     const suitest = FakeSuitest.make({
       ...FakeSuitest.emptyLab,

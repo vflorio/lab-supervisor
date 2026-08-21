@@ -22,7 +22,7 @@ describe("HealthSnapshot", () => {
     expect(HealthSnapshot.isHealthy(snapshot, stream)).toBe(false);
   });
 
-  it("una faccia mai sondata è Unknown, non sana", () => {
+  it("a facet never probed is Unknown, not healthy", () => {
     const unseen = FacetRef.make(DeviceId.of("tv-1"), "Reachable");
     expect(HealthSnapshot.statusOf(snapshot, unseen)).toEqual(HealthStatus.unknown);
     expect(HealthSnapshot.isHealthy(snapshot, unseen)).toBe(false);

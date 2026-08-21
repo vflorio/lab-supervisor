@@ -157,7 +157,7 @@ describe("RecoverySession · impedimenti dal contesto (INV-3)", () => {
     expect(dispatches(trace)).toEqual([]);
   });
 
-  it("la finestra è live: chiuderla a metà verifica ferma la sessione (INV-13)", () => {
+  it("the window is live: closing it mid-verification stops the session (INV-13)", () => {
     const verifying = arrived(tick(opened(), 200, down), RemedyOutcome.accepted, 201);
     expect(verifying.session.phase._tag).toBe("Verifying");
     const closed = tick(verifying, 210, down, { window: SupervisionWindow.closed });
@@ -166,7 +166,7 @@ describe("RecoverySession · impedimenti dal contesto (INV-3)", () => {
 });
 
 describe("RecoverySession · scarti ed escalation monotona (INV-4, INV-6)", () => {
-  it("un gradino la cui precondizione non è soddisfatta viene scartato, non fallito", () => {
+  it("a step whose precondition is not met is skipped, not failed", () => {
     const trace = tick(opened(), 200, [
       ["StreamAvailable", "down", 0],
       ["AdbTransport", "up", 0],
@@ -196,7 +196,7 @@ describe("RecoverySession · scarti ed escalation monotona (INV-4, INV-6)", () =
     expect(tags(advanced)).toContain("VerificationSucceeded");
   });
 
-  it("salire di gradino così non consuma tentativi: il gradino nuovo riparte dal primo", () => {
+  it("advancing step this way does not consume attempts: the new step restarts from the first", () => {
     const verifying = arrived(tick(opened(), 200, down), RemedyOutcome.accepted, 201);
     const advanced = tick(verifying, 210, [
       ["StreamAvailable", "down", 0],
@@ -214,13 +214,13 @@ describe("RecoverySession · la guarigione deve essere posteriore al comando (IN
   const untilVerifying = () =>
     arrived(tick(opened(profile({ playbook: playbook([restartApp]) })), 200, down), RemedyOutcome.accepted, 201);
 
-  it("uno stato sano ereditato da prima del dispaccio non è una guarigione (FATTO-13)", () => {
+  it("a healthy state inherited from before dispatch is not a recovery (FACT-13)", () => {
     const trace = tick(untilVerifying(), 215, [["StreamAvailable", "up", 100]]);
     expect(trace.session.phase._tag).toBe("Verifying");
     expect(tags(trace)).not.toContain("DeviceRecovered");
   });
 
-  it("si risolve solo quando il `since` è posteriore al dispaccio", () => {
+  it("resolves only when `since` is after dispatch", () => {
     const trace = tick(untilVerifying(), 215, [["StreamAvailable", "up", 205]]);
     expect(trace.session.phase._tag).toBe("Resolved");
     expect(tags(trace)).toContain("DeviceRecovered");
@@ -235,7 +235,7 @@ describe("RecoverySession · la guarigione deve essere posteriore al comando (IN
 describe("RecoverySession · tentativi e scadenze (INV-2, INV-10)", () => {
   const single = () => opened(profile({ playbook: playbook([restartApp]) }));
 
-  it("un rimedio senza esito entro la scadenza è un tentativo fallito, non un'attesa infinita", () => {
+  it("a remedy without outcome by deadline is a failed attempt, not infinite waiting", () => {
     const executing = tick(single(), 200, down);
     expect(executing.session.phase).toMatchObject({ _tag: "Executing", deadline: t(210) });
     const timedOut = tick(executing, 211, down);
@@ -252,7 +252,7 @@ describe("RecoverySession · tentativi e scadenze (INV-2, INV-10)", () => {
     expect(trace.session.phase._tag).toBe("GivenUp");
   });
 
-  it("ogni fase attiva chiede un tick, ogni fase terminale non ne chiede più (NO-7)", () => {
+  it("every active phase requests a tick, every terminal phase requests no more (NO-7)", () => {
     const executing = tick(single(), 200, down);
     expect(O.isSome(RecoverySession.nextDueAt(executing.session))).toBe(true);
     const verifying = arrived(executing, RemedyOutcome.accepted, 201);
@@ -280,14 +280,14 @@ describe("RecoverySession · la resa (INV-9)", () => {
     });
   });
 
-  it("è terminale e assorbe ogni comando", () => {
+  it("is terminal and absorbs every command", () => {
     const trace = exhaust();
     const after = tick(trace, 300, down);
     expect(after.session).toEqual(trace.session);
     expect(after.events).toEqual(trace.events);
   });
 
-  it("un rimedio che quel device non saprà mai fare fa arrendere subito, senza ritentare (FL-2)", () => {
+  it("a remedy that device can never do causes immediate surrender, without retrying (FL-2)", () => {
     const trace = arrived(
       tick(opened(profile({ playbook: playbook([restartApp]) })), 200, down),
       RemedyOutcome.unsupported,

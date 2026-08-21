@@ -35,7 +35,7 @@ describe("S10 · le quattro TV di una CU cadono", () => {
   });
 });
 
-describe("S11 · una TV aveva già una sessione quando il quorum si forma", () => {
+describe("S11 · a TV already had a session when the quorum forms", () => {
   it("quella sessione viene assorbita con Superseded e ne resta una sola attiva (INV-1)", async () => {
     const lab = makeLab({ profiles: [...labProfiles, tvProfileForTests] });
     lab.face(lab.cu.id, "Reachable", "up", 0);
@@ -59,7 +59,7 @@ describe("S11 · una TV aveva già una sessione quando il quorum si forma", () =
 });
 
 describe("S12 · la CU torna ma le TV no (INV-8)", () => {
-  it("non è una guarigione: la sessione esaurisce e alza un incidente", async () => {
+  it("is not a recovery: the session exhausts and raises an incident", async () => {
     const lab = makeLab();
     tvsFalling(lab, [0, 0, 0, 0]);
     await lab.detect("Reachable");
@@ -82,7 +82,7 @@ describe("S12 · la CU torna ma le TV no (INV-8)", () => {
     expect(lab.incidents()[0]?.facets).toHaveLength(5);
   });
 
-  it("se anche le TV tornano, allora sì", async () => {
+  it("if the TVs come back too, then yes", async () => {
     const lab = makeLab();
     tvsFalling(lab, [0, 0, 0, 0]);
     await lab.detect("Reachable");
@@ -97,7 +97,7 @@ describe("S12 · la CU torna ma le TV no (INV-8)", () => {
   });
 });
 
-describe("S13 · tre camere giù, appese via Observes a TV della stessa CU (NF-2)", () => {
+describe("S13 · three cameras down, suspended via Observes to a TV of the same CU (NF-2)", () => {
   it("tre bersagli Device, e mai un reboot della CU", async () => {
     const lab = makeLab();
     lab.face(lab.cu.id, "Reachable", "up", 0);
@@ -120,7 +120,7 @@ describe("S13 · tre camere giù, appese via Observes a TV della stessa CU (NF-2
   });
 });
 
-describe("S14 · una TV è sotto maintenance hold (INV-11)", () => {
+describe("S14 · a TV is under maintenance hold (INV-11)", () => {
   it("esce dal conto, e le altre tre bastano a formare il quorum", async () => {
     const lab = makeLab();
     lab.face(lab.cu.id, "Reachable", "up", 0);
@@ -135,7 +135,7 @@ describe("S14 · una TV è sotto maintenance hold (INV-11)", () => {
   });
 });
 
-describe("S19 · una TV giù da sola (NF-1)", () => {
+describe("S19 · a TV down alone (NF-1)", () => {
   it("nessuna sessione: il kind Tv non ha profilo", async () => {
     const lab = makeLab();
     lab.face(lab.cu.id, "Reachable", "up", 0);

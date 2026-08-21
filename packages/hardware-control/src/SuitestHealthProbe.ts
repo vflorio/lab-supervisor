@@ -44,7 +44,16 @@ const negative = (ref: FacetRef, at: Instant, reason: string): ProbeOutcome.Prob
 
 const positive = (ref: FacetRef, at: Instant): ProbeOutcome.ProbeOutcome => ProbeOutcome.make(ref, at, true);
 
-export const make = (config: Client.SuitestConfig, options: Options): HealthProbePort => {
+// La sonda, più la sola leva che il composition root deve poter tirare su di lei: dopo un comando
+// accettato la fotografia è vecchia per definizione, e chi dispaccia il rimedio (`SuitestDeviceControl`)
+// deve poter dire a chi osserva che quella lettura non vale più (FATTO-13). Non è una verifica —
+// quella è del dominio (INV-5) — è non far leggere alla sonda successiva un `online` di prima del
+// reboot.
+export interface SuitestHealthProbe extends HealthProbePort {
+  readonly invalidate: () => void;
+}
+
+export const make = (config: Client.SuitestConfig, options: Options): SuitestHealthProbe => {
   const client = Client.make(config, options.transport);
   const snapshots = Snapshot.cached(client, options.clock, options.snapshotTtl);
 
@@ -116,6 +125,7 @@ export const make = (config: Client.SuitestConfig, options: Options): HealthProb
     );
 
   return {
+    invalidate: snapshots.invalidate,
     probe: (ref) =>
       pipe(
         options.lookup(ref.deviceId),

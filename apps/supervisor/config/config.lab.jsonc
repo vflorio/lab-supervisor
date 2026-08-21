@@ -1,0 +1,211 @@
+// Configurazione del Lab Supervisor.
+//
+// Questo file è la sola cosa che cambia fra un lab e un altro: il codice non contiene un numero di
+// telefono, una coordinata o un timeout. I profili di sorveglianza vivono qui perché sono policy,
+// non modello — e sono gli stessi FL-1 e FL-2 del ticket, con i numeri veri.
+//
+// Le durate si scrivono per esteso ("30s", "3m", "1h"): un numero nudo non dice se sono secondi o
+// millisecondi, e la volta che lo si sbaglia il servizio riavvia un device ogni trenta millisecondi.
+{
+  "log": {
+    "level": "info" // "error" | "warn" | "info" | "debug"
+  },
+
+  "monitoring": {
+    // Il passo con cui si guarda il lab. Con `failureThreshold: 3` servono tre giri concordi
+    // perché un guasto sia confermato: 60s prima che il grace del profilo cominci a scorrere.
+    "probeInterval": "20s",
+    // La fotografia di Suitest non deve sopravvivere a un giro di sonde: se due giri leggessero la
+    // stessa risposta, l'anti-flapping conterebbe due volte la stessa osservazione. Il servizio si
+    // rifiuta di partire se questo valore non è minore di `probeInterval`.
+    "snapshotTtl": "10s",
+    // Prudenza nel dichiarare un guasto, prontezza nel dichiarare una guarigione.
+    "flapping": { "failureThreshold": 3, "successThreshold": 2 }
+  },
+
+  "recovery": {
+    // Ogni quanto le sessioni aperte avanzano. Non è il ritmo dei comandi — quello lo decidono
+    // backoff e verifiche del profilo — è la risoluzione con cui il servizio se ne accorge.
+    "tickInterval": "5s"
+  },
+
+  "suitest": {
+    "baseUrl": "https://the.suite.st/api/public/v4",
+    "tokenId": "da-riempire",
+    "tokenPassword": "da-riempire",
+    "timeout": "10s"
+  },
+
+  "adb": {
+    "binary": "adb",
+    "commandTimeout": "30s",
+    // La pazienza per il rientro dopo un reboot: lento (minuti) e storicamente inaffidabile.
+    "bootTimeout": "90s",
+    // L'app di cattura del lab e come la si rimette online. Sono fatti dell'hardware, verificati sul
+    // campo: stanno qui perché un tap spostato di venti pixel non deve richiedere una ricompilazione.
+    "captureApp": {
+      "packageId": "com.suitest.android.camera",
+      "activity": "com.suitest.android.camera.CameraActivity",
+      // Quanto aspettare che l'app disegni prima di toccarla.
+      "settleAfterLaunch": "5s",
+      // Il profilo `experimental-wide` non è un extra dell'intent: si sceglie toccando la UI.
+      // Quattro tap in pixel, sulla risoluzione dei tablet del lab.
+      "profileTaps": [
+        { "unit": "pixels", "x": 2200, "y": 160 }, // impostazioni (in alto a destra)
+        { "unit": "pixels", "x": 1000, "y": 440 }, // profilo
+        { "unit": "pixels", "x": 1000, "y": 640 }, // profilo: experimental
+        { "unit": "pixels", "x": 180, "y": 180 } // indietro (in alto a sinistra)
+      ],
+      // Il connect, in frazioni di schermo: dichiararle tali è ciò che le fa risolvere sulla
+      // dimensione vera del device invece di finire in `input tap 0.9 0.1`, cioè nell'angolo.
+      // L'app si connette da sola all'avvio nella maggior parte dei casi: questa sequenza è per gli altri.
+      "connectTaps": [
+        { "unit": "fraction", "x": 0.9, "y": 0.1 }, // bottone connect
+        { "unit": "fraction", "x": 0.5, "y": 0.5 } // conferma
+      ]
+    }
+  },
+
+  "slack": {
+    // A `false` gli incidenti si consegnano comunque, sul log: un supervisore che tace perché manca
+    // un token è peggio di uno che scrive a video.
+    "active": false,
+    "baseUrl": "https://slack.com/api",
+    "botToken": "da-riempire",
+    "channel": "#lab-supervisor",
+    "timeout": "10s"
+  },
+
+  // L'anagrafica. `suitest` è la chiave esterna verso Suitest (l'id dell'unità, del device o del
+  // video-capture-device), `adb` è l'endpoint `host:porta` delle camere: entrambe sono opzionali e
+  // si riconciliano a mano — una camera può esistere qui senza l'una o senza l'altra.
+  // ⚠ Gli identificatori qui sotto sono quelli di un lab d'esempio: vanno sostituiti con quelli veri
+  //   prima di puntare il servizio al lab.
+  "devices": [
+    {
+      "id": "cu-1",
+      "kind": "ControlUnit",
+      "unitType": "candybox",
+      "suitest": "control-unit-1",
+      // Ciò che *questa* unità dichiara di saper fare: non tutte le CU si riavviano, e accendere
+      // una CU spenta non è nel mandato di nessun canale che abbiamo oggi.
+      "capabilities": ["RebootHardware"]
+    },
+
+    { "id": "tv-1", "kind": "Tv", "suitest": "device-1", "attach": { "to": "cu-1", "relation": "DependsOn" } },
+    { "id": "tv-2", "kind": "Tv", "suitest": "device-2", "attach": { "to": "cu-1", "relation": "DependsOn" } },
+    { "id": "tv-3", "kind": "Tv", "suitest": "device-3", "attach": { "to": "cu-1", "relation": "DependsOn" } },
+    { "id": "tv-4", "kind": "Tv", "suitest": "device-4", "attach": { "to": "cu-1", "relation": "DependsOn" } },
+
+    // Una camera *inquadra* una TV, non ne dipende: sopravvive benissimo a una TV spenta, e
+    // riavviare la CU non ripara mai una camera.
+    {
+      "id": "cam-1",
+      "kind": "AndroidCamera",
+      "adb": "10.0.0.31:5555",
+      "suitest": "vcd-1",
+      "attach": { "to": "tv-1", "relation": "Observes" }
+    },
+    {
+      "id": "cam-2",
+      "kind": "AndroidCamera",
+      "adb": "10.0.0.32:5555",
+      "suitest": "vcd-2",
+      "attach": { "to": "tv-2", "relation": "Observes" }
+    },
+    {
+      "id": "cam-3",
+      "kind": "AndroidCamera",
+      "adb": "10.0.0.33:5555",
+      "suitest": "vcd-3",
+      "attach": { "to": "tv-3", "relation": "Observes" }
+    }
+  ],
+
+  // I profili: quale faccia apre una sessione, quanto la si lascia stare, con che scala si
+  // interviene. Un kind senza profilo — oggi la TV — è monitorato e partecipa alla correlazione,
+  // ma non apre mai una sessione propria: l'assenza di una riga qui *è* il meccanismo.
+  "profiles": [
+    {
+      // FL-1 · camera senza stream.
+      "kind": "AndroidCamera",
+      "trigger": "StreamAvailable",
+      "grace": "3m",
+      "criticality": "NotifyWhenExhausted",
+      "cooldownAfterGiveUp": "30m",
+      "window": {
+        // Un'autorizzazione, non un orario: fuori di qui non parte nessun comando, così nessun
+        // device si accende di notte.
+        "days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+        "from": "09:00",
+        "to": "18:00",
+        "zone": "Europe/Rome"
+      },
+      "playbook": [
+        {
+          // Ha senso solo se il transport è giù, e verifica una faccia diversa da quella d'innesco:
+          // se il transport torna ma lo stream no, il gradino ha fatto il suo lavoro e si sale
+          // senza consumare tentativi.
+          "remedy": "ReconnectTransport",
+          "appliesWhen": { "facet": "AdbTransport", "is": "Unhealthy" },
+          "dispatchTimeout": "30s",
+          "verify": { "facet": "AdbTransport", "settle": "5s", "poll": "5s", "timeout": "30s" },
+          "retry": { "maxAttempts": 1, "backoff": { "kind": "fixed", "delay": "30s" } }
+        },
+        {
+          "remedy": "RestartApp",
+          "app": "com.suitest.android.camera",
+          "dispatchTimeout": "30s",
+          "verify": { "facet": "StreamAvailable", "settle": "10s", "poll": "5s", "timeout": "60s" },
+          "retry": { "maxAttempts": 2, "backoff": { "kind": "fixed", "delay": "30s" } }
+        },
+        {
+          "remedy": "RebootHardware",
+          "dispatchTimeout": "30s",
+          // `settle` lungo: un reboot appena impartito non spegne il device all'istante, e per
+          // qualche secondo continua a rispondere.
+          "verify": { "facet": "StreamAvailable", "settle": "90s", "poll": "15s", "timeout": "3m" },
+          "retry": { "maxAttempts": 1, "backoff": { "kind": "fixed", "delay": "30s" } }
+        },
+        {
+          // Il caso "il device è tornato su ma l'app di cattura non è ripartita". L'ultimo gradino
+          // verifica la faccia d'innesco, ed è un requisito: un playbook che finisse verificando
+          // un'altra faccia non potrebbe mai risolversi, e il servizio non parte.
+          "remedy": "RelaunchSuite",
+          "appliesWhen": { "facet": "AdbTransport", "is": "Healthy" },
+          "dispatchTimeout": "30s",
+          "verify": { "facet": "StreamAvailable", "settle": "15s", "poll": "5s", "timeout": "60s" },
+          "retry": { "maxAttempts": 1, "backoff": { "kind": "fixed", "delay": "30s" } }
+        }
+      ]
+    },
+
+    {
+      // FL-2 · ControlUnit irraggiungibile. Un solo gradino, e `PowerOn` non c'è: una CU spenta non
+      // ha accensione fuori banda che sia lecito usare oggi. Se il reboot non è accettato, serve
+      // una mano umana — ed è esattamente ciò che l'incidente andrà a dire.
+      "kind": "ControlUnit",
+      "trigger": "Reachable",
+      "grace": "1m",
+      "criticality": "NotifyWhenExhausted",
+      "cooldownAfterGiveUp": "30m",
+      "window": {
+        "days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+        "from": "09:00",
+        "to": "18:00",
+        "zone": "Europe/Rome"
+      },
+      // Quando abbastanza figli cadono insieme, il guasto è uno solo: è la CU. La regola vive sul
+      // profilo dell'hub, che è l'unico posto sensato.
+      "correlation": { "rule": { "kind": "allChildren" }, "grace": "1m" },
+      "playbook": [
+        {
+          "remedy": "RebootHardware",
+          "dispatchTimeout": "30s",
+          "verify": { "facet": "Reachable", "settle": "45s", "poll": "15s", "timeout": "3m" },
+          "retry": { "maxAttempts": 2, "backoff": { "kind": "fixed", "delay": "1m" } }
+        }
+      ]
+    }
+  ]
+}

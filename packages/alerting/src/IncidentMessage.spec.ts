@@ -44,15 +44,15 @@ const incident = (overrides: Partial<Incident> = {}): Incident => ({
 const text = (blocks: ReadonlyArray<IncidentMessage.MessageBlock>) => blocks.map((block) => block.text).join("\n");
 
 describe("IncidentMessage", () => {
-  it("dice cosa è caduto e da quanto, in parole (FATTO-16)", () => {
+  it("says what fell and how long ago, in words (FACT-16)", () => {
     const rendered = text(IncidentMessage.render(incident()));
 
-    expect(rendered).toContain("cam-1 non recuperato");
-    expect(rendered).toContain("Giù da 12 min");
-    expect(rendered).toContain("scala di escalation esaurita");
+    expect(rendered).toContain("cam-1 not recovered");
+    expect(rendered).toContain("Down for 12 min");
+    expect(rendered).toContain("escalation ladder exhausted");
   });
 
-  it("fotografa tutte le facce, perché una camera muta su entrambe è un'altra storia (FATTO-8)", () => {
+  it("photographs all facets, because a camera silent on both is another story (FACT-8)", () => {
     const rendered = text(
       IncidentMessage.render(
         incident({
@@ -64,8 +64,8 @@ describe("IncidentMessage", () => {
       ),
     );
 
-    expect(rendered).toContain("cam-1 · AdbTransport: sana da 10 min");
-    expect(rendered).toContain("cam-1 · StreamAvailable: giù da 12 min");
+    expect(rendered).toContain("cam-1 · AdbTransport: healthy for 10 min");
+    expect(rendered).toContain("cam-1 · StreamAvailable: down for 12 min");
   });
 
   it("elenca i tentativi con esito e verdetto, e dice quali gradini sono stati scartati (INV-4)", () => {
@@ -93,11 +93,11 @@ describe("IncidentMessage", () => {
       ),
     );
 
-    expect(rendered).toContain("#0 ReconnectTransport — scartato (precondizione falsa)");
-    expect(rendered).toContain("#1 tentativo 1 RestartApp(st.suite.camera) — comando preso in carico → NotRecovered");
+    expect(rendered).toContain("#0 ReconnectTransport — skipped (precondition false)");
+    expect(rendered).toContain("#1 attempt 1 RestartApp(st.suite.camera) — accepted → NotRecovered");
   });
 
-  it("riporta l'ultimo esito per rimedio: è la risposta a «cosa ha detto l'hardware»", () => {
+  it("reports the last outcome per remedy: it answers 'what did the hardware say'", () => {
     const rendered = text(
       IncidentMessage.render(
         incident({
@@ -106,19 +106,19 @@ describe("IncidentMessage", () => {
       ),
     );
 
-    expect(rendered).toContain("RebootHardware: device irraggiungibile");
+    expect(rendered).toContain("RebootHardware: device unreachable");
   });
 
   it("una resa immediata per capability mancante si legge come tale, non come una scala esaurita (FL-2)", () => {
     const rendered = text(IncidentMessage.render(incident({ reason: O.some(GiveUpReason.remedyUnsupported) })));
 
-    expect(rendered).toContain("resa immediata: il device non dichiara la capability richiesta");
+    expect(rendered).toContain("immediate surrender: device does not declare required capability");
   });
 
-  it("un incidente alzato in anticipo per criticità dice che il recupero è ancora in corso (FATTO-16)", () => {
+  it("an incident raised early for criticality says recovery is still in progress (FACT-16)", () => {
     const rendered = text(IncidentMessage.render(incident({ reason: O.none, criticality: "NotifyImmediately" })));
 
-    expect(rendered).toContain("segnalato subito per criticità: il recupero è ancora in corso");
+    expect(rendered).toContain("raised immediately for criticality: recovery is still in progress");
   });
 
   it("un cluster nomina la CU e quanti dipendenti coinvolge (FL-3)", () => {
@@ -131,14 +131,14 @@ describe("IncidentMessage", () => {
       ),
     );
 
-    expect(rendered).toContain("cu-1 + 2 dipendenti");
+    expect(rendered).toContain("cu-1 + 2 dependents");
   });
 
-  it("un incidente chiuso è la buona notizia, non una nuova segnalazione", () => {
+  it("a closed incident is good news, not a new alert", () => {
     const blocks = IncidentMessage.render(incident({ closedAt: O.some(at(20)) }));
 
-    expect(text(blocks)).toContain("Rientrato");
-    expect(text(blocks)).toContain("durava da 20 min");
-    expect(IncidentMessage.summary(incident({ closedAt: O.some(at(20)) }))).toBe("Rientrato: cam-1");
+    expect(text(blocks)).toContain("Recovered");
+    expect(text(blocks)).toContain("lasted 20 min");
+    expect(IncidentMessage.summary(incident({ closedAt: O.some(at(20)) }))).toBe("Recovered: cam-1");
   });
 });

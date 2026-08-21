@@ -17,11 +17,11 @@ const labHours = SupervisionWindow.make(
 );
 
 describe("SupervisionWindow", () => {
-  it("dentro l'orario di un giorno feriale è autorizzata", () => {
+  it("authorized during business hours", () => {
     expect(SupervisionWindow.isOpen(labHours, mondayMorning)).toBe(true);
   });
 
-  it("di notte no: è così che nessun device si accende alle tre", () => {
+  it("not at night: this is how no device wakes up at 3am", () => {
     expect(SupervisionWindow.isOpen(labHours, mondayNight)).toBe(false);
   });
 
@@ -39,7 +39,7 @@ describe("SupervisionWindow", () => {
     expect(SupervisionWindow.isOpen(tokyo, mondayMorning)).toBe(false);
   });
 
-  it("`always` è sempre aperta e `closed` non lo è mai", () => {
+  it("`always` is always open and `closed` never is", () => {
     expect(SupervisionWindow.isOpen(SupervisionWindow.always, mondayNight)).toBe(true);
     expect(SupervisionWindow.isOpen(SupervisionWindow.always, saturdayMorning)).toBe(true);
     expect(SupervisionWindow.isOpen(SupervisionWindow.closed, mondayMorning)).toBe(false);

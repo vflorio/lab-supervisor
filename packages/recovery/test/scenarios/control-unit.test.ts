@@ -60,7 +60,7 @@ describe("S8 · la CU non torna mai", () => {
 });
 
 describe("S9 · una CU che non dichiara RebootHardware (FATTO-1)", () => {
-  it("l'esito è Unsupported e la resa è immediata, senza ritentativi", async () => {
+  it("the outcome is Unsupported and surrender is immediate, without retries", async () => {
     const lab = unitDown({ controlUnitCapabilities: Capability.setOf("PowerOn") });
     await lab.detect("Reachable");
     await lab.until(60);

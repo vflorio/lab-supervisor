@@ -86,7 +86,7 @@ describe("AdbDeviceControl", () => {
     expect(FakeAdb.verbs(adb)).toEqual(["disconnect", "connect"]);
   });
 
-  it("RestartApp è force-stop più lancio, e il nome dell'app viene dal dominio", async () => {
+  it("RestartApp is force-stop plus launch, and the app name comes from the domain", async () => {
     const device = camera({ adb: endpoint });
     const adb = FakeAdb.make([{ endpoint, state: "device" }]);
     const control = AdbDeviceControl.make(config, { lookup: lookupOf(device), spawn: adb.spawn });
@@ -123,7 +123,7 @@ describe("AdbDeviceControl", () => {
     ]);
   });
 
-  it("non sblocca uno schermo già sbloccato: quella swipe scrollerebbe l'app invece di sbloccare", async () => {
+  it("does not unlock an already unlocked screen: that swipe would scroll the app instead of unlocking", async () => {
     const device = camera({ adb: endpoint });
     const adb = FakeAdb.make([{ endpoint, state: "device" }]);
     adb.keyguard(false);
@@ -133,7 +133,7 @@ describe("AdbDeviceControl", () => {
     expect(FakeAdb.trace(adb)).not.toContain("shell input swipe");
   });
 
-  it("non rilancia un'app che è già in primo piano: riavviare ciò che funziona è il modo più rapido per romperlo", async () => {
+  it("does not restart an app already in foreground: restarting what works is the quickest way to break it", async () => {
     const device = camera({ adb: endpoint });
     const adb = FakeAdb.make([{ endpoint, state: "device" }]);
     adb.foreground("com.suitest.android.camera/com.suitest.android.camera.CameraActivity");
@@ -178,7 +178,7 @@ describe("AdbDeviceControl", () => {
     expect(adb.commands().filter((args) => args.includes("tap"))).toHaveLength(4);
   });
 
-  it("un comando appeso è un guasto del canale, non un rifiuto (FATTO-12)", async () => {
+  it("a hanging command is a channel failure, not a refusal (FACT-12)", async () => {
     const device = camera({ adb: endpoint });
     const adb = FakeAdb.make([{ endpoint, state: "device" }]);
     adb.failOn("reboot", { _tag: "Timeout", afterMs: 15_000 });
@@ -190,7 +190,7 @@ describe("AdbDeviceControl", () => {
     });
   });
 
-  it("`device not found` è irraggiungibile, non un errore di trasporto", async () => {
+  it("`device not found` is unreachable, not a transport error", async () => {
     const device = camera({ adb: endpoint });
     const adb = FakeAdb.make();
     adb.failOn("reboot", { _tag: "NonZeroExit", code: 1, stderr: "error: device '10.0.0.9:5555' not found" });
@@ -199,7 +199,7 @@ describe("AdbDeviceControl", () => {
     expect(await run(control, device.id, Remedy.rebootHardware)).toEqual({ _tag: "Unreachable" });
   });
 
-  it("PowerOn su una camera è Unsupported: è un telefono, e chi lo accende è una persona", async () => {
+  it("PowerOn on a camera is Unsupported: it is a phone, and a person powers it on", async () => {
     const device = camera({ adb: endpoint });
     const adb = FakeAdb.make();
     const control = AdbDeviceControl.make(config, { lookup: lookupOf(device), spawn: adb.spawn });
@@ -208,7 +208,7 @@ describe("AdbDeviceControl", () => {
     expect(adb.commands()).toEqual([]);
   });
 
-  it("una camera senza endpoint adb è un esito scritto, non un'eccezione (FATTO-9)", async () => {
+  it("a camera without adb endpoint is a written outcome, not an exception (FACT-9)", async () => {
     const device = camera();
     const adb = FakeAdb.make();
     const control = AdbDeviceControl.make(config, { lookup: lookupOf(device), spawn: adb.spawn });

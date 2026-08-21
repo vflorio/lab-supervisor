@@ -67,7 +67,7 @@ describe("SuitestDeviceControl", () => {
     expect(suitest.dispatched()).toEqual([{ unitId: "candy-1" }]);
   });
 
-  it("una TV non si comanda da qui: la Public API non lo espone, il canale sarà lo smart plug (FATTO-10, NF-3)", async () => {
+  it("a TV is not commanded from here: the Public API does not expose it, the channel will be the smart plug (FACT-10, NF-3)", async () => {
     const tv = registered("tv-1", "Tv", { suitest: "dev-1" });
     const suitest = FakeSuitest.make();
     const control = SuitestDeviceControl.make(config, { lookup: lookupOf(tv), transport: suitest.transport });
@@ -86,7 +86,7 @@ describe("SuitestDeviceControl", () => {
     expect(suitest.dispatched()).toEqual([]);
   });
 
-  it("una CU che non dichiara RebootHardware è Unsupported, e nessun comando parte (FATTO-1, S9)", async () => {
+  it("a CU that does not declare RebootHardware is Unsupported, and no command starts (FACT-1, S9)", async () => {
     const cu = registered("cu-2", "ControlUnit", { suitest: "candy-2", capabilities: Capability.setOf("PowerOn") });
     const suitest = FakeSuitest.make();
     const control = SuitestDeviceControl.make(config, { lookup: lookupOf(cu), transport: suitest.transport });
@@ -95,7 +95,7 @@ describe("SuitestDeviceControl", () => {
     expect(suitest.dispatched()).toEqual([]);
   });
 
-  it("un rimedio fuori dal mandato è Unsupported: chi altro possa farcela lo sa il routing (A-7)", async () => {
+  it("a remedy outside the mandate is Unsupported: the routing knows who else can do it (A-7)", async () => {
     const camera = registered("cam-1", "AndroidCamera", { suitest: "vcd-1" });
     const suitest = FakeSuitest.make();
     const control = SuitestDeviceControl.make(config, { lookup: lookupOf(camera), transport: suitest.transport });
@@ -107,7 +107,7 @@ describe("SuitestDeviceControl", () => {
     expect(suitest.dispatched()).toEqual([]);
   });
 
-  it("un 404 è irraggiungibile, un altro 4xx è un rifiuto motivato", async () => {
+  it("a 404 is unreachable, another 4xx is a motivated refusal", async () => {
     const cu = registered("cu-4", "ControlUnit", { suitest: "candy-4" });
     const suitest = FakeSuitest.make();
     const control = SuitestDeviceControl.make(config, { lookup: lookupOf(cu), transport: suitest.transport });
@@ -130,7 +130,7 @@ describe("SuitestDeviceControl", () => {
     suitest.breakWith({ _tag: "Timeout", afterMs: 5_000 });
     expect(await run(control, cu.id, Remedy.rebootHardware)).toEqual({
       _tag: "TransportError",
-      detail: "nessuna risposta da Suitest entro 5000ms",
+      detail: "no response from Suitest within 5000ms",
     });
 
     suitest.breakWith({ _tag: "BadStatus", status: 503, body: "" });

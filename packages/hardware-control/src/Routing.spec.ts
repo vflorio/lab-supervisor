@@ -74,7 +74,7 @@ describe("RoutingDeviceControl", () => {
     expect(log).toEqual(["adb", "suitest", "suitest"]);
   });
 
-  it("una coppia (kind, rimedio) senza rotta è Unsupported, non un crash", async () => {
+  it("a (kind, remedy) pair without a route is Unsupported, not a crash", async () => {
     const tv = registered("tv-2", "Tv");
     const log: string[] = [];
     // Domani la TV avrà rimedi Suitest e rimedi CDP: smistare sulla coppia è ciò che lo rende

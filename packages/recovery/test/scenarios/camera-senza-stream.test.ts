@@ -76,7 +76,7 @@ describe("S2 · lo stream torna dopo il RestartApp", () => {
 });
 
 describe("S3 · uno stato sano ereditato da prima del comando (FATTO-13)", () => {
-  it("non è una guarigione: si risolve solo quando il `since` è posteriore al dispaccio", async () => {
+  it("is not a recovery: resolves only when `since` is after dispatch", async () => {
     const { lab, camera } = cameraDown({ transport: "up" });
     await lab.detect("StreamAvailable");
     await lab.until(180);
@@ -111,7 +111,7 @@ describe("S4 · il transport torna ma lo stream no (INV-6)", () => {
   });
 });
 
-describe("S5 · il transport è già sano all'apertura", () => {
+describe("S5 · the transport is already healthy at opening", () => {
   it("il gradino 1 viene scartato, non fallito, e lo scarto resta nel dossier (INV-4)", async () => {
     const { lab } = cameraDown({ transport: "up" });
     await lab.detect("StreamAvailable");
@@ -125,7 +125,7 @@ describe("S5 · il transport è già sano all'apertura", () => {
 });
 
 describe("S6 · l'adapter non risponde entro la scadenza (FATTO-12, INV-10)", () => {
-  it("il tentativo è fallito, la sessione prosegue, e le altre sessioni dovute avanzano lo stesso", async () => {
+  it("the attempt failed, the session proceeds, and other due sessions advance anyway", async () => {
     const lab = makeLab();
     const [first, second] = lab.cameras;
     for (const camera of [first!, second!]) {
@@ -146,7 +146,7 @@ describe("S6 · l'adapter non risponde entro la scadenza (FATTO-12, INV-10)", ()
     for (const session of sessions) expect(session.history.some((record) => record.verdict._tag === "Some")).toBe(true);
   });
 
-  it("un rimedio rifiutato è un esito, non un errore: finisce nel dossier", async () => {
+  it("a rejected remedy is an outcome, not an error: it ends in the record", async () => {
     const { lab } = cameraDown({ transport: "up" });
     lab.deviceControl.answer("RestartApp", RemedyOutcome.rejected("device occupato"));
     await lab.detect("StreamAvailable");

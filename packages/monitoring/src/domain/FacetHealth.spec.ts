@@ -48,7 +48,7 @@ describe("FacetHealth · anti-flapping", () => {
     ]);
   });
 
-  it("una serie interrotta riparte da capo: due giù, uno su, due giù non fanno un guasto", () => {
+  it("a broken series restarts: two down, one up, two down is not a failure", () => {
     const { health, events } = apply(FacetHealth.initial(ref), [
       [0, false],
       [10, false],
@@ -74,7 +74,7 @@ describe("FacetHealth · anti-flapping", () => {
     expect(events.map((event) => event._tag)).toEqual(["FacetBecameHealthy"]);
   });
 
-  it("osservazioni concordi con lo stato già confermato non riemettono l'evento", () => {
+  it("observations consistent with already confirmed state do not re-emit the event", () => {
     const down = apply(FacetHealth.initial(ref), [
       [0, false],
       [10, false],

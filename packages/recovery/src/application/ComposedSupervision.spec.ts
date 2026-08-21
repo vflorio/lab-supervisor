@@ -103,7 +103,7 @@ const run = async <A>(task: () => Promise<E.Either<never, A>>): Promise<A> => {
 };
 
 describe("ComposedSupervision", () => {
-  it("il profilo di un cluster è quello del device su cui si agisce, la CU", async () => {
+  it("the profile of a cluster is that of the device being acted upon, the CU", async () => {
     const { supervision } = make([register(cu, "ControlUnit", "candybox"), register(tv, "Tv")]);
     const profile = await run(supervision.profileFor(RecoveryTarget.controlUnitCluster(cu, [tv])));
     expect(profile).toEqual(O.some(controlUnitProfile));
@@ -142,7 +142,7 @@ describe("ComposedSupervision", () => {
     expect(HealthSnapshot.facesOf(context.health, tv)).toEqual([]);
   });
 
-  it("un device sconosciuto all'anagrafica non porta salute con sé", async () => {
+  it("a device unknown to the registry does not bring health with it", async () => {
     const { supervision, health } = make([]);
     health.put({ ...FacetHealth.initial(FacetRef.make(camera, "StreamAvailable")), status: HealthStatus.healthy(at) });
     const context = await run(supervision.contextFor(RecoveryTarget.device(camera)));

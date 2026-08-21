@@ -93,7 +93,7 @@ export const makeLab = (options: LabOptions = {}) => {
 
   const run = async <A>(action: ReaderTaskEither<typeof env, never, A>): Promise<A> => {
     const result = await action(env)();
-    if (E.isLeft(result)) throw new Error("impossibile: il canale d'errore è never");
+    if (E.isLeft(result)) throw new Error("impossible: the error channel is never");
     return result.right;
   };
 

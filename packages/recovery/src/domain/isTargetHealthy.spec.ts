@@ -44,23 +44,23 @@ describe("isTargetHealthy · un device", () => {
     expect(isTargetHealthy(target, "Reachable", CorrelationRule.allChildren, fresh, O.some(t(100)))).toBe(true);
   });
 
-  it("una faccia mai sondata non è sana", () => {
+  it("a facet never probed is not healthy", () => {
     expect(isTargetHealthy(target, "Reachable", CorrelationRule.allChildren, HealthSnapshot.empty, O.none)).toBe(false);
   });
 });
 
 describe("isTargetHealthy · un cluster (INV-8)", () => {
-  it('"la CU risponde al ping" non è mai, da solo, una guarigione', () => {
+  it('"the CU responds to ping" is never, alone, a recovery', () => {
     const snapshot = health([[cu, "up", 110], ...tvs.map((tv) => [tv, "down", 0] as const)]);
     expect(isTargetHealthy(cluster, "Reachable", CorrelationRule.allChildren, snapshot, O.some(t(100)))).toBe(false);
   });
 
-  it("la CU giù non basta mai, per quanti figli siano tornati", () => {
+  it("the CU down is never enough, no matter how many children came back", () => {
     const snapshot = health([[cu, "down", 0], ...tvs.map((tv) => [tv, "up", 110] as const)]);
     expect(isTargetHealthy(cluster, "Reachable", CorrelationRule.allChildren, snapshot, O.some(t(100)))).toBe(false);
   });
 
-  it("guarito quando la CU è sana e la regola non la incolpa più", () => {
+  it("recovered when the CU is healthy and the rule no longer blames it", () => {
     expect(isTargetHealthy(cluster, "Reachable", CorrelationRule.allChildren, allUp(110), O.some(t(100)))).toBe(true);
   });
 

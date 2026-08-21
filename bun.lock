@@ -13,6 +13,20 @@
         "vitest": "^4.0.16",
       },
     },
+    "apps/supervisor": {
+      "name": "@lab/supervisor",
+      "version": "0.0.0",
+      "dependencies": {
+        "@lab/alerting": "workspace:*",
+        "@lab/hardware-control": "workspace:*",
+        "@lab/kernel": "workspace:*",
+        "@lab/monitoring": "workspace:*",
+        "@lab/recovery": "workspace:*",
+        "@lab/registry": "workspace:*",
+        "fp-ts": "2.16.11",
+        "io-ts": "2.2.22",
+      },
+    },
     "packages/alerting": {
       "name": "@lab/alerting",
       "version": "0.0.0",
@@ -193,6 +207,8 @@
     "@lab/recovery": ["@lab/recovery@workspace:packages/recovery"],
 
     "@lab/registry": ["@lab/registry@workspace:packages/registry"],
+
+    "@lab/supervisor": ["@lab/supervisor@workspace:apps/supervisor"],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.1.6", "", { "dependencies": { "@tybys/wasm-util": "^0.10.3" }, "peerDependencies": { "@emnapi/core": "^1.7.1", "@emnapi/runtime": "^1.7.1" } }, "sha512-ZLv/JdUfkvOy9eCnnBaGfiO+XimbjebAeO+MRQqD/B+FR1tnRN0tpKSJHRbE8sFfS6aqsXZ67TQjfwfsxULVbg=="],
 

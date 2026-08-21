@@ -39,7 +39,7 @@ describe("S20 · l'anagrafica non accetta topologie impossibili (INV-12)", () =>
   const attach = (seed: ReadonlyArray<Device.Device>, input: AttachDevice.Input) =>
     AttachDevice.execute(input, START)({ deviceRepository: InMemoryDeviceRepository.make(seed) })();
 
-  it("una quinta TV sulla stessa CU è un errore di dominio (FATTO-2)", async () => {
+  it("a fifth TV on the same CU is a domain error (FACT-2)", async () => {
     const fifth = build({ id: DeviceId.of("tv-5"), kind: "Tv" });
     const result = await attach([cu, ...fourTvs, fifth], {
       deviceId: fifth.id,
@@ -49,15 +49,15 @@ describe("S20 · l'anagrafica non accetta topologie impossibili (INV-12)", () =>
     expect(E.isLeft(result) && result.left._tag).toBe("TooManyDependents");
   });
 
-  it("una camera attaccata DependsOn a una CU è un errore di dominio (FATTO-3)", async () => {
+  it("a camera attached DependsOn to a CU is a domain error (FACT-3)", async () => {
     const camera = build({ id: DeviceId.of("cam-1"), kind: "AndroidCamera" });
     const result = await attach([cu, camera], { deviceId: camera.id, parent: cu.id, relation: "DependsOn" });
     expect(E.isLeft(result) && result.left._tag).toBe("InvalidAttachment");
   });
 });
 
-describe("S21 · proprietà di correlateOutage (M-5)", () => {
-  it("su qualunque insieme di device giù i bersagli sono disgiunti e rendono conto di tutti", () => {
+describe("S21 · correlateOutage properties (M-5)", () => {
+  it("on any set of down devices the targets are disjoint and account for all", () => {
     const lab = makeLab();
     const devices = [lab.cu, ...lab.tvs, ...lab.cameras];
     const topology = Topology.fromDevices(devices);
@@ -82,7 +82,7 @@ describe("S21 · proprietà di correlateOutage (M-5)", () => {
 });
 
 describe("S22 · le regole congelate e quelle vive (INV-13)", () => {
-  it("cambiare il profilo non altera una sessione già aperta", async () => {
+  it("changing the profile does not alter an already open session", async () => {
     const lab = makeLab();
     const camera = lab.cameras[0]!;
     lab.face(camera.id, "StreamAvailable", "down", 0);

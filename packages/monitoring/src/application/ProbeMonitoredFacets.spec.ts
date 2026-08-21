@@ -71,7 +71,7 @@ describe("ProbeMonitoredFacets", () => {
     expect(keysOf(lab.healthProbe.probed())).toEqual(keysOf([FacetRef.make(cu, "Reachable")]));
   });
 
-  it("un maintenance hold non toglie il device dallo sguardo: guardare non è comandare", async () => {
+  it("a maintenance hold does not remove the device from sight: watching is not commanding", async () => {
     const held = Device.placeMaintenanceHold(register(cu, "ControlUnit", "candybox"), "manutenzione", START).state;
     const lab = makeLab([held]);
     await lab.sweep();

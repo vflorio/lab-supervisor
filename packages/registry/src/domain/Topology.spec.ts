@@ -34,7 +34,7 @@ describe("Topology", () => {
     expect(Topology.dependentsOf(topology, tvA.id)).toEqual([]);
   });
 
-  it("l'ordine dei figli è deterministico, non quello di inserimento", () => {
+  it("the order of children is deterministic, not the order of insertion", () => {
     const reversed = Topology.fromDevices([camera, tvA, tvC, cu]);
     expect(Topology.dependentsOf(reversed, cu.id)).toEqual(Topology.dependentsOf(topology, cu.id));
   });

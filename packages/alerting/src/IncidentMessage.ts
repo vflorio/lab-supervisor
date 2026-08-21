@@ -42,16 +42,16 @@ const describeTarget = (target: RecoveryTarget.RecoveryTarget): string =>
     ? String(target.deviceId)
     : // Per un cluster il bersaglio dell'azione è la CU, ma i coinvolti sono anche i figli: dirlo
       // evita la domanda "e le TV?" (FL-3).
-      `${String(target.unitId)} + ${target.dependents.length} dipendenti`;
+      `${String(target.unitId)} + ${target.dependents.length} dependents`;
 
 const describeStatus = (status: HealthStatus, now: Instant.Instant): string => {
   switch (status._tag) {
     case "Unknown":
-      return "mai osservata";
+      return "never observed";
     case "Healthy":
-      return `sana da ${humanize(Instant.between(status.since, now))}`;
+      return `healthy for ${humanize(Instant.between(status.since, now))}`;
     case "Unhealthy":
-      return `giù da ${humanize(Instant.between(status.since, now))}`;
+      return `down for ${humanize(Instant.between(status.since, now))}`;
   }
 };
 
@@ -61,10 +61,10 @@ const describeFacet = (health: FacetHealth, now: Instant.Instant): string =>
 // Un gradino scartato non ha esito né dispaccio: dirlo com'è vale più di inventargli un esito
 // (INV-4, INV-6).
 const describeAttempt = (record: AttemptRecord): string => {
-  const verdict = O.getOrElse(() => "in corso")(record.verdict);
-  if (verdict === "Skipped") return `#${record.step} ${describeRemedy(record.remedy)} — scartato (precondizione falsa)`;
-  const outcome = O.match(() => "nessuna risposta", RemedyOutcome.describe)(record.outcome);
-  return `#${record.step} tentativo ${record.attempt} ${describeRemedy(record.remedy)} — ${outcome} → ${verdict}`;
+  const verdict = O.getOrElse(() => "in progress")(record.verdict);
+  if (verdict === "Skipped") return `#${record.step} ${describeRemedy(record.remedy)} — skipped (precondition false)`;
+  const outcome = O.match(() => "no response", RemedyOutcome.describe)(record.outcome);
+  return `#${record.step} attempt ${record.attempt} ${describeRemedy(record.remedy)} — ${outcome} → ${verdict}`;
 };
 
 const describeFailure = (failure: RemedyFailure): string =>
@@ -72,45 +72,45 @@ const describeFailure = (failure: RemedyFailure): string =>
 
 const describeReason = (incident: Incident): string =>
   O.match(
-    // Nessuna resa: l'incidente è stato alzato subito per criticità, e i rimedi stanno ancora
-    // girando (FATTO-16). Dirlo cambia cosa chi legge deve fare.
-    () => "segnalato subito per criticità: il recupero è ancora in corso",
+    // No surrender: the incident was raised immediately for criticality, and remedies are still
+    // running (FACT-16). Saying it changes what the reader must do.
+    () => "raised immediately for criticality: recovery is still in progress",
     (reason: { readonly _tag: string }) =>
       reason._tag === "RemedyUnsupported"
-        ? "resa immediata: il device non dichiara la capability richiesta"
-        : "scala di escalation esaurita",
+        ? "immediate surrender: device does not declare required capability"
+        : "escalation ladder exhausted",
   )(incident.reason);
 
 export const render = (incident: Incident): ReadonlyArray<MessageBlock> => {
   const now = O.getOrElse(() => incident.raisedAt)(incident.closedAt);
 
-  // Un incidente chiuso non è una nuova segnalazione: è la buona notizia, e va letta come tale.
+  // A closed incident is not a new alert: it is the good news, and must be read as such.
   if (O.isSome(incident.closedAt))
     return [
-      header(`✅ Rientrato · ${describeTarget(incident.target)}`),
-      section(`Il guasto durava da ${humanize(Instant.between(incident.outageSince, now))} ed è rientrato.`),
-      context(`sessione ${String(incident.sessionId)}`),
+      header(`✅ Recovered · ${describeTarget(incident.target)}`),
+      section(`The failure lasted ${humanize(Instant.between(incident.outageSince, now))} and has recovered.`),
+      context(`session ${String(incident.sessionId)}`),
     ];
 
   const blocks: MessageBlock[] = [
-    header(`🚨 ${describeTarget(incident.target)} non recuperato`),
-    section([`Giù da ${humanize(Instant.between(incident.outageSince, now))}.`, describeReason(incident)].join(" ")),
+    header(`🚨 ${describeTarget(incident.target)} not recovered`),
+    section([`Down for ${humanize(Instant.between(incident.outageSince, now))}.`, describeReason(incident)].join(" ")),
   ];
 
   if (incident.facets.length > 0)
     blocks.push(
-      section(["*Stato delle facce*", ...incident.facets.map((facet) => describeFacet(facet, now))].join("\n")),
+      section(["*Facet status*", ...incident.facets.map((facet) => describeFacet(facet, now))].join("\n")),
     );
 
   if (incident.history.length > 0)
-    blocks.push(section(["*Cosa è stato provato*", ...incident.history.map(describeAttempt)].join("\n")));
+    blocks.push(section(["*What was tried*", ...incident.history.map(describeAttempt)].join("\n")));
 
   if (incident.lastFailures.length > 0)
-    blocks.push(section(["*Ultimo esito per rimedio*", ...incident.lastFailures.map(describeFailure)].join("\n")));
+    blocks.push(section(["*Last outcome per remedy*", ...incident.lastFailures.map(describeFailure)].join("\n")));
 
   blocks.push(
     context(
-      `sessione ${String(incident.sessionId)} · criticità ${incident.criticality} · alzato ${Instant.toEpochMillis(incident.raisedAt)}`,
+      `session ${String(incident.sessionId)} · criticality ${incident.criticality} · raised ${Instant.toEpochMillis(incident.raisedAt)}`,
     ),
   );
 
@@ -120,5 +120,5 @@ export const render = (incident: Incident): ReadonlyArray<MessageBlock> => {
 // La riga sola che deve bastare in una notifica di sistema, dove i blocchi non arrivano.
 export const summary = (incident: Incident): string =>
   O.isSome(incident.closedAt)
-    ? `Rientrato: ${describeTarget(incident.target)}`
-    : `${describeTarget(incident.target)} non recuperato dopo ${incident.history.length} tentativi`;
+    ? `Recovered: ${describeTarget(incident.target)}`
+    : `${describeTarget(incident.target)} not recovered after ${incident.history.length} attempts`;
