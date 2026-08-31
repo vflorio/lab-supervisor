@@ -70,8 +70,8 @@
     [
       "suitest-camera-restart",
       [
-        ["restartApp", "com.suitest.android.camera"],
-        ["await", ["probe", "activityResumed", "com.suitest.android.camera.CameraActivity"], "5s"],
+        ["restartApp", "st.suite.camera"],
+        ["await", ["probe", "activityResumed", "st.suite.android.suitestcamera.MainActivity"], "5s"],
         ["run", "suitest-set-experimental-profile"],
         ["run", "suitest-connect"]
       ]
@@ -81,7 +81,7 @@
       [
         ["reboot"],
         ["waitForDevice"],
-        ["ensureActivity", "com.suitest.android.camera", "com.suitest.android.camera.CameraActivity"],
+        ["ensureActivity", "st.suite.camera", "st.suite.android.suitestcamera.MainActivity"],
         ["run", "suitest-set-experimental-profile"],
         ["run", "suitest-connect"]
       ]

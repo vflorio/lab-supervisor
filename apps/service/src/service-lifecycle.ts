@@ -147,6 +147,7 @@ const createResources =
         logger: env.logger.child("AndroidBridge"),
         spawn: Node.spawn,
         adbPort: env.config.adb.port,
+        mdnsBackend: Node.mdnsBackend,
         activityStream: env.activityStream,
       },
       env.adbDeviceStream,

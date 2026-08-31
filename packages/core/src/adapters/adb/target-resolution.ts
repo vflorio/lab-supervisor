@@ -8,7 +8,7 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 import * as RA from "fp-ts/ReadonlyArray";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
-import * as AvahiBrowse from "../avahi-browse";
+import * as Mdns from "../mdns";
 import type { AdbConnectionMachineEnv } from "./connection/interpret";
 import * as AdbConnectionMachine from "./connection/machine";
 import * as AdbConnection from "./connection/model";
@@ -106,6 +106,7 @@ const onTransition: Machine.TransitionHook<TargetResolutionMachineEnv, never, Re
 export interface TargetResolutionMachineEnv {
   readonly logger: Logger.Tagged;
   readonly spawn: Shell.Spawn;
+  readonly mdnsBackend: Mdns.Backend;
 }
 
 const reasonOf = (error: { readonly message: string }): string => error.message;
@@ -117,7 +118,11 @@ export const interpret =
       match(intent)
         .with({ _tag: "LookupPort" }, ({ host }) =>
           pipe(
-            AvahiBrowse.discoverAdbTlsConnect({ logger: env.logger.child("mDNS"), spawn: env.spawn }),
+            Mdns.discoverAdbTlsConnect({
+              logger: env.logger.child("mDNS"),
+              spawn: env.spawn,
+              backend: env.mdnsBackend,
+            }),
             TE.map(RA.findFirst((target: Network.Endpoint) => Network.EqIP.equals(target.ip, host.ip))),
             TE.match(
               (error): readonly ResolutionEvent[] => [{ _tag: "PortNotFound", host, reason: reasonOf(error) }],

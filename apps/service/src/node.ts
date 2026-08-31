@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import type * as Mdns from "@supervisor/core/adapters/mdns";
 import * as Errors from "@supervisor/core/errors";
 import type * as Fs from "@supervisor/core/fs";
 import * as Logger from "@supervisor/core/logger/logger";
@@ -16,6 +17,9 @@ export interface Process {
 
 const isTimedOut = (error: unknown): boolean =>
   error instanceof Error && "killed" in error && Boolean((error as Error & { killed?: boolean }).killed);
+
+// macOS espone `dns-sd`, le distro Linux `avahi-browse`: la scelta del backend mDNS segue la piattaforma.
+export const mdnsBackend: Mdns.Backend = process.platform === "darwin" ? "dns-sd" : "avahi";
 
 export const spawn: Shell.Spawn = (command, args, timeoutMs) =>
   pipe(
