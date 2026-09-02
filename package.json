@@ -37,7 +37,8 @@
     "syncpack:format": "syncpack format",
     "syncpack:list": "syncpack list",
     "test:e2e": "playwright test apps/tests --headed --ui",
-    "test:unit": "turbo run test"
+    "test:unit": "turbo run test",
+    "deploy": "rsync --exclude 'node_modules' --exclude 'dist' --exclude '.git' -avz -e ssh . macmini@192.168.0.20:/Users/macmini/lab-supervisor"
   },
   "type": "module",
   "workspaces": [

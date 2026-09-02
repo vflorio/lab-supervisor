@@ -127,6 +127,15 @@ export const tcpip =
 
 export const devices: Effect<Device[]> = pipe(run(["devices"]), RTE.map(parseDevices));
 
+export const killServer: Effect<void> = pipe(run(["kill-server"]), RTE.asUnit);
+export const startServer: Effect<void> = pipe(run(["start-server"]), RTE.asUnit);
+
+// Ripulisce transport/stato del server ADB host-level (non per-device) prima di un nuovo ciclo
+export const restartServer: Effect<void> = pipe(
+  killServer,
+  RTE.flatMap(() => startServer),
+);
+
 // Wait for specific state; no timeout (blocking-by-design, unlike other commands)
 export const waitForState =
   (state: Status) =>

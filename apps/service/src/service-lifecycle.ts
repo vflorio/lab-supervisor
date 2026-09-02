@@ -1,4 +1,5 @@
 import type * as Activity from "@supervisor/core/activity/stream";
+import * as Adb from "@supervisor/core/adapters/adb/shell";
 import type * as ConfigModel from "@supervisor/core/config";
 import * as DateTime from "@supervisor/core/date-time";
 import * as Errors from "@supervisor/core/errors";
@@ -68,7 +69,7 @@ export interface ActiveLifecycle {
   ) => TE.TaskEither<WorkflowInterpreter.WorkflowError, void>;
 }
 
-export type CreateError = Registry.SyncError | RecoveryEngine.StartError;
+export type CreateError = Adb.Error | Registry.SyncError | RecoveryEngine.StartError;
 
 const RECONCILE_POLICY = RetryCodec.describedConstant(DateTime.durationToMs("5s"));
 
@@ -239,15 +240,25 @@ const stopResources = ({
     IO.flatMap(() => androidBridge.stop),
   );
 
+const restartAdbServer = (env: Env) =>
+  pipe(
+    Adb.restartServer({ logger: env.logger.child("ADB"), spawn: Node.spawn }),
+    TE.tapIO(() => env.logger.info("ADB server restarted")),
+    TE.orElseFirstIOK((error) => env.logger.error(`ADB server restart failed: ${Errors.format(error)}`)),
+  );
+
 export const createActiveLifecycle = (env: Env): TE.TaskEither<CreateError, ActiveLifecycle> =>
   pipe(
-    Registry.sync({
-      logger: env.logger.child("Registry"),
-      suitestConfig: env.config.suitest,
-      dbPath: env.config.registry.dbPath,
-      seedDevices: env.config.registry.devices,
-      fsEnv: Node.fsEnv,
-    }),
+    restartAdbServer(env),
+    TE.flatMap(() =>
+      Registry.sync({
+        logger: env.logger.child("Registry"),
+        suitestConfig: env.config.suitest,
+        dbPath: env.config.registry.dbPath,
+        seedDevices: env.config.registry.devices,
+        fsEnv: Node.fsEnv,
+      }),
+    ),
     TE.tapIO(() => env.logger.info("Activation flow completed")),
     TE.flatMap(() => TE.fromIO(createResources(env))),
     TE.flatMap((resources) => createRecovery(env, resources)),
