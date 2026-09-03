@@ -102,17 +102,19 @@
 - [X] Gestione mDNS su macOS (dns-sd)
 - [X] ADB model: chiave primaria = id (uuid) invece dell'IP
 
-### Supervisor Agent 
-- [ ] deve mostrare l'IP corrente del device (e aggiornarsi se cambia la rete)
-- [ ] tasto reapply sparisce, non serve più 
+### Supervisor Agent
+- [X] deve mostrare l'IP corrente del device (e aggiornarsi se cambia la rete)
+- [X] tasto reapply sparisce, non serve più
 
 ### Candybox
 - [ ] Shared-host failure detection: se tutti i device appartenenti allo stesso Candybox risultano OFFLINE, riavvia del Candybox
 - [ ] Candybox recovery workflow: detect -> wait grace period -> reboot (smartplug) -> verify reachability
+    - blocked: da verificare in lab se esistono smart plug dietro le CU (oggi note solo dietro le TV) - senza plug sulla CU questo workflow non e' eseguibile
 
 ### Smart Plugs
-- [ ] Smart Plugs gestite dal servizio
-- [ ] Riconciliare gli SmartPlugs nella gerarchia dei device
+- [ ] Smart Plugs gestite dal servizio (oggi note solo dietro le TV, non dietro le CU - da confermare in lab)
+- [ ] Riconciliare gli SmartPlugs nella gerarchia dei device (mostrare la plug come "figlia" di una TV in UI)
+    - blocked: il Device codec Suitest (`packages/core/src/adapters/suitest.ts`) non ha un campo di relazione device->device ne' un discriminante di tipo esplicito - va chiarito con dati reali (dump Suitest) come si distingue una smart plug da una TV in `/devices` e come si risale alla TV a cui e' assegnata, prima di poter scrivere mock + reconciliation
 
 ### Predicates
 - [ ] Blaster Error: predicato dedicato per notificare su Slack (nessun recovery automatico, solo intervento manuale)
