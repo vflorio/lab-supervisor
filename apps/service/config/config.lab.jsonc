@@ -54,6 +54,7 @@
       // Auto-connects on app start; run manually in some cases
       "suitest-connect",
       [
+        // FIXME coordinate
         ["inputTap", { "x": 0.9, "y": 0.1 }], // connect button
         ["inputTap", { "x": 0.5, "y": 0.5 }] // confirm
       ]

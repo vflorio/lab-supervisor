@@ -1,7 +1,5 @@
 # TODO
 
-
-    
 ## v0.1.0
 
 ### Core
@@ -95,14 +93,43 @@
     - [X] Set Global Setting adb_wifi_enabled = 1
     - [X] Avvio automatico all'accensione (boot_completed) 
 
+
 ## v0.4.0
+
+### Android
+- [X] Riavvio del servizio ADB server quando si entra nello stato di attività
+  - [ ] UI Settings, trigger `adb disconnect` e `adb kill-server && adb start-server` 
+- [X] Gestione mDNS su macOS (dns-sd)
+- [ ] ADB model: chiave primaria = id (uuid) invece dell'IP (modificabile via UI)
+
+### Supervisor Agent 
+- [ ] deve mostrare l'IP corrente del device (e aggiornarsi se cambia la rete)
+- [ ] tasto reapply sparisce, non serve più 
 
 ### Candybox
 - [ ] Shared-host failure detection: se tutti i device appartenenti allo stesso Candybox risultano OFFLINE, riavvia del Candybox
 - [ ] Candybox recovery workflow: detect -> wait grace period -> reboot (smartplug) -> verify reachability
 
-### Workflow
-  - [ ] InputTap: coordinate relative/normalizzate (`0.0–1.0`) oltre a quelle assolute
+### Smart Plugs
+- [ ] Smart Plugs gestite dal servizio
+- [ ] Riconciliare gli SmartPlugs nella gerarchia dei device
+
+### Predicates
+- [ ] Blaster Error: predicato dedicato per notificare su Slack (nessun recovery automatico, solo intervento manuale)
+
+### Web / UI
+- [ ] Overview nel sidepanel
+- [ ] UI per modificare gli IPs
+- [ ] Indicatore versione servizio
+- [ ] (Bug) Service Logs rallenta l'app
+- [ ] Homepage
+  - [ ] Sort (Ordina per: Nome, IP)
+  - [ ] View toggles (CUs, TVs, Cameras, SmartPlugs)
+  - [ ] Filter (Abilitato, In Uso, In stato di errore)
+
+### Prod Env
+- [ ] Flusso di Deploy
+- [ ] Separare le chiavi dalla conf
 
 ## v0.5.0
 
