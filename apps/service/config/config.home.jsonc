@@ -105,16 +105,16 @@
   "registry": {
     "dbPath": "data/device-registry.json",
     "devices": {
-      // "cameras": [
-      //   {
-      //     "id": "tablet",
-      //     "label": "Lenovo Tab M10",
-      //     "controlled": true,
-      //     "videoCaptureDeviceId": null,
-      //     "adbId": "192.168.1.4:5555"
-      //   }
-      // ],
-      // "adb": [{ "id": "192.168.1.4:5555", "label": "Lenovo Tab M10", "target": "192.168.1.4:5555" }]
+      "cameras": [
+        {
+          "id": "tablet",
+          "label": "Lenovo Tab M10",
+          "controlled": true,
+          "videoCaptureDeviceId": null,
+          "adbId": "device-1"
+        }
+      ],
+      "adb": [{ "id": "device-1", "target": "192.168.1.4" }]
     }
   }
 }

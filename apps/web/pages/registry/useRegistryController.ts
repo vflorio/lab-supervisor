@@ -1,6 +1,5 @@
 import * as Network from "@supervisor/core/network";
 import * as E from "fp-ts/Either";
-import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
 import { useEffect, useState } from "react";
 import { match } from "ts-pattern";
@@ -140,7 +139,7 @@ function useRename({ log, run }: Deps) {
 // Target ADB: registro degli host, unica entita' registrabile a mano dalla UI
 // -------------------------------------------------------------------------------------
 
-const emptyNewAdbTarget: NewAdbTargetForm = { label: "", target: "" };
+const emptyNewAdbTarget: NewAdbTargetForm = { ip: "" };
 
 function useAdbTargets({ db, log, run }: Deps, devices: readonly AdbDevice[]) {
   const [open, setOpen] = useState(false);
@@ -148,14 +147,12 @@ function useAdbTargets({ db, log, run }: Deps, devices: readonly AdbDevice[]) {
 
   const submit = () =>
     run(async () => {
-      if (!form.label) return invalid("Label required");
-
-      const decoded = Network.decode(form.target);
+      const decoded = Network.decodeHost(form.ip);
       if (E.isLeft(decoded)) return { ok: false as const, error: decoded.left };
 
-      const id = Network.format(decoded.right);
-      log(`User added ADB target ${id} ("${form.label}")`);
-      const result = await mutations.adb.add.mutate({ id, label: form.label, target: id });
+      const id = crypto.randomUUID();
+      log(`User added ADB target ${form.ip} (id ${id})`);
+      const result = await mutations.adb.add.mutate({ id, target: Network.formatHost(decoded.right) });
 
       if (result.ok) {
         setOpen(false);
@@ -164,23 +161,16 @@ function useAdbTargets({ db, log, run }: Deps, devices: readonly AdbDevice[]) {
       return result;
     });
 
-  // Host gia' assegnati a una camera: esclusi dai candidati dell'assign dialog
-  const usedTargets = new Set(
+  // Adb id gia' assegnati a una camera: esclusi dai candidati dell'assign dialog
+  const usedAdbIds = new Set(
     Object.values(db.lab.cameras)
-      .map((c) =>
-        pipe(
-          c.adbId,
-          O.chain((id) => O.fromNullable(db.lab.adb[id])),
-          O.map((entry) => Network.format(entry.target)),
-        ),
-      )
-      .filter(O.isSome)
-      .map((o) => o.value),
+      .map((c) => O.toUndefined(c.adbId))
+      .filter((id): id is string => id !== undefined),
   );
 
   return {
     devices,
-    usedTargets,
+    usedAdbIds,
     statusFor: (target: Parameters<typeof adbStatusFor>[1]) => adbStatusFor(devices, target),
     add: { open, setOpen, form, setForm, submit },
   };
@@ -193,27 +183,50 @@ function useAdbTargets({ db, log, run }: Deps, devices: readonly AdbDevice[]) {
 function useAdbAssignment({ log, run }: Deps) {
   const dialog = useDialogTarget<CameraView>();
 
-  // Upsert (idempotente, chiave = target stesso) del target nel registro `adb`, poi collega
-  // la camera via foreign key `adbId`.
-  const submit = (target: string) =>
+  // Il picker offre solo id gia' registrati in `registry.adb` (SelectDialog non permette
+  // testo libero): qui basta collegare la camera via foreign key `adbId`.
+  const submit = (adbId: string) =>
     run(async () => {
       const camera = dialog.target;
       if (!camera) return invalid("No camera");
 
-      const decoded = Network.decode(target);
-      if (E.isLeft(decoded)) return { ok: false as const, error: decoded.left };
-
-      const id = Network.format(decoded.right);
-      log(`User assigned ADB host ${id} to camera ${camera.id}`);
-      const addResult = await mutations.adb.add.mutate({ id, label: id, target: id });
-      if (!addResult.ok) return addResult;
-
-      const result = await mutations.camera.update.mutate({ id: camera.id, adbId: id });
+      log(`User assigned ADB host ${adbId} to camera ${camera.id}`);
+      const result = await mutations.camera.update.mutate({ id: camera.id, adbId });
       if (result.ok) dialog.close();
       return result;
     });
 
   return { camera: dialog.target, start: dialog.open, cancel: dialog.close, submit };
+}
+
+// -------------------------------------------------------------------------------------
+// Modifica IP di un host ADB gia' registrato (es. il tablet ha cambiato rete)
+// -------------------------------------------------------------------------------------
+
+function useEditAdbIp({ db, log, run }: Deps) {
+  const dialog = useDialogTarget<{ id: string }>();
+  const [draft, setDraft] = useState("");
+
+  const start = (adbId: string) => {
+    dialog.open({ id: adbId });
+    setDraft(db.lab.adb[adbId]?.target.ip ?? "");
+  };
+
+  const save = () =>
+    run(async () => {
+      const target = dialog.target;
+      if (!target) return invalid("Nothing to edit");
+
+      const decoded = Network.decodeHost(draft);
+      if (E.isLeft(decoded)) return { ok: false as const, error: decoded.left };
+
+      log(`User changed ADB IP for ${target.id} to ${draft}`);
+      const result = await mutations.adb.update.mutate({ id: target.id, target: Network.formatHost(decoded.right) });
+      if (result.ok) dialog.close();
+      return result;
+    });
+
+  return { target: dialog.target, draft, setDraft, start, cancel: dialog.close, save };
 }
 
 // -------------------------------------------------------------------------------------
@@ -353,6 +366,7 @@ export function useRegistryController(
   db: Database,
   adbDevices: readonly AdbDevice[],
   workflows: readonly { name: string }[],
+  adbPort: Network.PORT,
 ) {
   const log = useServiceLogger();
   const { message, dismiss, setError, run } = useErrorSink();
@@ -363,6 +377,7 @@ export function useRegistryController(
   const rename = useRename(deps);
   const adb = useAdbTargets(deps, adbDevices);
   const assignAdb = useAdbAssignment(deps);
+  const editAdbIp = useEditAdbIp(deps);
   const linkSuitest = useSuitestLinking(deps);
   const linkTvCamera = useTvCameraLinking(deps, inventory.orphanCameras);
   const interventions = useInterventions(deps, workflows);
@@ -375,10 +390,12 @@ export function useRegistryController(
     rename,
     adb,
     assignAdb,
+    editAdbIp,
     linkSuitest,
     linkTvCamera,
     interventions,
     provisioning,
+    adbPort,
   };
 }
 
@@ -388,5 +405,13 @@ export type RegistryController = ReturnType<typeof useRegistryController>;
 // camera: un tipo solo al posto di un `Pick` duplicato per container.
 export type RegistryRowActions = Pick<
   RegistryController,
-  "devices" | "rename" | "assignAdb" | "linkSuitest" | "linkTvCamera" | "interventions" | "provisioning"
+  | "devices"
+  | "rename"
+  | "assignAdb"
+  | "editAdbIp"
+  | "linkSuitest"
+  | "linkTvCamera"
+  | "interventions"
+  | "provisioning"
+  | "adbPort"
 >;

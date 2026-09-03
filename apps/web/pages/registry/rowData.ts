@@ -74,11 +74,15 @@ function useAgentChecks(predicates: ReturnType<typeof useFacts>["table"], adbAdd
   };
 }
 
-export function useCameraRowData(camera: CameraView, onRearmRecovery: ResetRecovery): CameraRowData {
+export function useCameraRowData(
+  camera: CameraView,
+  onRearmRecovery: ResetRecovery,
+  adbPort: Network.PORT,
+): CameraRowData {
   const { table: predicates } = useFacts();
   const { table: activity } = useActivity();
   const videoCaptureDeviceId = O.toUndefined(camera.videoCaptureDeviceId) ?? "";
-  const adbAddress = camera.adb ? Network.format(camera.adb.target) : "";
+  const adbAddress = camera.adb ? Network.format(Network.of(camera.adb.target.ip, adbPort)) : "";
   const agent = useAgentChecks(predicates, adbAddress);
 
   return {

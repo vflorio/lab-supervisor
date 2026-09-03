@@ -1,17 +1,17 @@
-import * as Network from "@supervisor/core/network";
+import type * as Network from "@supervisor/core/network";
 import * as O from "fp-ts/Option";
 import type { AdbDevice } from "../../hooks/useAdbDevices";
 import type { CameraView, ControlUnitView, Database, Hierarchy, TvGroup, TvView } from "./types";
 
 // Stato di raggiungibilità ADB dell'host assegnato alla camera (fisico, via `adb devices`) -
-// distinto da `camera.suitest.online`, che riflette invece lo stato dell'app suitest-camera
+// distinto da `camera.suitest.online`, che riflette invece lo stato dell'app suitest-camera.
+// Il registry tiene solo l'IP, `adbDevices[].target` è "ip:port" live: si confronta il solo IP.
 export function adbStatusFor(
   adbDevices: readonly AdbDevice[],
-  target: Network.Endpoint | undefined,
+  target: Network.Host | undefined,
 ): AdbDevice["status"] | null {
   if (!target) return null;
-  const formatted = Network.format(target);
-  return adbDevices.find((d) => d.target === formatted)?.status ?? "disconnect";
+  return adbDevices.find((d) => d.target.startsWith(`${target.ip}:`))?.status ?? "disconnect";
 }
 
 // -------------------------------------------------------------------------------------

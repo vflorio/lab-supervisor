@@ -1,15 +1,15 @@
 import type { CameraEntry, LabRegistry } from "@supervisor/core/db";
-import * as Network from "@supervisor/core/network";
+import type * as Network from "@supervisor/core/network";
 import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
 import * as RA from "fp-ts/ReadonlyArray";
 
 // Gating: quali host ADB il discovery/connection deve considerare
 
-// Risolve la foreign key `adbId` nel registro `lab.adb` per ottenere il target ADB associato
+// Risolve la foreign key `adbId` nel registro `lab.adb` per ottenere l'host ADB associato
 const resolveAdbTarget =
   (registry: LabRegistry) =>
-  (camera: CameraEntry): O.Option<Network.Endpoint> =>
+  (camera: CameraEntry): O.Option<Network.Host> =>
     pipe(
       camera.adbId,
       O.chain((id) => O.fromNullable(registry.adb[id])),
@@ -38,8 +38,8 @@ export const cameraHosts = (registry: LabRegistry): readonly string[] =>
   pipe(Object.values(registry.cameras), RA.filterMap(resolveAdbHost(registry)));
 
 // (id camera -> host ADB) delle camere controllate - usato per istanziare/ritentare le FSM
-// android-bridge. Solo l'IP (non la porta registrata, che può essere stale): la connessione
-// effettiva risolve di nuovo la porta corrente via mDNS.
+// android-bridge. La connessione effettiva risolve la porta corrente via mDNS, quindi qui
+// serve solo l'IP.
 export const controlledCameraHostsById = (registry: LabRegistry): ReadonlyMap<string, Network.Host> =>
   new Map(
     pipe(
@@ -49,7 +49,7 @@ export const controlledCameraHostsById = (registry: LabRegistry): ReadonlyMap<st
         (camera): O.Option<readonly [string, Network.Host]> =>
           pipe(
             resolveAdbTarget(registry)(camera),
-            O.map((target): readonly [string, Network.Host] => [camera.id, Network.host(target.ip)]),
+            O.map((target): readonly [string, Network.Host] => [camera.id, target]),
           ),
       ),
     ),

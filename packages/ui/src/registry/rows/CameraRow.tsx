@@ -1,5 +1,5 @@
-import { Link as LinkIcon, Usb, Videocam } from "@mui/icons-material";
-import { Button, Stack } from "@mui/material";
+import { Edit, Link as LinkIcon, Usb, Videocam } from "@mui/icons-material";
+import { Button, IconButton, Stack } from "@mui/material";
 import type { CameraEntry } from "../../domain/types";
 import { EntryRow } from "../../misc/EntryRow";
 import { AdbBridgeActivityView } from "../activity/AdbBridgeActivityView";
@@ -30,6 +30,7 @@ export interface CameraRowProps {
   readonly onEdit: () => void;
   readonly onDelete: () => void;
   readonly onAssignAdb: () => void;
+  readonly onEditAdbIp?: () => void;
   readonly onLinkSuitest?: () => void;
   readonly onRunWorkflow?: (workflowName: string) => void;
   readonly onRearmRecovery?: () => void;
@@ -57,6 +58,7 @@ export function CameraRow({
   onEdit,
   onDelete,
   onAssignAdb,
+  onEditAdbIp,
   onLinkSuitest,
   onRunWorkflow,
   onRearmRecovery,
@@ -97,6 +99,11 @@ export function CameraRow({
         <Button key="adb" size="small" variant="outlined" startIcon={<Usb fontSize="small" />} onClick={onAssignAdb}>
           {camera.adbId ? "Change ADB" : "Assign ADB"}
         </Button>,
+        camera.adbId && onEditAdbIp && (
+          <IconButton key="edit-adb-ip" size="small" onClick={onEditAdbIp} title="Edit ADB IP">
+            <Edit fontSize="small" />
+          </IconButton>
+        ),
         onProvisionAgent && (
           <ProvisionAgentButton
             key="provision"

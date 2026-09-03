@@ -21,7 +21,7 @@ const toLoopWidgetProps = (entry: LoopEntry): LoopWidgetProps => ({
 });
 
 export default function Page() {
-  const { registry, adbDevices, workflows } = useData<Data>();
+  const { registry, adbDevices, workflows, adbPort } = useData<Data>();
   const liveAdbDevices = useAdbDevices(adbDevices.ok ? adbDevices.data : []);
   const loops = useLoops();
 
@@ -29,7 +29,9 @@ export default function Page() {
     <Box sx={{ maxHeight: "calc(100vh - 64px)", overflowY: "auto" }}>
       <ServiceStrip connection={loops.status} loops={loops.sorted.map(toLoopWidgetProps)} />
       {match(registry)
-        .with({ ok: true }, ({ data }) => <RegistryBody db={data} adbDevices={liveAdbDevices} workflows={workflows} />)
+        .with({ ok: true }, ({ data }) => (
+          <RegistryBody db={data} adbDevices={liveAdbDevices} workflows={workflows} adbPort={adbPort} />
+        ))
         .with({ ok: false }, ({ error }) => <Alert severity="error">Registry error: {error.message}</Alert>)
         .exhaustive()}
     </Box>

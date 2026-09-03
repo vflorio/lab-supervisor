@@ -100,7 +100,7 @@
 - [X] Riavvio del servizio ADB server quando si entra nello stato di attività
   - [ ] UI Settings, trigger `adb disconnect` e `adb kill-server && adb start-server` 
 - [X] Gestione mDNS su macOS (dns-sd)
-- [ ] ADB model: chiave primaria = id (uuid) invece dell'IP (modificabile via UI)
+- [X] ADB model: chiave primaria = id (uuid) invece dell'IP
 
 ### Supervisor Agent 
 - [ ] deve mostrare l'IP corrente del device (e aggiornarsi se cambia la rete)
@@ -119,7 +119,7 @@
 
 ### Web / UI
 - [ ] Overview nel sidepanel
-- [ ] UI per modificare gli IPs
+- [X] UI per modificare gli IPs ADB
 - [ ] Indicatore versione servizio
 - [ ] (Bug) Service Logs rallenta l'app
 - [ ] Homepage

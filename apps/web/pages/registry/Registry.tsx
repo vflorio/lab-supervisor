@@ -1,5 +1,5 @@
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField } from "@mui/material";
-import * as Network from "@supervisor/core/network";
+import type * as Network from "@supervisor/core/network";
 import { SelectDialog } from "@supervisor/ui/misc/SelectDialog";
 import {
   AddDeviceDialog,
@@ -7,6 +7,7 @@ import {
   DeviceRegistryHeader,
   UnlinkedSection,
 } from "@supervisor/ui/registry/index";
+import * as O from "fp-ts/Option";
 import { match } from "ts-pattern";
 import { useData } from "vike-react/useData";
 import { type AdbDevice, useAdbDevices } from "../../hooks/useAdbDevices";
@@ -22,11 +23,13 @@ import { useRegistryController } from "./useRegistryController";
 // -------------------------------------------------------------------------------------
 
 export function RegistryView() {
-  const { registry, adbDevices, workflows } = useData<Data>();
+  const { registry, adbDevices, workflows, adbPort } = useData<Data>();
   const liveAdbDevices = useAdbDevices(adbDevices.ok ? adbDevices.data : []);
 
   return match(registry)
-    .with({ ok: true }, ({ data }) => <RegistryBody db={data} adbDevices={liveAdbDevices} workflows={workflows} />)
+    .with({ ok: true }, ({ data }) => (
+      <RegistryBody db={data} adbDevices={liveAdbDevices} workflows={workflows} adbPort={adbPort} />
+    ))
     .with({ ok: false }, ({ error }) => <Alert severity="error">Registry error: {error.message}</Alert>)
     .exhaustive();
 }
@@ -37,15 +40,17 @@ export function RegistryBody({
   db,
   adbDevices,
   workflows,
+  adbPort,
 }: {
   db: Database;
   adbDevices: readonly AdbDevice[];
   workflows: readonly { name: string }[];
+  adbPort: Network.PORT;
 }) {
-  const controller = useRegistryController(db, adbDevices, workflows);
-  const { inventory, rename, adb, assignAdb, linkSuitest, linkTvCamera } = controller;
+  const controller = useRegistryController(db, adbDevices, workflows, adbPort);
+  const { inventory, rename, adb, assignAdb, editAdbIp, linkSuitest, linkTvCamera } = controller;
   const workflowNames = workflows.map((w) => w.name);
-  const assigningCameraTarget = assignAdb.camera?.adb ? Network.format(assignAdb.camera.adb.target) : undefined;
+  const assigningCameraAdbId = assignAdb.camera ? O.toUndefined(assignAdb.camera.adbId) : undefined;
 
   return (
     <Box sx={{ px: 3, py: 3 }}>
@@ -119,13 +124,39 @@ export function RegistryBody({
       <AssignCameraDialog
         open={assignAdb.camera !== null}
         cameraLabel={assignAdb.camera?.label}
-        selectedTarget={assigningCameraTarget}
+        selectedAdbId={assigningCameraAdbId}
         candidates={Object.values(db.lab.adb)
-          .filter((entry) => entry.id === assigningCameraTarget || !adb.usedTargets.has(entry.id))
-          .map((entry) => ({ target: entry.id, status: adb.statusFor(entry.target) ?? "disconnect" }))}
+          .filter((entry) => entry.id === assigningCameraAdbId || !adb.usedAdbIds.has(entry.id))
+          .map((entry) => ({
+            id: entry.id,
+            label: entry.target.ip,
+            status: adb.statusFor(entry.target) ?? "disconnect",
+          }))}
         onAssign={assignAdb.submit}
         onClose={assignAdb.cancel}
       />
+
+      {/* Edit ADB IP dialog */}
+      <Dialog open={editAdbIp.target !== null} onClose={editAdbIp.cancel}>
+        <DialogTitle>Edit ADB IP</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            placeholder="192.168.1.100"
+            value={editAdbIp.draft}
+            onChange={(e) => editAdbIp.setDraft(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && editAdbIp.save()}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={editAdbIp.cancel}>Cancel</Button>
+          <Button onClick={editAdbIp.save} variant="contained">
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Riconciliazione manuale: collega una camera a un video-capture-device Suitest */}
       <SelectDialog

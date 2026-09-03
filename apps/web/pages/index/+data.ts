@@ -9,5 +9,5 @@ export async function data(_pageContext: PageContextServer) {
     trpc.android.devices.query(),
     trpc.settings.getConfig.query(),
   ]);
-  return { registry, adbDevices, workflows: config.workflows };
+  return { registry, adbDevices, workflows: config.workflows, adbPort: config.adb.port };
 }
