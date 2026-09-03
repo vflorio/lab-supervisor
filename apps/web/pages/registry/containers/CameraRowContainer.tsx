@@ -1,9 +1,11 @@
 import * as Network from "@supervisor/core/network";
 import { CameraRow } from "@supervisor/ui/registry/index";
 import * as O from "fp-ts/Option";
+import { cameraErrorKinds } from "../errorKinds";
 import { toCameraEntry, useCameraRowData } from "../rowData";
 import type { CameraView } from "../types";
 import type { RegistryRowActions } from "../useRegistryController";
+import { matchesFilters } from "../useRegistryFilters";
 
 export function CameraRowContainer({
   camera,
@@ -19,6 +21,8 @@ export function CameraRowContainer({
   // non c'è nulla con cui parlare, quindi niente bottone.
   const adbTarget = camera.adb ? Network.format(Network.of(camera.adb.target.ip, controller.adbPort)) : undefined;
   const adbId = O.toUndefined(camera.adbId);
+
+  if (!matchesFilters(controller.display, "camera", camera, cameraErrorKinds(data))) return null;
 
   return (
     <CameraRow

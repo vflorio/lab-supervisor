@@ -7,6 +7,9 @@ import { ControlUnitRow, type ControlUnitRowProps } from "./ControlUnitRow";
 
 export interface ControlUnitCardProps extends Omit<ControlUnitRowProps, "cu" | "tvCount"> {
   readonly cu: ControlUnitEntry;
+  // Nasconde solo la riga propria della CU (nome, stato, switch), non le TV figlie - un toggle
+  // "nascondi CUs" nel toolbar della Homepage non deve far sparire anche i loro contenuti.
+  readonly showRow?: boolean;
   readonly children?: ReactNode;
 }
 
@@ -14,7 +17,7 @@ export interface ControlUnitCardProps extends Omit<ControlUnitRowProps, "cu" | "
 // la riga CU e ogni TV figlia (arrivata via `children`) ereditano per subgrid. `tvCount` è
 // derivato da `children` invece che richiesto al chiamante, per non duplicare un conteggio
 // che la lista di `children` già rappresenta.
-export function ControlUnitCard({ children, ...rowProps }: ControlUnitCardProps) {
+export function ControlUnitCard({ children, showRow = true, ...rowProps }: ControlUnitCardProps) {
   const tvCount = Children.count(children);
 
   return (
@@ -48,7 +51,7 @@ export function ControlUnitCard({ children, ...rowProps }: ControlUnitCardProps)
         </Typography>
       </Stack>
       <Box sx={{ ...entryRowGridSx, px: 2, py: 1.5 }}>
-        <ControlUnitRow {...rowProps} tvCount={tvCount} />
+        {showRow && <ControlUnitRow {...rowProps} tvCount={tvCount} />}
         {tvCount > 0 && (
           <Box
             sx={{ ...entryRowSubgridSx, rowGap: 1.5, mt: 1.5, pl: 3, borderLeft: "2px solid", borderColor: "divider" }}

@@ -52,9 +52,14 @@ export function Sidebar({ urlPathname }: { urlPathname: string }) {
         }}
       >
         {!collapsed && (
-          <Typography variant="subtitle1" noWrap sx={{ fontWeight: 600, p: 1, pl: 2 }}>
-            Lab Supervisor
-          </Typography>
+          <Box sx={{ p: 1, pl: 2, minWidth: 0 }}>
+            <Typography variant="subtitle1" noWrap sx={{ fontWeight: 600, lineHeight: 1.2 }}>
+              Lab Supervisor
+            </Typography>
+            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
+              Supervisor v{__APP_VERSION__}
+            </Typography>
+          </Box>
         )}
         <IconButton size="small" onClick={() => setCollapsed(!collapsed)} title={collapsed ? "Expand" : "Collapse"}>
           {collapsed ? <ChevronRight fontSize="small" /> : <ChevronLeft fontSize="small" />}

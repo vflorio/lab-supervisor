@@ -5,6 +5,7 @@ import {
   AddDeviceDialog,
   AssignCameraDialog,
   DeviceRegistryHeader,
+  RegistryToolbar,
   UnlinkedSection,
 } from "@supervisor/ui/registry/index";
 import * as O from "fp-ts/Option";
@@ -15,6 +16,7 @@ import type { Data } from "../index/+data";
 import { CameraRowContainer } from "./containers/CameraRowContainer";
 import { ControlUnitCardContainer } from "./containers/ControlUnitCardContainer";
 import { TvRowContainer } from "./containers/TvRowContainer";
+import { ERROR_KIND_OPTIONS } from "./errorKinds";
 import type { Database } from "./types";
 import { useRegistryController } from "./useRegistryController";
 
@@ -34,8 +36,8 @@ export function RegistryView() {
     .exhaustive();
 }
 
-// Corpo condiviso tra la route "/" e "/registry-v3" (vedi RegistryHeartbeat.tsx, che aggiunge
-// solo la ServiceStrip sopra questo stesso albero).
+// Corpo della route "/": la ServiceStrip (stato connessione + loop di background) vive nel
+// pannello Overview a destra (apps/web/components/OverviewPanel.tsx), non più qui in testa.
 export function RegistryBody({
   db,
   adbDevices,
@@ -48,7 +50,7 @@ export function RegistryBody({
   adbPort: Network.PORT;
 }) {
   const controller = useRegistryController(db, adbDevices, workflows, adbPort);
-  const { inventory, rename, adb, assignAdb, editAdbIp, linkSuitest, linkTvCamera } = controller;
+  const { inventory, rename, adb, assignAdb, editAdbIp, linkSuitest, linkTvCamera, display } = controller;
   const workflowNames = workflows.map((w) => w.name);
   const assigningCameraAdbId = assignAdb.camera ? O.toUndefined(assignAdb.camera.adbId) : undefined;
 
@@ -60,6 +62,20 @@ export function RegistryBody({
         cameraCount={inventory.counts.cameras}
         controlledCount={inventory.counts.controlled}
         onAddDevice={() => adb.add.setOpen(true)}
+      />
+
+      <RegistryToolbar
+        sortBy={display.sortBy}
+        onSortByChange={display.setSortBy}
+        visibleTypes={display.visibleTypes}
+        onToggleType={display.toggleType}
+        controlled={display.controlled}
+        onToggleControlled={display.toggleControlled}
+        inUse={display.inUse}
+        onToggleInUse={display.toggleInUse}
+        errorKindOptions={ERROR_KIND_OPTIONS}
+        errorKinds={display.errorKinds}
+        onToggleErrorKind={display.toggleErrorKind}
       />
 
       {controller.error.message && (

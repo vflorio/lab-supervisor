@@ -2,6 +2,7 @@ import type * as Network from "@supervisor/core/network";
 import * as O from "fp-ts/Option";
 import type { AdbDevice } from "../../hooks/useAdbDevices";
 import type { CameraView, ControlUnitView, Database, Hierarchy, TvGroup, TvView } from "./types";
+import type { SortBy } from "./useRegistryFilters";
 
 // Stato di raggiungibilità ADB dell'host assegnato alla camera (fisico, via `adb devices`) -
 // distinto da `camera.suitest.online`, che riflette invece lo stato dell'app suitest-camera.
@@ -92,6 +93,47 @@ export function buildHierarchy(db: Database): Hierarchy {
     cuGroups: controlUnits.map((cu) => ({ cu, tvs: (tvsByCuId.get(cu.id) ?? []).map(toGroup) })),
     unallocatedTvs: orphanTvs.map(toGroup),
     orphanCameras,
+  };
+}
+
+// Ordina la gerarchia per nome o IP - puramente di rendering, non tocca raggruppamento/join.
+// Le Control Unit non hanno un IP nel dominio (nessun campo sul CandyboxEntry) quindi restano
+// sempre ordinate per nome, qualunque sia `sortBy`; IP mancante finisce in coda.
+function byName<T extends { label: string }>(a: T, b: T): number {
+  return a.label.localeCompare(b.label);
+}
+
+function byIp<T extends { label: string }>(ip: (item: T) => string | undefined) {
+  return (a: T, b: T) => {
+    const ipA = ip(a);
+    const ipB = ip(b);
+    if (ipA === undefined && ipB === undefined) return byName(a, b);
+    if (ipA === undefined) return 1;
+    if (ipB === undefined) return -1;
+    return ipA.localeCompare(ipB, undefined, { numeric: true }) || byName(a, b);
+  };
+}
+
+const tvComparator = (sortBy: SortBy) =>
+  sortBy === "ip" ? byIp<TvView>((tv) => O.toUndefined(tv.ip)) : byName<TvView>;
+const cameraComparator = (sortBy: SortBy) =>
+  sortBy === "ip" ? byIp<CameraView>((camera) => camera.adb?.target.ip) : byName<CameraView>;
+
+export function sortHierarchy(hierarchy: Hierarchy, sortBy: SortBy): Hierarchy {
+  const sortTvGroup = (group: TvGroup): TvGroup => ({
+    ...group,
+    cameras: [...group.cameras].sort(cameraComparator(sortBy)),
+  });
+
+  return {
+    cuGroups: [...hierarchy.cuGroups]
+      .sort((a, b) => byName(a.cu, b.cu))
+      .map((group) => ({
+        ...group,
+        tvs: [...group.tvs].sort((a, b) => tvComparator(sortBy)(a.tv, b.tv)).map(sortTvGroup),
+      })),
+    unallocatedTvs: [...hierarchy.unallocatedTvs].sort((a, b) => tvComparator(sortBy)(a.tv, b.tv)).map(sortTvGroup),
+    orphanCameras: [...hierarchy.orphanCameras].sort(cameraComparator(sortBy)),
   };
 }
 

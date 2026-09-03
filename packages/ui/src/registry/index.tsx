@@ -14,6 +14,7 @@ export * from "./indicators/SuitestControlUnitOnlineView";
 export * from "./indicators/SuitestDeviceInUseView";
 export * from "./indicators/SuitestDeviceStatusView";
 export * from "./PageHeader";
+export * from "./RegistryToolbar";
 export * from "./rows/CameraRow";
 export * from "./rows/ControlUnitCard";
 export * from "./rows/ControlUnitRow";

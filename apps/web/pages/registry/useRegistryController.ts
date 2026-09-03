@@ -6,9 +6,16 @@ import { match } from "ts-pattern";
 import type { AdbDevice } from "../../hooks/useAdbDevices";
 import { useServiceLogger } from "../../hooks/useServiceLogger";
 import { trpc } from "../../trpc/client";
-import { adbStatusFor, buildHierarchy, cameraSuitestCandidates, suitestVideoCaptureDeviceForTv } from "./hierarchy";
+import {
+  adbStatusFor,
+  buildHierarchy,
+  cameraSuitestCandidates,
+  sortHierarchy,
+  suitestVideoCaptureDeviceForTv,
+} from "./hierarchy";
 import { mutate, mutations } from "./mutations";
 import type { CameraView, Database, DeviceKind, LinkingTarget, NewAdbTargetForm, TvView } from "./types";
+import { useRegistryFilters } from "./useRegistryFilters";
 
 // Estratto da Registry.tsx: cosi' Registry.tsx e RegistryTree.tsx riusano la stessa
 // business logic e differiscono solo nel rendering.
@@ -382,10 +389,12 @@ export function useRegistryController(
   const linkTvCamera = useTvCameraLinking(deps, inventory.orphanCameras);
   const interventions = useInterventions(deps, workflows);
   const provisioning = useProvisioning(deps);
+  const display = useRegistryFilters();
+  const sortedInventory = { ...inventory, ...sortHierarchy(inventory, display.sortBy) };
 
   return {
     error: { message, dismiss },
-    inventory,
+    inventory: sortedInventory,
     devices,
     rename,
     adb,
@@ -396,6 +405,7 @@ export function useRegistryController(
     interventions,
     provisioning,
     adbPort,
+    display,
   };
 }
 
@@ -414,4 +424,5 @@ export type RegistryRowActions = Pick<
   | "interventions"
   | "provisioning"
   | "adbPort"
+  | "display"
 >;

@@ -23,6 +23,9 @@ export interface TvRowProps {
   readonly onLinkCamera?: () => void;
   readonly onRunWorkflow?: (workflowName: string) => void;
   readonly onRearmRecovery?: () => void;
+  // Nasconde solo la riga propria della TV, non le camere figlie - stesso principio di
+  // ControlUnitCard `showRow` per il toggle "nascondi TVs" nel toolbar della Homepage.
+  readonly showRow?: boolean;
   readonly children?: ReactNode;
 }
 
@@ -44,47 +47,50 @@ export function TvRow({
   onLinkCamera,
   onRunWorkflow,
   onRearmRecovery,
+  showRow = true,
   children,
 }: TvRowProps) {
   const cameraCount = Children.count(children);
 
   return (
     <Box sx={{ ...entryRowSubgridSx, rowGap: 1 }}>
-      <EntryRow
-        icon={<Tv fontSize="small" />}
-        label={tv.label}
-        secondary={tv.ip}
-        checked={tv.controlled}
-        checkedTitle="Controlled by supervisor"
-        indicators={[
-          <SuitestDeviceStatusView key="status" value={deviceStatus} />,
-          <SuitestDeviceInUseView key="inuse" value={inUse} by={inUseBy} />,
-        ]}
-        context={
-          <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap", alignItems: "center" }}>
-            <RecoveryActivityView status={recoveryStatus} />
-            <ManualWorkflowActivityView status={workflowStatus} />
-          </Stack>
-        }
-        actions={[
-          onLinkCamera && (
-            <Button
-              key="link"
-              size="small"
-              variant="outlined"
-              startIcon={<LinkIcon fontSize="small" />}
-              onClick={onLinkCamera}
-            >
-              Link camera
-            </Button>
-          ),
-          onRunWorkflow && <WorkflowLauncher key="wf" workflows={workflows} onLaunch={onRunWorkflow} />,
-          <RearmRecoveryButton key="reset" recoveryStatus={recoveryStatus} onRearmRecovery={onRearmRecovery} />,
-        ]}
-        onToggle={onToggle}
-        onEdit={onEdit}
-        onDelete={onDelete}
-      />
+      {showRow && (
+        <EntryRow
+          icon={<Tv fontSize="small" />}
+          label={tv.label}
+          secondary={tv.ip}
+          checked={tv.controlled}
+          checkedTitle="Controlled by supervisor"
+          indicators={[
+            <SuitestDeviceStatusView key="status" value={deviceStatus} />,
+            <SuitestDeviceInUseView key="inuse" value={inUse} by={inUseBy} />,
+          ]}
+          context={
+            <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap", alignItems: "center" }}>
+              <RecoveryActivityView status={recoveryStatus} />
+              <ManualWorkflowActivityView status={workflowStatus} />
+            </Stack>
+          }
+          actions={[
+            onLinkCamera && (
+              <Button
+                key="link"
+                size="small"
+                variant="outlined"
+                startIcon={<LinkIcon fontSize="small" />}
+                onClick={onLinkCamera}
+              >
+                Link camera
+              </Button>
+            ),
+            onRunWorkflow && <WorkflowLauncher key="wf" workflows={workflows} onLaunch={onRunWorkflow} />,
+            <RearmRecoveryButton key="reset" recoveryStatus={recoveryStatus} onRearmRecovery={onRearmRecovery} />,
+          ]}
+          onToggle={onToggle}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
+      )}
       {cameraCount > 0 && (
         <Box sx={{ ...entryRowSubgridSx, rowGap: 1, pl: 3, borderLeft: "2px solid", borderColor: "divider" }}>
           {children}

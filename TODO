@@ -120,14 +120,14 @@
 - [ ] Blaster Error: predicato dedicato per notificare su Slack (nessun recovery automatico, solo intervento manuale)
 
 ### Web / UI
-- [ ] Overview nel sidepanel
+- [X] Overview nel sidepanel
 - [X] UI per modificare gli IPs ADB
-- [ ] Indicatore versione servizio
 - [ ] (Bug) Service Logs rallenta l'app
-- [ ] Homepage
-  - [ ] Sort (Ordina per: Nome, IP)
-  - [ ] View toggles (CUs, TVs, Cameras, SmartPlugs)
-  - [ ] Filter (Abilitato, In Uso, In stato di errore)
+- [X] Indicatore versione servizio
+- [X] Homepage
+  - [X] Sort (Ordina per: Nome, IP)
+  - [X] View toggles (CUs, TVs, Cameras, SmartPlugs)
+  - [X] Filter (Abilitato, In Uso, In stato di errore)
 
 ### Prod Env
 - [ ] Flusso di Deploy
