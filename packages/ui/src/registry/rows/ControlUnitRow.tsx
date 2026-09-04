@@ -50,11 +50,17 @@ export function ControlUnitRow({
       checked={cu.controlled}
       checkedTitle="Controlled by supervisor"
       indicators={[
-        <SuitestControlUnitOnlineView key="online" value={online} />,
-        <IndicatorStat key="tvs" label="TVS" value={tvCount} />,
+        <SuitestControlUnitOnlineView key={`${cu.id}-online`} value={online} />,
+        <IndicatorStat key={`${cu.id}-tvs`} label="TVS" value={tvCount} />,
       ]}
       context={<RecoveryActivityView status={recoveryStatus} />}
-      actions={[<RearmRecoveryButton key="reset" recoveryStatus={recoveryStatus} onRearmRecovery={onRearmRecovery} />]}
+      actions={[
+        <RearmRecoveryButton
+          key={`${cu.id}-reset`}
+          recoveryStatus={recoveryStatus}
+          onRearmRecovery={onRearmRecovery}
+        />,
+      ]}
       onToggle={onToggle}
       onEdit={onEdit}
       onDelete={onDelete}

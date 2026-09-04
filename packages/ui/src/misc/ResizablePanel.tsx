@@ -1,3 +1,4 @@
+import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import type { SxProps, Theme } from "@mui/material";
 import { Box } from "@mui/material";
 import type { ElementType, ReactNode, PointerEvent as ReactPointerEvent } from "react";
@@ -130,6 +131,20 @@ export function ResizablePanel({
               height: "100%",
               bgcolor: isActive ? "primary.main" : "transparent",
               transition: "width 0.1s, background-color 0.1s",
+            }}
+          />
+          <DragIndicatorIcon
+            sx={{
+              position: "absolute",
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: isActive ? "primary.main" : "action.active",
+              opacity: isActive ? 1 : 0.4,
+              pointerEvents: "none",
+              transition: "opacity 0.1s, color 0.1s",
+              bgcolor: "action.hover",
+              borderRadius: 2,
+              py: "2px",
             }}
           />
         </Box>

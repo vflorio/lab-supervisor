@@ -62,8 +62,8 @@ export function TvRow({
           checked={tv.controlled}
           checkedTitle="Controlled by supervisor"
           indicators={[
-            <SuitestDeviceStatusView key="status" value={deviceStatus} />,
-            <SuitestDeviceInUseView key="inuse" value={inUse} by={inUseBy} />,
+            <SuitestDeviceStatusView key={`${tv.deviceId}-status`} value={deviceStatus} />,
+            <SuitestDeviceInUseView key={`${tv.deviceId}-inuse`} value={inUse} by={inUseBy} />,
           ]}
           context={
             <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap", alignItems: "center" }}>
@@ -74,7 +74,7 @@ export function TvRow({
           actions={[
             onLinkCamera && (
               <Button
-                key="link"
+                key={`${tv.deviceId}-link`}
                 size="small"
                 variant="outlined"
                 startIcon={<LinkIcon fontSize="small" />}
@@ -83,8 +83,14 @@ export function TvRow({
                 Link camera
               </Button>
             ),
-            onRunWorkflow && <WorkflowLauncher key="wf" workflows={workflows} onLaunch={onRunWorkflow} />,
-            <RearmRecoveryButton key="reset" recoveryStatus={recoveryStatus} onRearmRecovery={onRearmRecovery} />,
+            onRunWorkflow && (
+              <WorkflowLauncher key={`${tv.deviceId}-workflow`} workflows={workflows} onLaunch={onRunWorkflow} />
+            ),
+            <RearmRecoveryButton
+              key={`${tv.deviceId}-reset`}
+              recoveryStatus={recoveryStatus}
+              onRearmRecovery={onRearmRecovery}
+            />,
           ]}
           onToggle={onToggle}
           onEdit={onEdit}
