@@ -1,14 +1,7 @@
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField } from "@mui/material";
 import type * as Network from "@supervisor/core/network";
 import { SelectDialog } from "@supervisor/ui/misc/SelectDialog";
-import {
-  AddDeviceDialog,
-  AssignCameraDialog,
-  DeviceRegistryHeader,
-  RegistryToolbar,
-  UnlinkedSection,
-} from "@supervisor/ui/registry/index";
-import * as O from "fp-ts/Option";
+import { AssignAdbDialog, DeviceRegistryHeader, RegistryToolbar, UnlinkedSection } from "@supervisor/ui/registry/index";
 import { match } from "ts-pattern";
 import { useData } from "vike-react/useData";
 import { type AdbDevice, useAdbDevices } from "../../hooks/useAdbDevices";
@@ -50,9 +43,8 @@ export function RegistryBody({
   adbPort: Network.PORT;
 }) {
   const controller = useRegistryController(db, adbDevices, workflows, adbPort);
-  const { inventory, rename, adb, assignAdb, editAdbIp, linkSuitest, linkTvCamera, display } = controller;
+  const { inventory, rename, createAdb, editAdbIp, linkSuitest, linkTvCamera, display } = controller;
   const workflowNames = workflows.map((w) => w.name);
-  const assigningCameraAdbId = assignAdb.camera ? O.toUndefined(assignAdb.camera.adbId) : undefined;
 
   return (
     <Box sx={{ px: 3, py: 3 }}>
@@ -61,7 +53,6 @@ export function RegistryBody({
         tvCount={inventory.counts.tvs}
         cameraCount={inventory.counts.cameras}
         controlledCount={inventory.counts.controlled}
-        onAddDevice={() => adb.add.setOpen(true)}
       />
 
       <RegistryToolbar
@@ -125,31 +116,16 @@ export function RegistryBody({
         </DialogActions>
       </Dialog>
 
-      {/* Add ADB target dialog */}
-      <AddDeviceDialog
-        open={adb.add.open}
-        device={adb.add.form}
-        onChange={adb.add.setForm}
-        onAdd={adb.add.submit}
-        onClose={() => adb.add.setOpen(false)}
-      />
-
-      {/* Assign camera <-> adb host dialog: candidati da registry.adb (non solo raggiungibili
-          in questo momento) - un target appena creato manualmente non è ancora connesso finché
-          non è assegnato a una camera controlled, il bridge lo connette al reconcile successivo */}
-      <AssignCameraDialog
-        open={assignAdb.camera !== null}
-        cameraLabel={assignAdb.camera?.label}
-        selectedAdbId={assigningCameraAdbId}
-        candidates={Object.values(db.lab.adb)
-          .filter((entry) => entry.id === assigningCameraAdbId || !adb.usedAdbIds.has(entry.id))
-          .map((entry) => ({
-            id: entry.id,
-            label: entry.target.ip,
-            status: adb.statusFor(entry.target) ?? "disconnect",
-          }))}
-        onAssign={assignAdb.submit}
-        onClose={assignAdb.cancel}
+      {/* Crea l'host ADB e lo assegna alla camera in un colpo solo - niente pool di host da
+          gestire a parte, ognuno nasce già legato alla camera per cui è stato registrato */}
+      <AssignAdbDialog
+        open={createAdb.camera !== null}
+        cameraLabel={createAdb.camera?.label}
+        device={createAdb.form}
+        status={createAdb.status}
+        onChange={createAdb.setForm}
+        onAssign={createAdb.submit}
+        onClose={createAdb.cancel}
       />
 
       {/* Edit ADB IP dialog */}

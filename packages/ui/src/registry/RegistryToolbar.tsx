@@ -111,7 +111,7 @@ export function RegistryToolbar({
       {errorKindOptions.length > 0 && (
         <Stack direction="row" sx={{ gap: 0.5, alignItems: "center", flexWrap: "wrap" }}>
           <Typography sx={{ fontSize: 11 }} color="text.secondary">
-            In stato di errore
+            By error state
           </Typography>
           {errorKindOptions.map((kind) => (
             <Chip

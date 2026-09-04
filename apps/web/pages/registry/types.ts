@@ -43,7 +43,8 @@ export interface Hierarchy {
 }
 
 // Candybox/Camera/TV derivano da config seed / Suitest sync: l'unico device registrabile
-// manualmente dalla UI è un target ADB (es. un tablet), poi assegnabile a una camera.
+// manualmente dalla UI è un target ADB (es. un tablet), creato e assegnato a una camera in
+// un solo step (nessun pool di host non assegnati).
 export interface NewAdbTargetForm {
   ip: string; // validato a runtime con Network.decodeHost
 }

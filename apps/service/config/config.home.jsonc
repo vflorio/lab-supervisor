@@ -32,8 +32,8 @@
     "adb": { "policy": [["constantDelay", "10s"]] },
     "agent": { "policy": [["constantDelay", "15m"]] },
     "suitestCamera": { "policy": [["constantDelay", "30s"]] },
-    "suitestControlUnit": { "policy": [["constantDelay", "60s"]] },
-    "suitestDevice": { "policy": [["constantDelay", "60s"]] }
+    "suitestControlUnit": { "policy": [["constantDelay", "3m"]] },
+    "suitestDevice": { "policy": [["constantDelay", "1m"]] }
   },
 
   // Applicative

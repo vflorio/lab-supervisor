@@ -35,7 +35,7 @@ export function CameraRowContainer({
       onToggle={() => controller.devices.toggle("camera", camera.id, camera.controlled)}
       onEdit={() => controller.rename.start("camera", camera.id, camera.label)}
       onDelete={() => controller.devices.remove("camera", camera.id)}
-      onAssignAdb={() => controller.assignAdb.start(camera)}
+      onCreateAdb={() => controller.createAdb.start(camera)}
       onEditAdbIp={adbId ? () => controller.editAdbIp.start(adbId) : undefined}
       onLinkSuitest={() => controller.linkSuitest.start(camera)}
       onRunWorkflow={camera.adb ? (name) => controller.interventions.runWorkflow(camera.id, name) : undefined}

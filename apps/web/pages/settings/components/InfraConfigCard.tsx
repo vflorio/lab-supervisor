@@ -1,9 +1,7 @@
-import { Dns, RestartAlt } from "@mui/icons-material";
+import { Dns } from "@mui/icons-material";
 import {
   Alert,
   Box,
-  Button,
-  CircularProgress,
   MenuItem,
   Paper,
   Select,
@@ -26,6 +24,7 @@ import { useState } from "react";
 import { trpc } from "../../../trpc/client";
 import type { Config } from "../Settings";
 import { EditActions } from "./EditActions";
+import { RestartAdbServerButton } from "./RestartAdbServerButton";
 
 const mono = { fontFamily: "'JetBrains Mono', monospace" } as const;
 const LOG_LEVELS = Object.keys(LogLevel.keys) as readonly LogLevel[];
@@ -74,9 +73,6 @@ export function InfraConfigCard({ config, onSaved }: { config: Config; onSaved: 
   const [showJson, setShowJson] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [restarting, setRestarting] = useState(false);
-  const [restarted, setRestarted] = useState(false);
-  const [restartError, setRestartError] = useState<string | null>(null);
 
   const infra = editing ? draft : toInfra(config);
 
@@ -91,20 +87,6 @@ export function InfraConfigCard({ config, onSaved }: { config: Config; onSaved: 
       setError(result.error.message);
     }
     setSaving(false);
-  };
-
-  // adb disconnect (all) + adb kill-server && adb start-server
-  const restartAdbServer = async () => {
-    setRestarting(true);
-    setRestartError(null);
-    const result = await trpc.android.restartServer.mutate();
-    if (result.ok) {
-      setRestarted(true);
-      setTimeout(() => setRestarted(false), 2000);
-    } else {
-      setRestartError(result.error.message);
-    }
-    setRestarting(false);
   };
 
   return (
@@ -133,11 +115,6 @@ export function InfraConfigCard({ config, onSaved }: { config: Config; onSaved: 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
-        </Alert>
-      )}
-      {restartError && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setRestartError(null)}>
-          {restartError}
         </Alert>
       )}
       {showJson ? (
@@ -262,16 +239,7 @@ export function InfraConfigCard({ config, onSaved }: { config: Config; onSaved: 
                 <Field label="waitForDeviceTimeout">
                   <DurationView value={infra.adb.waitForDeviceTimeout} />
                 </Field>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  color={restartError ? "error" : "inherit"}
-                  disabled={restarting}
-                  startIcon={restarting ? <CircularProgress size={14} /> : <RestartAlt fontSize="small" />}
-                  onClick={restartAdbServer}
-                >
-                  {restarting ? "Restarting…" : restarted ? "Restarted" : "Restart ADB server"}
-                </Button>
+                <RestartAdbServerButton />
               </>
             )}
           </Group>

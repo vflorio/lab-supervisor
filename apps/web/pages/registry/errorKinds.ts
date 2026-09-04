@@ -8,24 +8,24 @@ import type { CameraRowData, ControlUnitRowData, TvRowData } from "./rowData";
 export function controlUnitErrorKinds(data: ControlUnitRowData): readonly string[] {
   return [
     data.online === false && "Control unit offline",
-    isRecoveryStuck(data.recoveryStatus) && "Recovery bloccata",
+    isRecoveryStuck(data.recoveryStatus) && "Recovery stuck",
   ].filter((kind): kind is string => kind !== false);
 }
 
 export function tvErrorKinds(data: TvRowData): readonly string[] {
   return [
     data.deviceStatus === "OFFLINE" && "TV offline",
-    isRecoveryStuck(data.recoveryStatus) && "Recovery bloccata",
+    isRecoveryStuck(data.recoveryStatus) && "Recovery stuck",
   ].filter((kind): kind is string => kind !== false);
 }
 
 export function cameraErrorKinds(data: CameraRowData): readonly string[] {
   return [
-    data.connected === false && "Camera non connessa",
-    data.adbReachable === false && "Camera non raggiungibile (ADB)",
-    data.agentProvisioned === false && "Agent non provisionato",
-    adbBridgeActivityTone(data.adbActivityStatus)[0] === "error" && "ADB disconnesso",
-    isRecoveryStuck(data.recoveryStatus) && "Recovery bloccata",
+    data.connected === false && "Camera offline",
+    data.adbReachable === false && "Camera offline (ADB)",
+    data.agentProvisioned === false && "Agent unprovisioned",
+    adbBridgeActivityTone(data.adbActivityStatus)[0] === "error" && "ADB disconnected",
+    isRecoveryStuck(data.recoveryStatus) && "Recovery stuck",
   ].filter((kind): kind is string => kind !== false);
 }
 
@@ -34,9 +34,9 @@ export function cameraErrorKinds(data: CameraRowData): readonly string[] {
 export const ERROR_KIND_OPTIONS = [
   "Control unit offline",
   "TV offline",
-  "Camera non connessa",
-  "Camera non raggiungibile (ADB)",
-  "Agent non provisionato",
-  "ADB disconnesso",
-  "Recovery bloccata",
+  "Camera offline",
+  "Camera offline (ADB)",
+  "Agent unprovisioned",
+  "ADB disconnected",
+  "Recovery stuck",
 ] as const;

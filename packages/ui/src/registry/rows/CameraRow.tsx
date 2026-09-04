@@ -29,7 +29,7 @@ export interface CameraRowProps {
   readonly onToggle: () => void;
   readonly onEdit: () => void;
   readonly onDelete: () => void;
-  readonly onAssignAdb: () => void;
+  readonly onCreateAdb?: () => void;
   readonly onEditAdbIp?: () => void;
   readonly onLinkSuitest?: () => void;
   readonly onRunWorkflow?: (workflowName: string) => void;
@@ -38,8 +38,9 @@ export interface CameraRowProps {
 }
 
 // Riga camera: foglia della gerarchia, nessun figlio. "Link Suitest" compare solo finché la
-// camera non è collegata a un video-capture-device; l'azione ADB cambia label in base a
-// `camera.adbId` invece di offrire due bottoni distinti (§6.3).
+// camera non è collegata a un video-capture-device. Sull'ADB un solo bottone alla volta: senza
+// `adbId` si crea+assegna un host in un colpo solo, una volta assegnato resta solo l'edit IP -
+// non esiste un flusso per "cambiare" l'host assegnato con uno diverso.
 export function CameraRow({
   camera,
   connected,
@@ -57,7 +58,7 @@ export function CameraRow({
   onToggle,
   onEdit,
   onDelete,
-  onAssignAdb,
+  onCreateAdb,
   onEditAdbIp,
   onLinkSuitest,
   onRunWorkflow,
@@ -96,9 +97,11 @@ export function CameraRow({
             Link Suitest
           </Button>
         ),
-        <Button key="adb" size="small" variant="outlined" startIcon={<Usb fontSize="small" />} onClick={onAssignAdb}>
-          {camera.adbId ? "Change ADB" : "Assign ADB"}
-        </Button>,
+        !camera.adbId && onCreateAdb && (
+          <Button key="adb" size="small" variant="outlined" startIcon={<Usb fontSize="small" />} onClick={onCreateAdb}>
+            Add ADB
+          </Button>
+        ),
         camera.adbId && onEditAdbIp && (
           <IconButton key="edit-adb-ip" size="small" onClick={onEditAdbIp} title="Edit ADB IP">
             <Edit fontSize="small" />
