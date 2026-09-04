@@ -134,6 +134,7 @@ export const create = ({
 const android = (trpcLog: Logger.Tagged, stream: AndroidBridge.AdbDeviceStream): Trpc.Services["android"] => ({
   devices: () => pipe(Adb.devices({ logger: trpcLog, spawn: Node.spawn }), TE.map(toDeviceSnapshot)),
   reboot: (target) => Adb.reboot(target)({ logger: trpcLog, spawn: Node.spawn }),
+  restartServer: () => Adb.reset({ logger: trpcLog, spawn: Node.spawn }),
 
   // Alimentato dal tracker centralizzato: evita che questo feed ripolli `adb devices` per conto proprio
   devicesFeed: {

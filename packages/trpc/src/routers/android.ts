@@ -23,6 +23,10 @@ export const androidRouter = router({
     .input(targetInput)
     .mutation(({ ctx, input }) => pipe(ctx.services.android.reboot(input), Result.fromTaskEither)),
 
+  restartServer: publicProcedure.mutation(({ ctx }) =>
+    pipe(ctx.services.android.restartServer(), Result.fromTaskEither),
+  ),
+
   // Live tail dello stato ADB degli host (raggiungibilità fisica del device, non l'app suitest-camera).
   devicesTail: publicProcedure.subscription(async function* ({
     ctx,

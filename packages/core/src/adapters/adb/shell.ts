@@ -108,6 +108,8 @@ export const connect = (target: Network.Endpoint): Effect<void> =>
 export const disconnect = (target: Network.Endpoint): Effect<void> =>
   pipe(run(["disconnect", Network.format(target)]), RTE.asUnit);
 
+export const disconnectAll: Effect<void> = pipe(run(["disconnect"]), RTE.asUnit);
+
 // Best-effort disconnect (failure is OK; cleans stray transports; logs only)
 export const disconnectQuietly =
   (target: Network.Endpoint): RTE.ReaderTaskEither<AdbEnv, never, void> =>
@@ -130,9 +132,9 @@ export const devices: Effect<Device[]> = pipe(run(["devices"]), RTE.map(parseDev
 export const killServer: Effect<void> = pipe(run(["kill-server"]), RTE.asUnit);
 export const startServer: Effect<void> = pipe(run(["start-server"]), RTE.asUnit);
 
-// Ripulisce transport/stato del server ADB host-level (non per-device) prima di un nuovo ciclo
-export const restartServer: Effect<void> = pipe(
-  killServer,
+export const reset: Effect<void> = pipe(
+  disconnectAll,
+  RTE.flatMap(() => killServer),
   RTE.flatMap(() => startServer),
 );
 

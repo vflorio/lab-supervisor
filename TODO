@@ -98,7 +98,7 @@
 
 ### Android
 - [X] Riavvio del servizio ADB server quando si entra nello stato di attività
-  - [ ] UI Settings, trigger `adb disconnect` e `adb kill-server && adb start-server` 
+  - [X] UI Settings, trigger `adb disconnect` e `adb kill-server && adb start-server`
 - [X] Gestione mDNS su macOS (dns-sd)
 - [X] ADB model: chiave primaria = id (uuid) invece dell'IP
 

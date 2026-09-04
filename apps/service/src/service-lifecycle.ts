@@ -240,16 +240,9 @@ const stopResources = ({
     IO.flatMap(() => androidBridge.stop),
   );
 
-const restartAdbServer = (env: Env) =>
-  pipe(
-    Adb.restartServer({ logger: env.logger.child("ADB"), spawn: Node.spawn }),
-    TE.tapIO(() => env.logger.info("ADB server restarted")),
-    TE.orElseFirstIOK((error) => env.logger.error(`ADB server restart failed: ${Errors.format(error)}`)),
-  );
-
 export const createActiveLifecycle = (env: Env): TE.TaskEither<CreateError, ActiveLifecycle> =>
   pipe(
-    restartAdbServer(env),
+    Adb.reset({ logger: env.logger.child("ADB"), spawn: Node.spawn }),
     TE.flatMap(() =>
       Registry.sync({
         logger: env.logger.child("Registry"),
