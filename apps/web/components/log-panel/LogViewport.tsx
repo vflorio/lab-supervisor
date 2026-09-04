@@ -3,10 +3,10 @@ import { Box, Fab, Typography } from "@mui/material";
 import type { LogEntry } from "@supervisor/core/logger/log-stream";
 import type { LogLevel } from "@supervisor/core/logger/logger";
 import { List, useDynamicRowHeight } from "react-window";
-import type { ServiceStatus } from "../hooks/useLogFeed";
-import { useStickToBottom } from "../hooks/useStickToBottom";
-import { PANEL_HEADER_HEIGHT } from "../layout/PanelHeader";
+import type { ServiceStatus } from "../../hooks/useLogFeed";
+import { PANEL_HEADER_HEIGHT } from "../../layout/PanelHeader";
 import { LogRow } from "./LogRow";
+import { useStickToBottom } from "./useStickToBottom";
 
 const VIEWPORT_BG = "#0a0c0e";
 const DEFAULT_ROW_HEIGHT = 20;

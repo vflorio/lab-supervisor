@@ -1,7 +1,7 @@
 import { RestartAlt } from "@mui/icons-material";
 import { Alert, Button, CircularProgress, Stack } from "@mui/material";
 import { useState } from "react";
-import { trpc } from "../../../trpc/client";
+import { trpc } from "../trpc/client";
 
 // `adb disconnect` (all) + `adb kill-server && adb start-server`
 export function RestartAdbServerButton() {

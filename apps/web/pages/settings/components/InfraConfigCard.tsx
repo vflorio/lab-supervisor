@@ -24,7 +24,6 @@ import { useState } from "react";
 import { trpc } from "../../../trpc/client";
 import type { Config } from "../Settings";
 import { EditActions } from "./EditActions";
-import { RestartAdbServerButton } from "./RestartAdbServerButton";
 
 const mono = { fontFamily: "'JetBrains Mono', monospace" } as const;
 const LOG_LEVELS = Object.keys(LogLevel.keys) as readonly LogLevel[];
@@ -239,7 +238,6 @@ export function InfraConfigCard({ config, onSaved }: { config: Config; onSaved: 
                 <Field label="waitForDeviceTimeout">
                   <DurationView value={infra.adb.waitForDeviceTimeout} />
                 </Field>
-                <RestartAdbServerButton />
               </>
             )}
           </Group>
