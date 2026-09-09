@@ -19,7 +19,7 @@ export function recoveryActivityTone(status: string | undefined): [StatusTone, s
     .otherwise((s) => ["disabled", s]);
 }
 
-// Un tripwire fermo in questi due stati richiede il reset manuale dell'operatore (§6.3) -
+// Un tripwire fermo in questi due stati richiede il reset manuale dell'operatore -
 // esposta a parte così CameraRow/TvRow/ControlUnitRow decidono se mostrare "Rearm recovery"
 // senza duplicare la logica di stato.
 export function isRecoveryStuck(status: string | undefined): boolean {

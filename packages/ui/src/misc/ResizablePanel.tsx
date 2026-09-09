@@ -99,8 +99,6 @@ export function ResizablePanel({
         width: collapsed ? collapsedSize : size,
         minWidth: 0,
         overflow: "hidden",
-        // Nessuna transizione durante il drag - farebbe rincorrere il pointer al box invece di
-        // seguirlo 1:1; si anima solo il passaggio collapsed/expanded.
         transition: isActive ? "none" : (t) => t.transitions.create("width"),
         ...sx,
       }}
@@ -118,33 +116,22 @@ export function ResizablePanel({
             bottom: 0,
             [handleSide]: -HANDLE_HITBOX / 2,
             width: HANDLE_HITBOX,
-            display: "flex",
-            justifyContent: "center",
             cursor: "col-resize",
             zIndex: 1,
-            "&:hover": { bgcolor: isActive ? undefined : "action.hover" },
+            bgcolor: isActive ? "primary.main" : "action.hover",
+            transition: "background-color 0.1s",
           }}
         >
-          <Box
-            sx={{
-              width: isActive ? 4 : 2,
-              height: "100%",
-              bgcolor: isActive ? "primary.main" : "transparent",
-              transition: "width 0.1s, background-color 0.1s",
-            }}
-          />
           <DragIndicatorIcon
             sx={{
               position: "absolute",
               top: "50%",
-              transform: "translateY(-50%)",
-              color: isActive ? "primary.main" : "action.active",
+              left: "calc(50% - -1px)",
+              transform: "translate(-50%, -50%)",
+              color: isActive ? "primary.contrastText" : "action.active",
               opacity: isActive ? 1 : 0.4,
               pointerEvents: "none",
               transition: "opacity 0.1s, color 0.1s",
-              bgcolor: "action.hover",
-              borderRadius: 2,
-              py: "2px",
             }}
           />
         </Box>

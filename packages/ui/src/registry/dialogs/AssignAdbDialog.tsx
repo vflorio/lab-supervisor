@@ -16,8 +16,16 @@ export interface AssignAdbDialogProps {
 
 // Crea l'host ADB e lo assegna alla camera in un unico step: non esiste un pool di host
 // standalone da gestire a parte, ogni host nasce già legato alla camera per cui è stato
-// registrato (§6.3).
-export function AssignAdbDialog({ open, cameraLabel, device, status, onChange, onAssign, onClose }: AssignAdbDialogProps) {
+// registrato.
+export function AssignAdbDialog({
+  open,
+  cameraLabel,
+  device,
+  status,
+  onChange,
+  onAssign,
+  onClose,
+}: AssignAdbDialogProps) {
   const canSubmit = !!device.ip;
 
   return (

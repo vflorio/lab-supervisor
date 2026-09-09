@@ -21,10 +21,13 @@ export function adbStatusFor(
 // -------------------------------------------------------------------------------------
 
 function enrich(db: Database): { controlUnits: ControlUnitView[]; tvs: TvView[]; cameras: CameraView[] } {
-  const controlUnits: ControlUnitView[] = Object.values(db.lab.candyboxes).map((cu) => ({
-    ...cu,
-    online: db.suitest.controlUnits[cu.id]?.online,
-  }));
+  // Le control unit di tipo "drive" (PC Suitest Drive) non sono candybox fisiche del lab: escluse dalla UI.
+  const controlUnits: ControlUnitView[] = Object.values(db.lab.candyboxes)
+    .filter((cu) => db.suitest.controlUnits[cu.id]?.type !== "drive")
+    .map((cu) => ({
+      ...cu,
+      online: db.suitest.controlUnits[cu.id]?.online,
+    }));
 
   // Identità TV = deviceId Suitest, sempre presente
   const tvs: TvView[] = Object.values(db.lab.tvs).map((tv) => {

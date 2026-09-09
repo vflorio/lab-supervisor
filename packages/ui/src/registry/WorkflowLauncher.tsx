@@ -9,7 +9,7 @@ export interface WorkflowLauncherProps {
 }
 
 // Bottone + popover con ricerca per lanciare manualmente uno dei workflow configurati contro
-// l'entità della riga corrente (§6.3). Nessun workflow configurato -> nulla da lanciare.
+// l'entità della riga corrente. Nessun workflow configurato -> nulla da lanciare.
 export function WorkflowLauncher({ workflows, onLaunch }: WorkflowLauncherProps) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   if (workflows.length === 0) return null;

@@ -1,5 +1,5 @@
-import { Edit, Link as LinkIcon, Usb, Videocam } from "@mui/icons-material";
-import { Button, IconButton, Stack } from "@mui/material";
+import { Link as LinkIcon, Usb, Videocam } from "@mui/icons-material";
+import { Button, Stack } from "@mui/material";
 import type { CameraEntry } from "../../domain/types";
 import { EntryRow } from "../../misc/EntryRow";
 import { AdbBridgeActivityView } from "../activity/AdbBridgeActivityView";

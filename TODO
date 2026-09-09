@@ -108,13 +108,7 @@
 
 ### Candybox
 - [ ] Shared-host failure detection: se tutti i device appartenenti allo stesso Candybox risultano OFFLINE, riavvia del Candybox
-- [ ] Candybox recovery workflow: detect -> wait grace period -> reboot (smartplug) -> verify reachability
-    - blocked: da verificare in lab se esistono smart plug dietro le CU (oggi note solo dietro le TV) - senza plug sulla CU questo workflow non e' eseguibile
-
-### Smart Plugs
-- [ ] Smart Plugs gestite dal servizio (oggi note solo dietro le TV, non dietro le CU - da confermare in lab)
-- [ ] Riconciliare gli SmartPlugs nella gerarchia dei device (mostrare la plug come "figlia" di una TV in UI)
-    - blocked: il Device codec Suitest (`packages/core/src/adapters/suitest.ts`) non ha un campo di relazione device->device ne' un discriminante di tipo esplicito - va chiarito con dati reali (dump Suitest) come si distingue una smart plug da una TV in `/devices` e come si risale alla TV a cui e' assegnata, prima di poter scrivere mock + reconciliation
+- [ ] Candybox recovery workflow: detect -> wait grace period -> reboot (ssh) -> verify reachability
 
 ### Predicates
 - [ ] Blaster Error: predicato dedicato per notificare su Slack (nessun recovery automatico, solo intervento manuale)
@@ -122,7 +116,6 @@
 ### Web / UI
 - [X] Overview nel sidepanel
 - [X] UI per modificare gli IPs ADB
-- [ ] (Bug) Service Logs rallenta l'app
 - [X] Indicatore versione servizio
 - [X] Homepage
   - [X] Sort (Ordina per: Nome, IP)
@@ -140,6 +133,10 @@
 - [ ] Scheduling core
   - [ ] Esporre il concetto di stato controlled per ogni entity (es. utilizzo TV0 dalle 14:00 alle 18:00)
   - [ ] Riutilizzare il modello di stato controlled come base per altre feature di scheduling e prenotazione
+
+### Smart Plugs
+- [ ] Riconciliazione manuale TV <-> Smart Plug in UI (stesso pattern di Camera <-> ADB Entry: FK assegnata a mano, un solo step - le smart plug sono confermate solo dietro le TV, mai dietro le CU)
+- [ ] Tripwire di stato per Smart Plug OFFLINE/unreachable: solo notifica Slack, nessun workflow di recovery automatico
 
 ### TV Device
 

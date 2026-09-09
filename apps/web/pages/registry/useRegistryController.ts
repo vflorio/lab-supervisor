@@ -64,12 +64,13 @@ function useDialogTarget<T>() {
 function useInventory(db: Database) {
   const { cuGroups, unallocatedTvs, orphanCameras } = buildHierarchy(db);
 
-  const controlUnits = Object.keys(db.lab.candyboxes).length;
+  // cuGroups esclude già le control unit di tipo "drive" (vedi hierarchy.ts)
+  const controlUnits = cuGroups.length;
   const tvs = Object.keys(db.lab.tvs).length;
   const cameras = Object.keys(db.lab.cameras).length;
 
   const controlled =
-    Object.values(db.lab.candyboxes).filter((d) => d.controlled).length +
+    cuGroups.filter((group) => group.cu.controlled).length +
     Object.values(db.lab.cameras).filter((d) => d.controlled).length +
     Object.values(db.lab.tvs).filter((d) => d.controlled).length;
 
@@ -144,7 +145,7 @@ function useRename({ log, run }: Deps) {
 
 // -------------------------------------------------------------------------------------
 // Creazione + assegnazione host ADB: unica entita' registrabile a mano dalla UI, sempre
-// legata a una camera fin dalla creazione - non esiste un pool di host non assegnati (§6.3).
+// legata a una camera fin dalla creazione - non esiste un pool di host non assegnati.
 // -------------------------------------------------------------------------------------
 
 const emptyNewAdbTarget: NewAdbTargetForm = { ip: "" };

@@ -12,8 +12,13 @@ export interface DeviceRegistryHeaderProps {
 // "controlled" come pillole nella zona azioni - stessa convenzione già in uso nelle pagine
 // reali (RegistryTree/RegistryHeartbeat passano Chip nella `actions` slot di PageHeader).
 // Nessuna azione di creazione qui: un host ADB si crea solo contestualmente a una camera,
-// dal bottone "Add ADB" della sua row (§6.3).
-export function DeviceRegistryHeader({ controlUnitCount, tvCount, cameraCount, controlledCount }: DeviceRegistryHeaderProps) {
+// dal bottone "Add ADB" della sua row.
+export function DeviceRegistryHeader({
+  controlUnitCount,
+  tvCount,
+  cameraCount,
+  controlledCount,
+}: DeviceRegistryHeaderProps) {
   return (
     <PageHeader
       eyebrow="Registry"

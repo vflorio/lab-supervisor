@@ -23,7 +23,7 @@ const TRIM_THRESHOLD = 1200;
 // Le entry in arrivo si accumulano per questa finestra e vengono applicate in un solo render:
 // ogni messaggio WebSocket è un task a sé, quindi React non li batcha tra loro e senza questo
 // si paga un render completo del pannello per riga di log.
-const FLUSH_INTERVAL_MS = 100;
+const FLUSH_INTERVAL_MS = 250;
 
 const trimmed = (entries: LogEntry[]): LogEntry[] =>
   entries.length > TRIM_THRESHOLD ? entries.slice(entries.length - MAX_ENTRIES) : entries;

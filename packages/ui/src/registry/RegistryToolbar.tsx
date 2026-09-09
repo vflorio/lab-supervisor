@@ -1,5 +1,5 @@
 import { Dns, Tv, Videocam } from "@mui/icons-material";
-import { Chip, MenuItem, Select, type SelectChangeEvent, Stack, Tooltip, Typography } from "@mui/material";
+import { Chip, MenuItem, Select, type SelectChangeEvent, Stack, Typography } from "@mui/material";
 
 export type SortBy = "name" | "ip";
 export type VisibleType = "candybox" | "tv" | "camera" | "smartplug";
@@ -69,25 +69,17 @@ export function RegistryToolbar({
         </Stack>
 
         <Stack direction="row" sx={{ gap: 0.5 }}>
-          {TYPE_CHIPS.map(({ type, label, icon }) =>
-            type === "smartplug" ? (
-              <Tooltip key={type} title="Non ancora supportato">
-                <span>
-                  <Chip size="small" variant="outlined" icon={icon} label={label} disabled />
-                </span>
-              </Tooltip>
-            ) : (
-              <Chip
-                key={type}
-                size="small"
-                icon={icon}
-                label={label}
-                variant={visibleTypes.has(type) ? "filled" : "outlined"}
-                color={visibleTypes.has(type) ? "primary" : "default"}
-                onClick={() => onToggleType(type)}
-              />
-            ),
-          )}
+          {TYPE_CHIPS.map(({ type, label, icon }) => (
+            <Chip
+              key={type}
+              size="small"
+              icon={icon}
+              label={label}
+              variant={visibleTypes.has(type) ? "filled" : "outlined"}
+              color={visibleTypes.has(type) ? "primary" : "default"}
+              onClick={() => onToggleType(type)}
+            />
+          ))}
         </Stack>
 
         <Stack direction="row" sx={{ gap: 0.5 }}>

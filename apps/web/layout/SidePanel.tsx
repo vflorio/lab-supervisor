@@ -76,7 +76,11 @@ export function SidePanel({
             p: 1,
           }}
         >
-          <IconButton size="small" onClick={() => onToggleCollapsed(!collapsed)} title={collapsed ? "Expand" : "Collapse"}>
+          <IconButton
+            size="small"
+            onClick={() => onToggleCollapsed(!collapsed)}
+            title={collapsed ? "Expand" : "Collapse"}
+          >
             {collapsed ? <ChevronLeft fontSize="small" /> : <ChevronRight fontSize="small" />}
           </IconButton>
         </Box>

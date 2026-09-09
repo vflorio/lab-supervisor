@@ -1,5 +1,4 @@
 import { usePersistedState } from "@supervisor/ui/misc/usePersistedState";
-import { useState } from "react";
 import type { DeviceKind } from "./types";
 
 export type SortBy = "name" | "ip";
@@ -7,6 +6,9 @@ export type VisibleType = DeviceKind | "smartplug";
 export type TriState = boolean | null; // null = filtro non attivo
 
 const ALL_VISIBLE_TYPES: readonly VisibleType[] = ["candybox", "tv", "camera", "smartplug"];
+// SmartPlugs non sono ancora agganciate alla gerarchia (vedi hierarchy.ts): il toggle esiste
+// già in UI ma parte disattivato di default.
+const DEFAULT_VISIBLE_TYPES: readonly VisibleType[] = ["candybox", "tv", "camera"];
 
 const sortByCodec = {
   serialize: (value: SortBy) => value,
@@ -25,19 +27,40 @@ const visibleTypesCodec = {
   },
 };
 
-// Stato di visualizzazione della Homepage (sort, toggle per tipo device, filtri) - sort e
-// toggle sono preferenze di layout (persistite come collapsed/width altrove), i filtri sono
-// stato di sessione effimero come search/minLevel in useLogFilters (si resettano al reload).
+const triStateCodec = {
+  serialize: (value: TriState) => (value === null ? "null" : String(value)),
+  deserialize: (raw: string) => (raw === "null" ? null : raw === "true" ? true : raw === "false" ? false : undefined),
+};
+
+const stringSetCodec = {
+  serialize: (value: ReadonlySet<string>) => JSON.stringify([...value]),
+  deserialize: (raw: string) => {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) && parsed.every((v) => typeof v === "string") ? new Set(parsed) : undefined;
+    } catch {
+      return undefined;
+    }
+  },
+};
+
+// Stato di visualizzazione della Homepage (sort, toggle per tipo device, filtri) - tutto
+// persistito in localStorage (stesso pattern del resizable panel), così i filtri sopravvivono
+// al reload esattamente come layout/sort.
 export function useRegistryFilters() {
   const [sortBy, setSortBy] = usePersistedState<SortBy>("registry:sortBy", "name", sortByCodec);
   const [visibleTypes, setVisibleTypes] = usePersistedState<ReadonlySet<VisibleType>>(
     "registry:visibleTypes",
-    new Set(ALL_VISIBLE_TYPES),
+    new Set(DEFAULT_VISIBLE_TYPES),
     visibleTypesCodec,
   );
-  const [controlled, setControlled] = useState<TriState>(null);
-  const [inUse, setInUse] = useState<TriState>(null);
-  const [errorKinds, setErrorKinds] = useState<ReadonlySet<string>>(new Set());
+  const [controlled, setControlled] = usePersistedState<TriState>("registry:controlled", null, triStateCodec);
+  const [inUse, setInUse] = usePersistedState<TriState>("registry:inUse", null, triStateCodec);
+  const [errorKinds, setErrorKinds] = usePersistedState<ReadonlySet<string>>(
+    "registry:errorKinds",
+    new Set(),
+    stringSetCodec,
+  );
 
   const toggleType = (type: VisibleType) => {
     const next = new Set(visibleTypes);
