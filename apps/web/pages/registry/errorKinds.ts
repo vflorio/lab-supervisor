@@ -16,6 +16,7 @@ export function tvErrorKinds(data: TvRowData): readonly string[] {
   return [
     data.deviceStatus === "OFFLINE" && "TV offline",
     data.deviceStatus === "BLASTER_ERROR" && "TV blaster error",
+    data.isSmartPlug && data.deviceStatus === "CANNOT_TURN_ON" && "Smart Plug cannot turn on",
     isRecoveryStuck(data.recoveryStatus) && "Recovery stuck",
   ].filter((kind): kind is string => kind !== false);
 }
@@ -36,6 +37,7 @@ export const ERROR_KIND_OPTIONS = [
   "Control unit offline",
   "TV offline",
   "TV blaster error",
+  "Smart Plug cannot turn on",
   "Camera offline",
   "Camera ADB unreachable",
   "Camera Agent unprovisioned",
