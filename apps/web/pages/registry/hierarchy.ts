@@ -1,3 +1,4 @@
+import * as Suitest from "@supervisor/core/adapters/suitest";
 import type * as Network from "@supervisor/core/network";
 import * as O from "fp-ts/Option";
 import type { AdbDevice } from "../../hooks/useAdbDevices";
@@ -32,7 +33,12 @@ function enrich(db: Database): { controlUnits: ControlUnitView[]; tvs: TvView[];
   // Identità TV = deviceId Suitest, sempre presente
   const tvs: TvView[] = Object.values(db.lab.tvs).map((tv) => {
     const device = db.suitest.devices[tv.deviceId];
-    return { ...tv, controlUnitIds: device?.controlUnitIds, inUseBy: device?.inUseBy };
+    return {
+      ...tv,
+      controlUnitIds: device?.controlUnitIds,
+      inUseBy: device?.inUseBy,
+      isSmartPlug: device ? Suitest.isSmartPlug(device) : false,
+    };
   });
 
   const cameras: CameraView[] = Object.values(db.lab.cameras).map((camera) => {

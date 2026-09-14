@@ -16,7 +16,13 @@ export function TvRowContainer({
   controller: RegistryRowActions;
 }) {
   const data = useTvRowData(group.tv, controller.interventions.resetRecovery);
-  const showRow = matchesFilters(controller.display, "tv", group.tv, tvErrorKinds(data), data.inUse);
+  const showRow = matchesFilters(
+    controller.display,
+    group.tv.isSmartPlug ? "smartplug" : "tv",
+    group.tv,
+    tvErrorKinds(data),
+    data.inUse,
+  );
 
   return (
     <TvRow

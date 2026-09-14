@@ -99,7 +99,7 @@ export type RegistryFilters = ReturnType<typeof useRegistryFilters>;
 // riga nascosta non nasconde i propri children, vedi ControlUnitCard/TvRow `showRow`).
 export function matchesFilters(
   filters: RegistryFilters,
-  kind: DeviceKind,
+  kind: VisibleType,
   entry: { readonly controlled: boolean },
   errorKindsOfRow: readonly string[],
   inUseValue?: boolean,

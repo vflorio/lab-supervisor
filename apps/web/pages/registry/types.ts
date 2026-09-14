@@ -24,6 +24,7 @@ export interface CameraView extends CameraEntry {
 export interface TvView extends TvEntry {
   controlUnitIds?: string[];
   inUseBy?: InUseBy;
+  isSmartPlug?: boolean;
 }
 
 export interface TvGroup {
