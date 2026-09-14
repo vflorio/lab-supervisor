@@ -36,9 +36,6 @@ Two env files, both in `apps/service/`:
   SLACK_BOT_TOKEN=...
   EOF
   ```
-
-  `bun run deploy` only rsyncs the repo, it never touches `.env.prod` on the target (it's gitignored, so it's simply absent from what gets synced) - set it up once directly on that machine and it survives future deploys.
-
 ## Development
 
 Build all packages:
@@ -162,13 +159,52 @@ Other useful combinations:
 
 ## Deploy
 
-`bun run deploy` (root `package.json`) rsyncs the repo over SSH to the lab Mac mini (`macmini@192.168.0.20:/Users/macmini/lab-supervisor`). For a new machine (new lab Mac mini, or a new dev machine that needs to push a deploy), authorize your key first:
+Prod runs on the lab Mac mini as two `launchd` daemons (native macOS, no Docker: `adb` and
+`dns-sd`/Bonjour need direct host + LAN access). The repo is synced with `git` (not rsync), the
+service loads its config from a URL, and all runtime data (registry + logs) lives in a shared
+macOS path outside the repo so `git pull` never overwrites it.
+
+### Runtime data location
+
+`config.lab.jsonc` points `registry.dbPath` and `log.path` at `/Users/Shared/lab-supervisor/`
+(world-writable on macOS, created automatically on first write). Nothing lives under the repo's
+`data/` dir in prod, so pulling new code never clobbers the registry or logs. `launchd` writes its
+own stdout/stderr there too (`service.out.log`, `service.err.log`, `web.out.log`, `web.err.log`).
+
+### First-time setup on the Mac mini
+
+1. Install [bun](https://bun.sh/) and clone the repo to `/Users/macmini/lab-supervisor`.
+2. Create `apps/service/.env.prod` with the real credentials (see [Environment variables](#environment-variables)).
+3. Adjust the two unit files in [deploy/](deploy/) if the machine differs from the defaults:
+   - `PATH` must resolve `bun`, `dns-sd` (`/usr/bin`, always present) and `adb` - check with
+     `which adb` and update the `platform-tools` path (Intel Macs use `/usr/local/bin` for bun).
+   - `SUPERVISOR_CONFIG_PATH` in `com.supervisor.service.plist` = the path of the config file.
+   - `UserName` / `WorkingDirectory` if the repo lives elsewhere or under another user.
+4. Build once and install the daemons:
+
+   ```bash
+   bun install && bun run build
+   sudo cp deploy/com.supervisor.service.plist deploy/com.supervisor.web.plist /Library/LaunchDaemons/
+   sudo launchctl load -w /Library/LaunchDaemons/com.supervisor.service.plist
+   sudo launchctl load -w /Library/LaunchDaemons/com.supervisor.web.plist
+   ```
+
+   Both start on boot (`RunAtLoad`) and are kept alive on crash (`KeepAlive`). The service listens
+   on `127.0.0.1:3001`, the web UI on `:3000`.
+
+### Redeploy (new code)
+
+On the Mac mini, pull, rebuild and restart the daemons:
 
 ```bash
-ssh-copy-id macmini@192.168.0.20
+cd /Users/macmini/lab-supervisor
+git pull && bun install && bun run build
+sudo launchctl kickstart -k system/com.supervisor.service
+sudo launchctl kickstart -k system/com.supervisor.web
 ```
 
-After that, `bun run deploy` connects without a password prompt. Remember the target still needs `apps/service/.env.prod` set up once with the real credentials (see [Environment variables](#environment-variables)) - `rsync` only copies the repo, and `.env.prod` is gitignored so it's never part of what gets synced.
+The service also handles `SIGHUP` for a hot config reload without a full restart
+(`launchctl kill -s HUP system/com.supervisor.service`).
 
 ## Android
 

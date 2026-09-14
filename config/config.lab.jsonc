@@ -1,17 +1,20 @@
 {
   "suitest": {
-    "baseUrl": "https://the.suite.st/api/public/v4"
+    "baseUrl": "https://the.suite.st/api/public/v4",
     //"baseUrl": "http://localhost:3002/v1/suitest",
+    "tokenId": "oBAQ2OBK5q",
+    "tokenPassword": "fe0e935bd26d941f531f3a3dc42147cc24f2ebac900160928b25f5298f60087b"
   },
   "slack": {
-    "active": false
+    "active": false,
+    "botToken": "dev-slack-token"
   },
   "trpc": {
     "port": 3001,
     "hostname": "127.0.0.1"
   },
   "registry": {
-    "dbPath": "/Users/Shared/lab-supervisor/device-registry.json"
+    "dbPath": "data/device-registry.json"
   },
   "activationSchedule": {
     "days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
@@ -19,7 +22,7 @@
     "to": "18:15"
   },
   "provisioning": {
-    "apkPath": "/Users/Shared/lab-supervisor/agent.apk",
+    "apkPath": "../android/app/build/outputs/apk/release/app-release.apk",
     "packageId": "com.vflorio.supervisoragent",
     "activity": ".MainActivity",
     "versionCode": 1
@@ -43,11 +46,12 @@
   },
   "log": {
     "level": "debug", // "error" | "warn" | "info" | "debug"
-    "path": "/Users/Shared/lab-supervisor/logs.jsonl",
+    "path": "data/logs.jsonl", // JSON Lines files
     "network": false // log HTTP responses (get/post, single or paginated)
   },
   "adb": {
     "port": 5555,
+    // Timeout for device reconnection; individual retry form is fixed
     "waitForDeviceTimeout": "90s"
   },
   "workflows": [
@@ -142,9 +146,14 @@
       [
         ["forceStopApp", "com.android.vending"],
         ["openUrl", "market://details?id=st.suite.camera"],
-        ["sleep", "5s"],
-        // tasto "Update"
-        ["inputTap", { "x": 1500, "y": 660 }]
+        ["sleep", "5s"], // attesa caricamento pagina
+        [
+          "inputTap",
+          {
+            "x": 1500,
+            "y": 660
+          }
+        ] // tasto "Update"
       ]
     ]
   ],

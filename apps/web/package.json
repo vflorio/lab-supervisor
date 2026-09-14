@@ -38,7 +38,8 @@
     "web:build": "vike build",
     "web:dev": "vike dev",
     "web:preview": "vike build && vike preview",
-    "web:prod": "vike build && node ./dist/server/index.mjs"
+    "web:prod": "vike build && node ./dist/server/index.mjs",
+    "web:start": "bun ./dist/server/index.mjs"
   },
   "type": "module"
 }

@@ -114,8 +114,8 @@
   - [X] Filter (Abilitato, In Uso, In stato di errore)
 
 ### Prod Env
-- [ ] Flusso di Deploy
-- [ ] Separare le chiavi dalla conf
+- [X] Flusso di Deploy
+- [X] Spostare le credenziali dalla configurazione all'env
 
 ## v0.5.0
 
