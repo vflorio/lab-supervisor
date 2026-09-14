@@ -8,7 +8,7 @@
   },
   "trpc": {
     "port": 3001,
-    "hostname": "127.0.0.1"
+    "hostname": "0.0.0.0" // bind su tutte le interfacce
   },
   "registry": {
     "dbPath": "/Users/Shared/lab-supervisor/device-registry.json"

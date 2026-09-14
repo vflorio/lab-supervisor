@@ -10,13 +10,11 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(version),
   },
+  ssr: {
+    noExternal: ["fp-ts", "io-ts"],
+  },
   server: {
     proxy: {
-      "/api/trpc": {
-        target: "http://localhost:3001",
-        ws: true,
-        rewrite: (path) => path.replace(/^\/api\/trpc/, "/trpc"),
-      },
       // Mock Suitest server (apps/mocks) - solo per la form di debug /mock in sviluppo
       "/api/mocks": {
         target: "http://localhost:3002",

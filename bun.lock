@@ -107,6 +107,7 @@
         "react-dom": "19.2.7",
         "react-window": "2.3.0",
         "ts-pattern": "5.9.0",
+        "uuid": "14.0.1",
         "vike": "0.4.260",
         "vike-react": "0.6.25",
       },

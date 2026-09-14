@@ -190,7 +190,7 @@ own stdout/stderr there too (`service.out.log`, `service.err.log`, `web.out.log`
    ```
 
    Both start on boot (`RunAtLoad`) and are kept alive on crash (`KeepAlive`). The service listens
-   on `127.0.0.1:3001`, the web UI on `:3000`.
+   on `0.0.0.0:3001` (reachable over LAN, e.g. via the Mac mini's IP), the web UI on `:3000`.
 
 ### Redeploy (new code)
 

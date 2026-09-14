@@ -1,15 +1,24 @@
 import type { AppRouter } from "@supervisor/trpc/server";
 import { createTRPCProxyClient, createWSClient, httpBatchLink, splitLink, wsLink } from "@trpc/client";
 
-const getBaseUrl = () => (typeof window !== "undefined" ? "" : `http://localhost:${import.meta.env.PORT ?? 3000}`);
+// The service is reached directly (no proxy): same hostname the page was loaded from, so it
+// also works over LAN when the web UI is opened via the server's IP.
+const SERVICE_PORT = 3001;
 
-const url = `${getBaseUrl()}/api/trpc`;
+const getHttpBaseUrl = () =>
+  typeof window !== "undefined"
+    ? `${window.location.protocol}//${window.location.hostname}:${SERVICE_PORT}`
+    : `http://localhost:${SERVICE_PORT}`;
+
+const getWsBaseUrl = () =>
+  typeof window !== "undefined"
+    ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.hostname}:${SERVICE_PORT}`
+    : `ws://localhost:${SERVICE_PORT}`;
+
+const url = `${getHttpBaseUrl()}/trpc`;
 
 const wsClient = createWSClient({
-  url: () =>
-    typeof window !== "undefined"
-      ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/api/trpc`
-      : `ws://localhost:${import.meta.env.PORT ?? 3000}/api/trpc`,
+  url: () => `${getWsBaseUrl()}/trpc`,
   lazy: { enabled: true, closeMs: 0 },
 });
 

@@ -3,6 +3,7 @@ import * as E from "fp-ts/Either";
 import * as O from "fp-ts/Option";
 import { useEffect, useState } from "react";
 import { match } from "ts-pattern";
+import { v4 as uuidv4 } from "uuid";
 import type { AdbDevice } from "../../hooks/useAdbDevices";
 import { useServiceLogger } from "../../hooks/useServiceLogger";
 import { trpc } from "../../trpc/client";
@@ -168,7 +169,7 @@ function useCreateAdbAssignment({ log, run }: Deps, devices: readonly AdbDevice[
       if (!camera) return invalid("No camera");
       if (E.isLeft(decoded)) return { ok: false as const, error: decoded.left };
 
-      const id = crypto.randomUUID();
+      const id = uuidv4();
       log(`User added ADB host ${form.ip} (id ${id}) and assigned it to camera ${camera.id}`);
       const created = await mutations.adb.add.mutate({ id, target: Network.formatHost(decoded.right) });
       if (!created.ok) return created;

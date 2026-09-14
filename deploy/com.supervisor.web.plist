@@ -20,7 +20,7 @@
     <array>
         <string>/opt/homebrew/bin/bun</string>
         <string>run</string>
-        <string>web:start</string>
+        <string>web:prod</string>
     </array>
 
     <key>EnvironmentVariables</key>
