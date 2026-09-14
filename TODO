@@ -80,7 +80,6 @@
     - [X] Comando `when`: esegue un workflow solo se la Condition regge, con ramo else opzionale
     - [X] Foglia `condition` nella Pipeline: precondizione di una recovery policy (es. non riavviare mentre registra), scritta dove si legge la policy
     - [X] Bound di profondità su run/when: un ciclo in config fallisce invece di girare per sempre
-
 - [X] Comando wait/sleep nella config workflow (per tap-scripting e timing)
 - [X] Comando wakeUp dovrebbe controllare lo schermo prima di mandare lo swipe (guard `["probe", "keyguardShowing"]`)
 
@@ -93,7 +92,6 @@
     - [X] Set Global Setting adb_wifi_enabled = 1
     - [X] Avvio automatico all'accensione (boot_completed) 
 
-
 ## v0.4.0
 
 ### Android
@@ -105,13 +103,6 @@
 ### Supervisor Agent
 - [X] deve mostrare l'IP corrente del device (e aggiornarsi se cambia la rete)
 - [X] tasto reapply sparisce, non serve più
-
-### Candybox
-- [ ] Shared-host failure detection: se tutti i device appartenenti allo stesso Candybox risultano OFFLINE, riavvia del Candybox
-- [ ] Candybox recovery workflow: detect -> wait grace period -> reboot (ssh) -> verify reachability
-
-### Predicates
-- [ ] Blaster Error: predicato dedicato per notificare su Slack (nessun recovery automatico, solo intervento manuale)
 
 ### Web / UI
 - [X] Overview nel sidepanel
@@ -127,6 +118,22 @@
 - [ ] Separare le chiavi dalla conf
 
 ## v0.5.0
+
+### Candybox
+- [ ] Shared-host failure detection: se tutti i device appartenenti allo stesso Candybox risultano OFFLINE, riavvia del Candybox
+- [ ] SSH client: oggi non esiste nulla - modello di config (host, credenziali/key), servizio di connessione, invio comandi con parsing dell'output (oggi serve solo `reboot`)
+  - [ ] Rimodulare il sistema di credenziali che devono stare fuori dalla config (Agent Sign Key, SSH Private key, Suitest API Key, Slack API Key)
+- [ ] Candybox recovery workflow: detect -> wait grace period -> reboot (ssh) -> verify reachability
+
+### Workflows
+- [ ] Manual run massivo: possibilità di lanciare manualmente un workflow su più device contemporaneamente (non uno alla volta)
+- [ ] Init workflow: eseguire un workflow all'avvio del servizio (es. suitest connect)
+  - [ ] Eseguire il suitest connect solo se lo stato del device è offline (guard tramite probes)
+
+### Predicates
+- [ ] Blaster Error: predicato dedicato per notificare su Slack (nessun recovery automatico, solo intervento manuale)
+
+## Backlog
 
 ### Scheduling
 
