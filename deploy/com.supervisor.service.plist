@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchDaemon per il recovery service (tRPC/WS su 127.0.0.1:3001).
+  Installazione: vedi "Deploy" in SETUP.md.
+
+  Placeholder da adattare al Mac mini prima di installare:
+    - UserName: utente che possiede il repo e ha .env.prod
+    - PATH: deve risolvere `bun`, `dns-sd` e `adb`
+    - SUPERVISOR_CONFIG_PATH: URL da cui il service scarica la config di prod
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.supervisor.service</string>
+
+    <key>UserName</key>
+    <string>macmini</string>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/macmini/lab-supervisor/apps/service</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/bun</string>
+        <string>run</string>
+        <string>service:prod</string>
+    </array>
+
+    <!-- PATH minimale sotto launchd: bun + dns-sd (/usr/bin) + adb devono essere risolvibili -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/macmini/Library/Android/sdk/platform-tools</string>
+        <key>SUPERVISOR_CONFIG_PATH</key>
+        <string>/Users/Shared/lab-supervisor/config.jsonc</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/Shared/lab-supervisor/service.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/Shared/lab-supervisor/service.err.log</string>
+</dict>
+</plist>

@@ -1,6 +1,7 @@
 package com.vflorio.supervisoragent
 
 import android.content.Context
+import android.net.ConnectivityManager
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
@@ -19,7 +20,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -44,6 +44,7 @@ import com.vflorio.supervisoragent.agent.AgentService
 import com.vflorio.supervisoragent.agent.EventLog
 import com.vflorio.supervisoragent.ui.theme.SupervisorAgentTheme
 import kotlinx.coroutines.delay
+import java.net.Inet4Address
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,13 +72,25 @@ class MainActivity : ComponentActivity() {
 private data class Health(
     val settings: AdbSettings.Status,
     val batteryExempt: Boolean,
+    val ip: String?,
 )
 
 private fun health(context: Context) = Health(
     settings = AdbSettings.status(context),
     batteryExempt = context.getSystemService(PowerManager::class.java)
         .isIgnoringBatteryOptimizations(context.packageName),
+    ip = ipAddress(context),
 )
+
+private fun ipAddress(context: Context): String? {
+    val cm = context.getSystemService(ConnectivityManager::class.java)
+    val network = cm.activeNetwork ?: return null
+    val linkProperties = cm.getLinkProperties(network) ?: return null
+    return linkProperties.linkAddresses
+        .map { it.address }
+        .firstOrNull { it is Inet4Address && !it.isLoopbackAddress }
+        ?.hostAddress
+}
 
 @Composable
 private fun AgentScreen(modifier: Modifier = Modifier) {
@@ -98,6 +111,10 @@ private fun AgentScreen(modifier: Modifier = Modifier) {
         Text("Supervisor Agent", style = MaterialTheme.typography.headlineSmall)
         Text(
             "${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Text(
+            "IP: ${state.ip ?: "unknown"}",
             style = MaterialTheme.typography.bodySmall,
         )
 
@@ -127,15 +144,6 @@ private fun AgentScreen(modifier: Modifier = Modifier) {
                 )
             }
         }
-
-        Spacer(Modifier.size(12.dp))
-
-        // L'esenzione doze la concede l'host (`dumpsys deviceidle whitelist +pkg`): qui resta
-        // solo la riscrittura dei settings, che e' l'unica cosa che l'app puo' fare da sola.
-        Button(onClick = {
-            AgentService.reassertSettings(context, "manual")
-            state = health(context)
-        }) { Text("Reapply settings") }
 
         Spacer(Modifier.size(20.dp))
 

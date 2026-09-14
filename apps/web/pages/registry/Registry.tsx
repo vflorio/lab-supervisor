@@ -1,12 +1,7 @@
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField } from "@mui/material";
-import * as Network from "@supervisor/core/network";
+import type * as Network from "@supervisor/core/network";
 import { SelectDialog } from "@supervisor/ui/misc/SelectDialog";
-import {
-  AddDeviceDialog,
-  AssignCameraDialog,
-  DeviceRegistryHeader,
-  UnlinkedSection,
-} from "@supervisor/ui/registry/index";
+import { AssignAdbDialog, DeviceRegistryHeader, RegistryToolbar, UnlinkedSection } from "@supervisor/ui/registry/index";
 import { match } from "ts-pattern";
 import { useData } from "vike-react/useData";
 import { type AdbDevice, useAdbDevices } from "../../hooks/useAdbDevices";
@@ -14,6 +9,7 @@ import type { Data } from "../index/+data";
 import { CameraRowContainer } from "./containers/CameraRowContainer";
 import { ControlUnitCardContainer } from "./containers/ControlUnitCardContainer";
 import { TvRowContainer } from "./containers/TvRowContainer";
+import { ERROR_KIND_OPTIONS } from "./errorKinds";
 import type { Database } from "./types";
 import { useRegistryController } from "./useRegistryController";
 
@@ -22,30 +18,33 @@ import { useRegistryController } from "./useRegistryController";
 // -------------------------------------------------------------------------------------
 
 export function RegistryView() {
-  const { registry, adbDevices, workflows } = useData<Data>();
+  const { registry, adbDevices, workflows, adbPort } = useData<Data>();
   const liveAdbDevices = useAdbDevices(adbDevices.ok ? adbDevices.data : []);
 
   return match(registry)
-    .with({ ok: true }, ({ data }) => <RegistryBody db={data} adbDevices={liveAdbDevices} workflows={workflows} />)
+    .with({ ok: true }, ({ data }) => (
+      <RegistryBody db={data} adbDevices={liveAdbDevices} workflows={workflows} adbPort={adbPort} />
+    ))
     .with({ ok: false }, ({ error }) => <Alert severity="error">Registry error: {error.message}</Alert>)
     .exhaustive();
 }
 
-// Corpo condiviso tra la route "/" e "/registry-v3" (vedi RegistryHeartbeat.tsx, che aggiunge
-// solo la ServiceStrip sopra questo stesso albero).
+// Corpo della route "/": la ServiceStrip (stato connessione + loop di background) vive nel
+// pannello Overview a destra (apps/web/components/OverviewPanel.tsx), non più qui in testa.
 export function RegistryBody({
   db,
   adbDevices,
   workflows,
+  adbPort,
 }: {
   db: Database;
   adbDevices: readonly AdbDevice[];
   workflows: readonly { name: string }[];
+  adbPort: Network.PORT;
 }) {
-  const controller = useRegistryController(db, adbDevices, workflows);
-  const { inventory, rename, adb, assignAdb, linkSuitest, linkTvCamera } = controller;
+  const controller = useRegistryController(db, adbDevices, workflows, adbPort);
+  const { inventory, rename, createAdb, editAdbIp, linkSuitest, linkTvCamera, display } = controller;
   const workflowNames = workflows.map((w) => w.name);
-  const assigningCameraTarget = assignAdb.camera?.adb ? Network.format(assignAdb.camera.adb.target) : undefined;
 
   return (
     <Box sx={{ px: 3, py: 3 }}>
@@ -54,7 +53,20 @@ export function RegistryBody({
         tvCount={inventory.counts.tvs}
         cameraCount={inventory.counts.cameras}
         controlledCount={inventory.counts.controlled}
-        onAddDevice={() => adb.add.setOpen(true)}
+      />
+
+      <RegistryToolbar
+        sortBy={display.sortBy}
+        onSortByChange={display.setSortBy}
+        visibleTypes={display.visibleTypes}
+        onToggleType={display.toggleType}
+        controlled={display.controlled}
+        onToggleControlled={display.toggleControlled}
+        inUse={display.inUse}
+        onToggleInUse={display.toggleInUse}
+        errorKindOptions={ERROR_KIND_OPTIONS}
+        errorKinds={display.errorKinds}
+        onToggleErrorKind={display.toggleErrorKind}
       />
 
       {controller.error.message && (
@@ -104,28 +116,39 @@ export function RegistryBody({
         </DialogActions>
       </Dialog>
 
-      {/* Add ADB target dialog */}
-      <AddDeviceDialog
-        open={adb.add.open}
-        device={adb.add.form}
-        onChange={adb.add.setForm}
-        onAdd={adb.add.submit}
-        onClose={() => adb.add.setOpen(false)}
+      {/* Crea l'host ADB e lo assegna alla camera in un colpo solo - niente pool di host da
+          gestire a parte, ognuno nasce già legato alla camera per cui è stato registrato */}
+      <AssignAdbDialog
+        open={createAdb.camera !== null}
+        cameraLabel={createAdb.camera?.label}
+        device={createAdb.form}
+        status={createAdb.status}
+        onChange={createAdb.setForm}
+        onAssign={createAdb.submit}
+        onClose={createAdb.cancel}
       />
 
-      {/* Assign camera <-> adb host dialog: candidati da registry.adb (non solo raggiungibili
-          in questo momento) - un target appena creato manualmente non è ancora connesso finché
-          non è assegnato a una camera controlled, il bridge lo connette al reconcile successivo */}
-      <AssignCameraDialog
-        open={assignAdb.camera !== null}
-        cameraLabel={assignAdb.camera?.label}
-        selectedTarget={assigningCameraTarget}
-        candidates={Object.values(db.lab.adb)
-          .filter((entry) => entry.id === assigningCameraTarget || !adb.usedTargets.has(entry.id))
-          .map((entry) => ({ target: entry.id, status: adb.statusFor(entry.target) ?? "disconnect" }))}
-        onAssign={assignAdb.submit}
-        onClose={assignAdb.cancel}
-      />
+      {/* Edit ADB IP dialog */}
+      <Dialog open={editAdbIp.target !== null} onClose={editAdbIp.cancel}>
+        <DialogTitle>Edit ADB IP</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            placeholder="192.168.1.100"
+            value={editAdbIp.draft}
+            onChange={(e) => editAdbIp.setDraft(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && editAdbIp.save()}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={editAdbIp.cancel}>Cancel</Button>
+          <Button onClick={editAdbIp.save} variant="contained">
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Riconciliazione manuale: collega una camera a un video-capture-device Suitest */}
       <SelectDialog

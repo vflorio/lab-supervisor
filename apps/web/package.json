@@ -21,6 +21,7 @@
     "react-dom": "19.2.7",
     "react-window": "2.3.0",
     "ts-pattern": "5.9.0",
+    "uuid": "14.0.1",
     "vike": "0.4.260",
     "vike-react": "0.6.25"
   },
@@ -37,8 +38,7 @@
     "dev": "tsc --noEmit --watch",
     "web:build": "vike build",
     "web:dev": "vike dev",
-    "web:preview": "vike build && vike preview",
-    "web:prod": "vike build && node ./dist/server/index.mjs"
+    "web:prod": "vike build && vike preview"
   },
   "type": "module"
 }

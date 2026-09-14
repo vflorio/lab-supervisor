@@ -29,7 +29,8 @@ export interface CameraRowProps {
   readonly onToggle: () => void;
   readonly onEdit: () => void;
   readonly onDelete: () => void;
-  readonly onAssignAdb: () => void;
+  readonly onCreateAdb?: () => void;
+  readonly onEditAdbIp?: () => void;
   readonly onLinkSuitest?: () => void;
   readonly onRunWorkflow?: (workflowName: string) => void;
   readonly onRearmRecovery?: () => void;
@@ -37,8 +38,9 @@ export interface CameraRowProps {
 }
 
 // Riga camera: foglia della gerarchia, nessun figlio. "Link Suitest" compare solo finché la
-// camera non è collegata a un video-capture-device; l'azione ADB cambia label in base a
-// `camera.adbId` invece di offrire due bottoni distinti (§6.3).
+// camera non è collegata a un video-capture-device. Sull'ADB un solo bottone alla volta: senza
+// `adbId` si crea+assegna un host in un colpo solo, una volta assegnato resta solo l'edit IP -
+// non esiste un flusso per "cambiare" l'host assegnato con uno diverso.
 export function CameraRow({
   camera,
   connected,
@@ -56,7 +58,8 @@ export function CameraRow({
   onToggle,
   onEdit,
   onDelete,
-  onAssignAdb,
+  onCreateAdb,
+  onEditAdbIp,
   onLinkSuitest,
   onRunWorkflow,
   onRearmRecovery,
@@ -70,11 +73,11 @@ export function CameraRow({
       checked={camera.controlled}
       checkedTitle="Controlled by supervisor"
       indicators={[
-        <SuitestCameraConnectedView key="conn" value={connected} />,
-        <SuitestCameraRecordingView key="rec" value={recording} />,
-        <SuitestCameraStreamingView key="stream" value={streaming} />,
-        <AdbDeviceReachableView key="adb" value={adbReachable} />,
-        <AgentProvisionedView key="agent" value={agentProvisioned} missing={agentMissing} />,
+        <SuitestCameraConnectedView key={`${camera.id}-conn`} value={connected} />,
+        <SuitestCameraRecordingView key={`${camera.id}-rec`} value={recording} />,
+        <SuitestCameraStreamingView key={`${camera.id}-stream`} value={streaming} />,
+        <AdbDeviceReachableView key={`${camera.id}-adb`} value={adbReachable} />,
+        <AgentProvisionedView key={`${camera.id}-agent`} value={agentProvisioned} missing={agentMissing} />,
       ]}
       context={
         <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap", alignItems: "center" }}>
@@ -85,7 +88,7 @@ export function CameraRow({
       actions={[
         !camera.videoCaptureDeviceId && onLinkSuitest && (
           <Button
-            key="link"
+            key={`${camera.id}-link`}
             size="small"
             variant="outlined"
             startIcon={<LinkIcon fontSize="small" />}
@@ -94,12 +97,31 @@ export function CameraRow({
             Link Suitest
           </Button>
         ),
-        <Button key="adb" size="small" variant="outlined" startIcon={<Usb fontSize="small" />} onClick={onAssignAdb}>
-          {camera.adbId ? "Change ADB" : "Assign ADB"}
-        </Button>,
+        !camera.adbId && onCreateAdb && (
+          <Button
+            key={`${camera.id}-adb`}
+            size="small"
+            variant="outlined"
+            startIcon={<Usb fontSize="small" />}
+            onClick={onCreateAdb}
+          >
+            Add ADB
+          </Button>
+        ),
+        camera.adbId && onEditAdbIp && (
+          <Button
+            key={`${camera.id}-adb`}
+            size="small"
+            variant="outlined"
+            startIcon={<Usb fontSize="small" />}
+            onClick={onEditAdbIp}
+          >
+            ADB
+          </Button>
+        ),
         onProvisionAgent && (
           <ProvisionAgentButton
-            key="provision"
+            key={`${camera.id}-provision`}
             provisioned={agentProvisioned}
             installed={agentInstalled}
             configured={provisioningConfigured}
@@ -107,8 +129,12 @@ export function CameraRow({
             onProvision={onProvisionAgent}
           />
         ),
-        onRunWorkflow && <WorkflowLauncher key="wf" workflows={workflows} onLaunch={onRunWorkflow} />,
-        <RearmRecoveryButton key="reset" recoveryStatus={recoveryStatus} onRearmRecovery={onRearmRecovery} />,
+        onRunWorkflow && <WorkflowLauncher key={`${camera.id}-wf`} workflows={workflows} onLaunch={onRunWorkflow} />,
+        <RearmRecoveryButton
+          key={`${camera.id}-reset`}
+          recoveryStatus={recoveryStatus}
+          onRearmRecovery={onRearmRecovery}
+        />,
       ]}
       onToggle={onToggle}
       onEdit={onEdit}

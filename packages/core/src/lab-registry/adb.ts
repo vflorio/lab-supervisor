@@ -3,19 +3,21 @@ import * as t from "io-ts";
 import * as Network from "../network";
 import type { LabRegistry } from "./registry";
 
-// Target ADB registrato manualmente (host:port), referenziato per id da altre entità (es.
-// CameraEntry.adbId). `id` coincide con la forma stringa del target (es. "192.168.1.4:5555"):
-// è una chiave naturale, registrare due volte lo stesso target è quindi un upsert idempotente.
+// Target ADB registrato manualmente (IP), referenziato per id da altre entità (es.
+// CameraEntry.adbId). `id` è un identificatore opaco - generato in fase di associazione o
+// preconfigurato via seed - indipendente dal target di rete, che può quindi cambiare (device
+// sostituito, nuovo IP) senza invalidare i riferimenti che lo usano. La porta non fa parte del
+// target: è la stessa per tutti i device (config globale `adb.port`), risolta a valle da chi
+// deve aprire una connessione.
 
 export const AdbEntryCodec = t.type({
   id: t.string,
-  label: t.string,
-  target: Network.Codec,
+  target: Network.HostCodec,
 });
 
 export type AdbEntry = t.TypeOf<typeof AdbEntryCodec>;
 
-export const AdbUpdateInputCodec = t.intersection([t.type({ id: t.string }), t.partial({ label: t.string })]);
+export const AdbUpdateInputCodec = t.intersection([t.type({ id: t.string }), t.partial({ target: Network.HostCodec })]);
 
 export type AdbUpdateInput = t.TypeOf<typeof AdbUpdateInputCodec>;
 

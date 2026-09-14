@@ -1,12 +1,11 @@
 {
+  // Credenziali (tokenId/tokenPassword/botToken) non vanno qui: sono lette dall'env della shell
+  // (SUITEST_TOKEN_ID, SUITEST_TOKEN_PASSWORD, SLACK_BOT_TOKEN) - vedi SETUP.md.
   "suitest": {
-    "baseUrl": "http://localhost:3002/v1/suitest",
-    "tokenId": "dev-suitest-token-id",
-    "tokenPassword": "dev-suitest-token-password"
+    "baseUrl": "http://localhost:3002/v1/suitest"
   },
   "slack": {
-    "active": false,
-    "botToken": "dev-slack-token"
+    "active": false
   },
   "trpc": {
     "port": 3001,
@@ -32,8 +31,8 @@
     "adb": { "policy": [["constantDelay", "10s"]] },
     "agent": { "policy": [["constantDelay", "15m"]] },
     "suitestCamera": { "policy": [["constantDelay", "30s"]] },
-    "suitestControlUnit": { "policy": [["constantDelay", "60s"]] },
-    "suitestDevice": { "policy": [["constantDelay", "60s"]] }
+    "suitestControlUnit": { "policy": [["constantDelay", "3m"]] },
+    "suitestDevice": { "policy": [["constantDelay", "1m"]] }
   },
 
   // Applicative
@@ -105,16 +104,16 @@
   "registry": {
     "dbPath": "data/device-registry.json",
     "devices": {
-      // "cameras": [
-      //   {
-      //     "id": "tablet",
-      //     "label": "Lenovo Tab M10",
-      //     "controlled": true,
-      //     "videoCaptureDeviceId": null,
-      //     "adbId": "192.168.1.4:5555"
-      //   }
-      // ],
-      // "adb": [{ "id": "192.168.1.4:5555", "label": "Lenovo Tab M10", "target": "192.168.1.4:5555" }]
+      "cameras": [
+        {
+          "id": "tablet",
+          "label": "Lenovo Tab M10",
+          "controlled": true,
+          "videoCaptureDeviceId": null,
+          "adbId": "device-1"
+        }
+      ],
+      "adb": [{ "id": "device-1", "target": "192.168.1.4" }]
     }
   }
 }

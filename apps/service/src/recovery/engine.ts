@@ -82,13 +82,14 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
     },
     androidBridge: env.androidBridge,
     waitForDeviceTimeoutMs: DateTime.durationToMs(env.config.adb.waitForDeviceTimeout),
+    adbPort: env.config.adb.port,
   };
 
   // Describe entity (readable label/ip) for notification message placeholders; registry read failures fall back to entityId
   const describeSource = (source: NotifyStream.NotifyEventSource): T.Task<Target.EntityDescriptor> =>
     pipe(
       Registry.read(capabilitiesEnv.registryEnv),
-      TE.map((db) => Target.describeEntity(source.domain, source.entityId, db.lab)),
+      TE.map((db) => Target.describeEntity(source.domain, source.entityId, db.lab, capabilitiesEnv.adbPort)),
       TE.getOrElse(() => T.of<Target.EntityDescriptor>({ id: source.entityId, label: source.entityId, ip: "unknown" })),
     );
 

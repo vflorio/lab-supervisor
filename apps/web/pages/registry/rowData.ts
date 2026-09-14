@@ -74,11 +74,15 @@ function useAgentChecks(predicates: ReturnType<typeof useFacts>["table"], adbAdd
   };
 }
 
-export function useCameraRowData(camera: CameraView, onRearmRecovery: ResetRecovery): CameraRowData {
+export function useCameraRowData(
+  camera: CameraView,
+  onRearmRecovery: ResetRecovery,
+  adbPort: Network.PORT,
+): CameraRowData {
   const { table: predicates } = useFacts();
   const { table: activity } = useActivity();
   const videoCaptureDeviceId = O.toUndefined(camera.videoCaptureDeviceId) ?? "";
-  const adbAddress = camera.adb ? Network.format(camera.adb.target) : "";
+  const adbAddress = camera.adb ? Network.format(Network.of(camera.adb.target.ip, adbPort)) : "";
   const agent = useAgentChecks(predicates, adbAddress);
 
   return {
@@ -107,6 +111,7 @@ export interface TvRowData {
   readonly deviceStatus?: string;
   readonly inUse?: boolean;
   readonly inUseBy?: string;
+  readonly isSmartPlug?: boolean;
   readonly recoveryStatus?: string;
   readonly onRearmRecovery?: () => void;
 }
@@ -122,6 +127,7 @@ export function useTvRowData(tv: TvView, onRearmRecovery: ResetRecovery): TvRowD
     inUse: predicates.get(factKey({ domain: "suitest-device", entityId: tv.deviceId, name: "suitest_device_in_use" }))
       ?.value as boolean | undefined,
     inUseBy: tv.inUseBy?.email ?? tv.inUseBy?.orgName ?? tv.inUseBy?.tokenName,
+    isSmartPlug: tv.isSmartPlug,
     recoveryStatus: activity.get(activityKey({ source: "recovery", entityId: tv.deviceId }))?.status,
     onRearmRecovery: useResetRecoveryHandler("suitest-device", tv.deviceId, onRearmRecovery),
   };

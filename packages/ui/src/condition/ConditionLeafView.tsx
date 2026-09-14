@@ -18,7 +18,7 @@ export function ConditionLeafView({ value }: ConditionLeafViewProps) {
         {value.name}
       </Typography>
       {value.args.length > 0 && (
-        <Typography variant="caption" color="textSecondary">
+        <Typography variant="monoLabel" color="textSecondary">
           ({value.args.join(", ")})
         </Typography>
       )}

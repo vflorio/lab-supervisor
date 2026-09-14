@@ -21,6 +21,7 @@ export interface Env {
   readonly workflowEnv: AdbCapabilities.Env;
   readonly androidBridge: AndroidBridge.Handle;
   readonly waitForDeviceTimeoutMs: number;
+  readonly adbPort: Network.PORT;
 }
 
 // Bridge lifecycle: shared by commands and probes (both resolve same entityId, same error reporting)
@@ -61,7 +62,7 @@ const bridgeFor = (domain: string, env: Env, entityId: string) => {
       Registry.read(env.registryEnv),
       TE.mapLeft((error) => WorkflowInterpreter.workflowError(`Registry read failed: ${Errors.format(error)}`)),
       TE.flatMapOption(
-        (db) => Target.resolveTarget(domain, entityId, db.lab),
+        (db) => Target.resolveTarget(domain, entityId, db.lab, env.adbPort),
         () => WorkflowInterpreter.workflowError(`No ADB target resolved for ${domain}/${entityId}`),
       ),
       TE.flatMap(use),

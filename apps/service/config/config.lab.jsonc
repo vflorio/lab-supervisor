@@ -1,52 +1,53 @@
 {
   "suitest": {
-    //"baseUrl": "https://the.suite.st/api/public/v4",
-    "baseUrl": "http://localhost:3002/v1/suitest",
-    "tokenId": "dev-suitest-token-id",
-    "tokenPassword": "dev-suitest-token-password"
+    "baseUrl": "https://the.suite.st/api/public/v4"
+    //"baseUrl": "http://localhost:3002/v1/suitest",
   },
   "slack": {
-    "active": false,
-    "botToken": "dev-slack-token"
+    "active": false
   },
   "trpc": {
     "port": 3001,
-    "hostname": "127.0.0.1"
+    "hostname": "0.0.0.0" // bind su tutte le interfacce
   },
   "registry": {
-    "dbPath": "data/device-registry.json"
+    "dbPath": "/Users/Shared/lab-supervisor/device-registry.json"
   },
   "activationSchedule": {
     "days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
-    "from": "09:00",
-    "to": "23:00"
+    "from": "08:45",
+    "to": "18:15"
   },
-  // Provisioning dell'agent Android. L'APK va costruito prima (apps/android: ./gradlew
-  // :app:assembleRelease) ed e' firmato con la keystore versionata, non con la debug.keystore
-  // per-macchina: chiave diversa => uninstall forzato => WRITE_SECURE_SETTINGS perso.
-  // `versionCode` deve seguire quello di apps/android/app/build.gradle.kts, altrimenti il
-  // servizio non sa che l'APK sul device e' vecchio.
   "provisioning": {
-    "apkPath": "../android/app/build/outputs/apk/release/app-release.apk",
+    "apkPath": "/Users/Shared/lab-supervisor/agent.apk",
     "packageId": "com.vflorio.supervisoragent",
     "activity": ".MainActivity",
     "versionCode": 1
   },
   "tracking": {
-    "adb": { "policy": [["constantDelay", "10s"]] },
-    // Molto piu' lento degli altri: lo stato di provisioning cambia agli ordini di grandezza
-    // dei reboot, e ogni lettura e' un round trip ADB che compete con i recovery veri.
-    "agent": { "policy": [["constantDelay", "15m"]] },
-    "suitestCamera": { "policy": [["constantDelay", "30s"]] },
-    "suitestControlUnit": { "policy": [["constantDelay", "60s"]] },
-    "suitestDevice": { "policy": [["constantDelay", "60s"]] }
+    "adb": {
+      "policy": [["constantDelay", "10s"]]
+    },
+    "agent": {
+      "policy": [["constantDelay", "15m"]]
+    },
+    "suitestCamera": {
+      "policy": [["constantDelay", "30s"]]
+    },
+    "suitestControlUnit": {
+      "policy": [["constantDelay", "120s"]]
+    },
+    "suitestDevice": {
+      "policy": [["constantDelay", "60s"]]
+    }
   },
   "log": {
-    "level": "debug" // "error" | "warn" | "info" | "debug"
+    "level": "debug", // "error" | "warn" | "info" | "debug"
+    "path": "/Users/Shared/lab-supervisor/logs.jsonl",
+    "network": false // log HTTP responses (get/post, single or paginated)
   },
   "adb": {
     "port": 5555,
-    // Timeout for device reconnection; individual retry form is fixed
     "waitForDeviceTimeout": "90s"
   },
   "workflows": [
@@ -54,26 +55,68 @@
       // Auto-connects on app start; run manually in some cases
       "suitest-connect",
       [
-        ["inputTap", { "x": 0.9, "y": 0.1 }], // connect button
-        ["inputTap", { "x": 0.5, "y": 0.5 }] // confirm
+        [
+          "inputTap",
+          {
+            "x": 0.9,
+            "y": 0.1
+          }
+        ], // connect button
+        [
+          "inputTap",
+          {
+            "x": 0.5,
+            "y": 0.5
+          }
+        ] // confirm
       ]
     ],
     [
       "suitest-set-experimental-profile",
       [
-        ["inputTap", { "x": 2200, "y": 160 }], // settings (top-right)
-        ["inputTap", { "x": 1000, "y": 440 }], // profile
-        ["inputTap", { "x": 1000, "y": 640 }], // profile: experimental
-        ["inputTap", { "x": 180, "y": 180 }] // back (top-left)
+        [
+          "inputTap",
+          {
+            "x": 2200,
+            "y": 160
+          }
+        ], // settings (top-right)
+        ["sleep", "1s"],
+        [
+          "inputTap",
+          {
+            "x": 1000,
+            "y": 400
+          }
+        ], // profile
+        ["sleep", "1s"],
+        [
+          "inputTap",
+          {
+            "x": 1000,
+            "y": 640
+          }
+        ], // profile: experimental
+        ["sleep", "1s"],
+        [
+          "inputTap",
+          {
+            "x": 100,
+            "y": 100
+          }
+        ] // back (top-left)
       ]
     ],
     [
       "suitest-camera-restart",
       [
-        ["restartApp", "com.suitest.android.camera"],
-        ["await", ["probe", "activityResumed", "com.suitest.android.camera.CameraActivity"], "5s"],
-        ["run", "suitest-set-experimental-profile"],
-        ["run", "suitest-connect"]
+        ["restartApp", "st.suite.camera"],
+        ["await", ["probe", "activityResumed", "st.suite.android.suitestcamera.MainActivity"], "5s"],
+        ["run", "suitest-set-experimental-profile"]
+        // [
+        //   "run",
+        //   "suitest-connect"
+        // ]
       ]
     ],
     [
@@ -81,7 +124,7 @@
       [
         ["reboot"],
         ["waitForDevice"],
-        ["ensureActivity", "com.suitest.android.camera", "com.suitest.android.camera.CameraActivity"],
+        ["ensureActivity", "st.suite.camera", "st.suite.android.suitestcamera.MainActivity"],
         ["run", "suitest-set-experimental-profile"],
         ["run", "suitest-connect"]
       ]
@@ -93,9 +136,18 @@
     [
       "suitest-camera-reboot-verified",
       [["run", "suitest-camera-reboot"], ["await", ["truthy", "suitest_camera_connected"], "60s"]]
+    ],
+    [
+      "suitest-camera-update",
+      [
+        ["forceStopApp", "com.android.vending"],
+        ["openUrl", "market://details?id=st.suite.camera"],
+        ["sleep", "5s"],
+        // tasto "Update"
+        ["inputTap", { "x": 1500, "y": 660 }]
+      ]
     ]
   ],
-
   "recovery": [
     {
       "domain": "suitest-camera",

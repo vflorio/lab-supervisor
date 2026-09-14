@@ -8,6 +8,7 @@ import type * as RTE from "fp-ts/ReaderTaskEither";
 import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
 import { match } from "ts-pattern";
+import type * as Mdns from "../../mdns";
 import * as Adb from "../shell";
 import type { ConnectionEvent, ConnectionIntent } from "./model";
 
@@ -19,6 +20,7 @@ export interface AdbConnectionMachineEnv {
   readonly logger: Logger.Tagged;
   readonly adbPort: Network.PORT;
   readonly spawn: Shell.Spawn;
+  readonly mdnsBackend: Mdns.Backend;
 }
 
 // Quantum di tentativi per il solo handshake ADB (`adb connect`) - non configurabile: dettaglio

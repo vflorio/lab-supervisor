@@ -3,10 +3,13 @@ import * as Errors from "@supervisor/core/errors";
 import * as Facts from "@supervisor/core/fact/index";
 import type { CameraEntry } from "@supervisor/core/lab-registry/camera";
 import type * as Logger from "@supervisor/core/logger/logger";
+import * as Network from "@supervisor/core/network";
 import * as WorkflowInterpreter from "@supervisor/core/workflow/interpreter";
 import type { Workflow } from "@supervisor/core/workflow/workflow";
+import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
+import * as RA from "fp-ts/ReadonlyArray";
 import * as TE from "fp-ts/TaskEither";
 import * as AndroidBridgeTracking from "./android-bridge/tracking";
 import * as Capabilities from "./recovery/capabilities";
@@ -37,6 +40,23 @@ export const run =
         O.toUndefined,
       );
 
+    const liveAdbEntityId = (ip: Network.IP): O.Option<string> =>
+      pipe(
+        env.factStream.snapshot(),
+        RA.findFirst(
+          (entry) =>
+            entry.domain === AndroidBridgeTracking.DOMAIN &&
+            entry.name === "adb_device_reachable" &&
+            entry.value === true &&
+            pipe(
+              Network.decode(entry.entityId),
+              E.map((endpoint) => Network.EqIP.equals(endpoint.ip, ip)),
+              E.getOrElse(() => false),
+            ),
+        ),
+        O.map((entry) => entry.entityId),
+      );
+
     return pipe(
       Registry.read(env.capabilitiesEnv.registryEnv),
       TE.mapLeft((error) => WorkflowInterpreter.workflowError(`Registry read failed: ${Errors.format(error)}`)),
@@ -46,19 +66,24 @@ export const run =
             O.fromNullable(db.lab.cameras[cameraId]),
             O.bindTo("camera"),
             O.bind("adbId", ({ camera }) => camera.adbId),
+            O.bind("adbIp", ({ adbId }) => O.fromNullable(db.lab.adb[adbId]?.target.ip)),
+            O.bind("entityId", ({ adbIp }) => liveAdbEntityId(adbIp)),
           ),
-        () => WorkflowInterpreter.workflowError(`Camera "${cameraId}" has no ADB device assigned`),
+        () =>
+          WorkflowInterpreter.workflowError(
+            `Camera "${cameraId}" has no ADB device assigned, or it is not currently reachable`,
+          ),
       ),
       TE.tapIO(() => () => emit(`running:${workflowName}`)),
-      TE.flatMap(({ camera, adbId }) =>
+      TE.flatMap(({ camera, entityId }) =>
         WorkflowInterpreter.run(
           env.workflows,
           workflowName,
         )({
           logger: env.logger,
           workflows: env.workflows,
-          commands: Capabilities.commandsFor(AndroidBridgeTracking.DOMAIN, env.capabilitiesEnv)(adbId),
-          probes: Capabilities.probesFor(AndroidBridgeTracking.DOMAIN, env.capabilitiesEnv)(adbId),
+          commands: Capabilities.commandsFor(AndroidBridgeTracking.DOMAIN, env.capabilitiesEnv)(entityId),
+          probes: Capabilities.probesFor(AndroidBridgeTracking.DOMAIN, env.capabilitiesEnv)(entityId),
           lookup: lookupFor(camera),
         }),
       ),

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchDaemon per la web UI (Vike/Express su :3000).
+  Esegue il build gia' prodotto da `bun run build` (non ricompila all'avvio).
+  Installazione: vedi "Deploy" in SETUP.md.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.supervisor.web</string>
+
+    <key>UserName</key>
+    <string>macmini</string>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/macmini/lab-supervisor/apps/web</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/bun</string>
+        <string>run</string>
+        <string>web:prod</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/bin:/bin</string>
+        <key>PORT</key>
+        <string>3000</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/Shared/lab-supervisor/web.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/Shared/lab-supervisor/web.err.log</string>
+</dict>
+</plist>

@@ -108,6 +108,8 @@ export const connect = (target: Network.Endpoint): Effect<void> =>
 export const disconnect = (target: Network.Endpoint): Effect<void> =>
   pipe(run(["disconnect", Network.format(target)]), RTE.asUnit);
 
+export const disconnectAll: Effect<void> = pipe(run(["disconnect"]), RTE.asUnit);
+
 // Best-effort disconnect (failure is OK; cleans stray transports; logs only)
 export const disconnectQuietly =
   (target: Network.Endpoint): RTE.ReaderTaskEither<AdbEnv, never, void> =>
@@ -126,6 +128,15 @@ export const tcpip =
     pipe(run(["tcpip", String(port)], target), RTE.asUnit);
 
 export const devices: Effect<Device[]> = pipe(run(["devices"]), RTE.map(parseDevices));
+
+export const killServer: Effect<void> = pipe(run(["kill-server"]), RTE.asUnit);
+export const startServer: Effect<void> = pipe(run(["start-server"]), RTE.asUnit);
+
+export const reset: Effect<void> = pipe(
+  disconnectAll,
+  RTE.flatMap(() => killServer),
+  RTE.flatMap(() => startServer),
+);
 
 // Wait for specific state; no timeout (blocking-by-design, unlike other commands)
 export const waitForState =

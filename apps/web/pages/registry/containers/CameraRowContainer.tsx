@@ -1,8 +1,11 @@
 import * as Network from "@supervisor/core/network";
 import { CameraRow } from "@supervisor/ui/registry/index";
+import * as O from "fp-ts/Option";
+import { cameraErrorKinds } from "../errorKinds";
 import { toCameraEntry, useCameraRowData } from "../rowData";
 import type { CameraView } from "../types";
 import type { RegistryRowActions } from "../useRegistryController";
+import { matchesFilters } from "../useRegistryFilters";
 
 export function CameraRowContainer({
   camera,
@@ -13,10 +16,13 @@ export function CameraRowContainer({
   workflows: readonly string[];
   controller: RegistryRowActions;
 }) {
-  const data = useCameraRowData(camera, controller.interventions.resetRecovery);
+  const data = useCameraRowData(camera, controller.interventions.resetRecovery, controller.adbPort);
   // Il provisioning si rivolge al device, non al ruolo camera: senza un host ADB assegnato
   // non c'è nulla con cui parlare, quindi niente bottone.
-  const adbTarget = camera.adb ? Network.format(camera.adb.target) : undefined;
+  const adbTarget = camera.adb ? Network.format(Network.of(camera.adb.target.ip, controller.adbPort)) : undefined;
+  const adbId = O.toUndefined(camera.adbId);
+
+  if (!matchesFilters(controller.display, "camera", camera, cameraErrorKinds(data))) return null;
 
   return (
     <CameraRow
@@ -29,7 +35,8 @@ export function CameraRowContainer({
       onToggle={() => controller.devices.toggle("camera", camera.id, camera.controlled)}
       onEdit={() => controller.rename.start("camera", camera.id, camera.label)}
       onDelete={() => controller.devices.remove("camera", camera.id)}
-      onAssignAdb={() => controller.assignAdb.start(camera)}
+      onCreateAdb={() => controller.createAdb.start(camera)}
+      onEditAdbIp={adbId ? () => controller.editAdbIp.start(adbId) : undefined}
       onLinkSuitest={() => controller.linkSuitest.start(camera)}
       onRunWorkflow={camera.adb ? (name) => controller.interventions.runWorkflow(camera.id, name) : undefined}
     />

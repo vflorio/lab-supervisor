@@ -26,6 +26,7 @@ export interface AndroidDeviceSnapshot {
 interface AndroidBridge {
   readonly devices: () => TE.TaskEither<Adb.Error, readonly AndroidDeviceSnapshot[]>;
   readonly reboot: (target: Network.Endpoint) => TE.TaskEither<Adb.Error, void>;
+  readonly restartServer: () => TE.TaskEither<Adb.Error, void>;
   // Feed alimentato dal tracker ADB
   readonly devicesFeed: {
     readonly subscribe: (listener: (devices: readonly AndroidDeviceSnapshot[]) => void) => () => void;

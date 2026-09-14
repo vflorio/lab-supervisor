@@ -13,6 +13,7 @@ const NOW = 1_700_000_000_000;
 
 const ONLINE_ARGS: ServiceStripProps = {
   connection: "online",
+  version: "1.4.0",
   loops: [
     {
       id: "android-bridge:reconcile",

@@ -65,8 +65,10 @@ const tvsRouter = router({
 });
 
 const adbRouter = router({
+  // `target` è {ip} una volta decodificato ma stringa sul wire (vedi wireInput) - il registry
+  // tiene solo l'IP, non ip:port
   update: publicProcedure
-    .input(decodeOrThrow(AdbUpdateInputCodec))
+    .input(wireInput(AdbUpdateInputCodec))
     .mutation(({ ctx, input }) => pipe(ctx.services.registry.adb.update(input), ApiResult.fromTaskEither)),
 
   add: publicProcedure

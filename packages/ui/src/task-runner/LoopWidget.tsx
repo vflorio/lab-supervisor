@@ -66,7 +66,7 @@ export function LoopWidget({
         justifyContent: "space-between",
         p: 1.5,
         gap: 1.25,
-        width: 240,
+        width: "100%",
         flexShrink: 0,
       }}
     >

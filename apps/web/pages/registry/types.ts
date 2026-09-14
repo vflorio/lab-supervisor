@@ -24,6 +24,7 @@ export interface CameraView extends CameraEntry {
 export interface TvView extends TvEntry {
   controlUnitIds?: string[];
   inUseBy?: InUseBy;
+  isSmartPlug?: boolean;
 }
 
 export interface TvGroup {
@@ -43,10 +44,10 @@ export interface Hierarchy {
 }
 
 // Candybox/Camera/TV derivano da config seed / Suitest sync: l'unico device registrabile
-// manualmente dalla UI è un target ADB (es. un tablet), poi assegnabile a una camera.
+// manualmente dalla UI è un target ADB (es. un tablet), creato e assegnato a una camera in
+// un solo step (nessun pool di host non assegnati).
 export interface NewAdbTargetForm {
-  label: string;
-  target: string; // "ip:port", validato a runtime con Network.decode
+  ip: string; // validato a runtime con Network.decodeHost
 }
 
 // Riconciliazione manuale camera <-> video-capture-device Suitest

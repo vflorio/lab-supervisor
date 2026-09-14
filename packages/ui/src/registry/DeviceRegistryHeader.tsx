@@ -1,5 +1,3 @@
-import { Add } from "@mui/icons-material";
-import { Button } from "@mui/material";
 import { PageHeader } from "./PageHeader";
 import { StatusPill } from "./StatusPill";
 
@@ -8,18 +6,18 @@ export interface DeviceRegistryHeaderProps {
   readonly tvCount: number;
   readonly cameraCount: number;
   readonly controlledCount: number;
-  readonly onAddDevice: () => void;
 }
 
 // Header di pagina del registro: eyebrow+title generici via PageHeader, conteggi e badge
 // "controlled" come pillole nella zona azioni - stessa convenzione già in uso nelle pagine
 // reali (RegistryTree/RegistryHeartbeat passano Chip nella `actions` slot di PageHeader).
+// Nessuna azione di creazione qui: un host ADB si crea solo contestualmente a una camera,
+// dal bottone "Add ADB" della sua row.
 export function DeviceRegistryHeader({
   controlUnitCount,
   tvCount,
   cameraCount,
   controlledCount,
-  onAddDevice,
 }: DeviceRegistryHeaderProps) {
   return (
     <PageHeader
@@ -32,9 +30,6 @@ export function DeviceRegistryHeader({
             tone="disabled"
           />
           <StatusPill label={`${controlledCount} controlled`} tone="success" />
-          <Button size="small" variant="contained" startIcon={<Add fontSize="small" />} onClick={onAddDevice}>
-            Add device
-          </Button>
         </>
       }
     />

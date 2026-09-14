@@ -1,7 +1,7 @@
 # TODO
 
+I plugs non devono avere il bottone di link alla camera, e vanno riconciliati da json
 
-    
 ## v0.1.0
 
 ### Core
@@ -82,7 +82,6 @@
     - [X] Comando `when`: esegue un workflow solo se la Condition regge, con ramo else opzionale
     - [X] Foglia `condition` nella Pipeline: precondizione di una recovery policy (es. non riavviare mentre registra), scritta dove si legge la policy
     - [X] Bound di profondità su run/when: un ciclo in config fallisce invece di girare per sempre
-
 - [X] Comando wait/sleep nella config workflow (per tap-scripting e timing)
 - [X] Comando wakeUp dovrebbe controllare lo schermo prima di mandare lo swipe (guard `["probe", "keyguardShowing"]`)
 
@@ -97,20 +96,56 @@
 
 ## v0.4.0
 
-### Candybox
-- [ ] Shared-host failure detection: se tutti i device appartenenti allo stesso Candybox risultano OFFLINE, riavvia del Candybox
-- [ ] Candybox recovery workflow: detect -> wait grace period -> reboot (smartplug) -> verify reachability
+### Android
+- [X] Riavvio del servizio ADB server quando si entra nello stato di attività
+  - [X] UI Settings, trigger `adb disconnect` e `adb kill-server && adb start-server`
+- [X] Gestione mDNS su macOS (dns-sd)
+- [X] ADB model: chiave primaria = id (uuid) invece dell'IP
 
-### Workflow
-  - [ ] InputTap: coordinate relative/normalizzate (`0.0–1.0`) oltre a quelle assolute
+### Supervisor Agent
+- [X] deve mostrare l'IP corrente del device (e aggiornarsi se cambia la rete)
+- [X] tasto reapply sparisce, non serve più
+
+### Web / UI
+- [X] Overview nel sidepanel
+- [X] UI per modificare gli IPs ADB
+- [X] Indicatore versione servizio
+- [X] Homepage
+  - [X] Sort (Ordina per: Nome, IP)
+  - [X] View toggles (CUs, TVs, Cameras, SmartPlugs)
+  - [X] Filter (Abilitato, In Uso, In stato di errore)
+
+### Prod Env
+- [X] Flusso di Deploy
+- [X] Spostare le credenziali dalla configurazione all'env
 
 ## v0.5.0
+
+### Candybox
+- [ ] Shared-host failure detection: se tutti i device appartenenti allo stesso Candybox risultano OFFLINE, riavvia del Candybox
+- [ ] SSH client: oggi non esiste nulla - modello di config (host, credenziali/key), servizio di connessione, invio comandi con parsing dell'output (oggi serve solo `reboot`)
+  - [ ] Rimodulare il sistema di credenziali che devono stare fuori dalla config (Agent Sign Key, SSH Private key, Suitest API Key, Slack API Key)
+- [ ] Candybox recovery workflow: detect -> wait grace period -> reboot (ssh) -> verify reachability
+
+### Workflows
+- [ ] Manual run massivo: possibilità di lanciare manualmente un workflow su più device contemporaneamente (non uno alla volta)
+- [ ] Init workflow: eseguire un workflow all'avvio del servizio (es. suitest connect)
+  - [ ] Eseguire il suitest connect solo se lo stato del device è offline (guard tramite probes)
+
+### Predicates
+- [ ] Blaster Error: predicato dedicato per notificare su Slack (nessun recovery automatico, solo intervento manuale)
+
+## Backlog
 
 ### Scheduling
 
 - [ ] Scheduling core
   - [ ] Esporre il concetto di stato controlled per ogni entity (es. utilizzo TV0 dalle 14:00 alle 18:00)
   - [ ] Riutilizzare il modello di stato controlled come base per altre feature di scheduling e prenotazione
+
+### Smart Plugs
+- [ ] Riconciliazione manuale TV <-> Smart Plug in UI (stesso pattern di Camera <-> ADB Entry: FK assegnata a mano, un solo step - le smart plug sono confermate solo dietro le TV, mai dietro le CU)
+- [ ] Tripwire di stato per Smart Plug OFFLINE/unreachable: solo notifica Slack, nessun workflow di recovery automatico
 
 ### TV Device
 

@@ -13,6 +13,29 @@ curl -fsSL https://bun.sh/install | bash
 bun install
 ```
 
+## Environment variables
+
+`tokenId`/`tokenPassword`/`botToken` are read from the process env at startup and merged into the config in memory. 
+The service fails fast at boot if any of these are missing:
+
+| Env var | Used for |
+| --- | --- |
+| `SUITEST_TOKEN_ID` | Suitest Public API basic auth (paired with `SUITEST_TOKEN_PASSWORD`) |
+| `SUITEST_TOKEN_PASSWORD` | Suitest Public API basic auth |
+| `SLACK_BOT_TOKEN` | Slack bot token used to post recovery notifications |
+
+Two env files, both in `apps/service/`:
+
+- **`.env`** - dev placeholders matching the mock server's defaults (`apps/mocks/src/index.ts`). Versioned in git (not real secrets), and loaded automatically by Bun for `service:dev` - nothing to configure to work against the mocks.
+- **`.env.prod`** - real credentials for the real Suitest API / Slack app. **Gitignored**, never committed. `service:start` (used with `config.lab.jsonc`) loads it explicitly via `bun --env-file=.env.prod`, so it never mixes with the `.env` dev placeholders. Create it once per machine that runs the real service (e.g. the lab Mac mini):
+
+  ```bash
+  cat > apps/service/.env.prod <<'EOF'
+  SUITEST_TOKEN_ID=...
+  SUITEST_TOKEN_PASSWORD=...
+  SLACK_BOT_TOKEN=...
+  EOF
+  ```
 ## Development
 
 Build all packages:
@@ -76,7 +99,7 @@ Each app is run individually with `bun run --filter <package> <script>` (or `cd`
 bun run --filter @supervisor/service service:dev
 ```
 
-Reads `apps/service/config/config.home.jsonc` by default (see `service:dev` script). Pass a different config with `--config <path>` or `--config-url <url>`. The tRPC/WS server listens on `127.0.0.1:3001` (`trpc.port` / `trpc.hostname` in the config).
+Requires `SUITEST_TOKEN_ID` / `SUITEST_TOKEN_PASSWORD` / `SLACK_BOT_TOKEN` in the environment (see [Environment variables](#environment-variables)) - the service exits immediately if any is missing. `service:dev` gets these from `apps/service/.env` automatically (Bun loads it, no setup needed); `service:start` loads `apps/service/.env.prod` instead. Reads `apps/service/config/config.home.jsonc` by default (see `service:dev` script). Pass a different config with `--config <path>` or `--config-url <url>`. The tRPC/WS server listens on `127.0.0.1:3001` (`trpc.port` / `trpc.hostname` in the config).
 
 **Web app** — the operator UI (Vike + React)
 
@@ -92,7 +115,7 @@ Serves on `http://localhost:3000` by default and talks to the service over tRPC 
 bun run --filter @scheduler-fp/mock-services mock-services:start
 ```
 
-Serves on `http://localhost:3002`, exposing `/v1/suitest/*` and `/v1/slack/*`, plus `/_admin/*` admin routes to reset/inspect state (see `apps/mocks/src/index.ts`). Override `SUITEST_TOKEN_ID` / `SUITEST_TOKEN_PASSWORD` / `SLACK_BOT_TOKEN` env vars if needed (defaults match the `config.home.jsonc` dev tokens).
+Serves on `http://localhost:3002`, exposing `/v1/suitest/*` and `/v1/slack/*`, plus `/_admin/*` admin routes to reset/inspect state (see `apps/mocks/src/index.ts`). Override `SUITEST_TOKEN_ID` / `SUITEST_TOKEN_PASSWORD` / `SLACK_BOT_TOKEN` env vars if needed (defaults match the dev placeholders in [Environment variables](#environment-variables)).
 
 **Demo** — standalone UI component demo
 
@@ -131,6 +154,68 @@ To develop without hitting the real Suitest API, point the service's config at t
 Other useful combinations:
 
 - **Service + mocks only** (no UI, e.g. testing recovery workflows/logs): run just terminals 1 and 2 above, then tail `apps/service/data/logs.jsonl`.
-- **Web app against the real lab**: point `suitest.baseUrl` at the real Suitest API (and set real tokens) in the config the service loads, then skip the mock server entirely.
+- **Web app against the real lab**: point `suitest.baseUrl` at the real Suitest API in the config the service loads, run the service with `service:start` (loads real credentials from `apps/service/.env.prod`, see [Environment variables](#environment-variables)), then skip the mock server entirely.
 - **Everything at once**: `bun run dev` from the repo root starts every workspace's `dev` script via turbo, though most apps' root `dev` script only type-checks in watch mode — use the `*:dev` scripts above (`service:dev`, `web:dev`, `mock-services:start`, `demo:dev`) to actually serve the apps.
+
+## Deploy
+
+Prod runs on the lab Mac mini as two `launchd` daemons (native macOS, no Docker: `adb` and
+`dns-sd`/Bonjour need direct host + LAN access). The repo is synced with `git` (not rsync), the
+service loads its config from a URL, and all runtime data (registry + logs) lives in a shared
+macOS path outside the repo so `git pull` never overwrites it.
+
+### Runtime data location
+
+`config.lab.jsonc` points `registry.dbPath` and `log.path` at `/Users/Shared/lab-supervisor/`
+(world-writable on macOS, created automatically on first write). Nothing lives under the repo's
+`data/` dir in prod, so pulling new code never clobbers the registry or logs. `launchd` writes its
+own stdout/stderr there too (`service.out.log`, `service.err.log`, `web.out.log`, `web.err.log`).
+
+### First-time setup on the Mac mini
+
+1. Install [bun](https://bun.sh/) and clone the repo to `/Users/macmini/lab-supervisor`.
+2. Create `apps/service/.env.prod` with the real credentials (see [Environment variables](#environment-variables)).
+3. Adjust the two unit files in [deploy/](deploy/) if the machine differs from the defaults:
+   - `PATH` must resolve `bun`, `dns-sd` (`/usr/bin`, always present) and `adb` - check with
+     `which adb` and update the `platform-tools` path (Intel Macs use `/usr/local/bin` for bun).
+   - `SUPERVISOR_CONFIG_PATH` in `com.supervisor.service.plist` = the path of the config file.
+   - `UserName` / `WorkingDirectory` if the repo lives elsewhere or under another user.
+4. Build once and install the daemons:
+
+   ```bash
+   bun install && bun run build
+   sudo cp deploy/com.supervisor.service.plist deploy/com.supervisor.web.plist /Library/LaunchDaemons/
+   sudo launchctl load -w /Library/LaunchDaemons/com.supervisor.service.plist
+   sudo launchctl load -w /Library/LaunchDaemons/com.supervisor.web.plist
+   ```
+
+   Both start on boot (`RunAtLoad`) and are kept alive on crash (`KeepAlive`). The service listens
+   on `0.0.0.0:3001` (reachable over LAN, e.g. via the Mac mini's IP), the web UI on `:3000`.
+
+### Redeploy (new code)
+
+On the Mac mini, pull, rebuild and restart the daemons:
+
+```bash
+cd /Users/macmini/lab-supervisor
+git pull && bun install && bun run build
+sudo launchctl kickstart -k system/com.supervisor.service
+sudo launchctl kickstart -k system/com.supervisor.web
+```
+
+The service also handles `SIGHUP` for a hot config reload without a full restart
+(`launchctl kill -s HUP system/com.supervisor.service`).
+
+## Android
+
+The Android agent (`apps/android`) is signed with a single shared keystore versioned in the repo (`apps/android/keystore/supervisor-agent.p12`), not the per-machine debug keystore - see the comment on `signingConfigs` in [apps/android/app/build.gradle.kts](apps/android/app/build.gradle.kts#L23). Any machine building a release/debug APK must produce a binary signed with the *same* key, otherwise installing it forces an uninstall on every device and the `WRITE_SECURE_SETTINGS` grant is lost.
+
+When opening `apps/android` in Android Studio for the first time, nothing needs to be configured manually: Gradle already resolves `signingConfigs.supervisor` from `build.gradle.kts` for both `debug` and `release` builds. If Android Studio's "Generate Signed Bundle / APK" wizard is used instead of a Gradle task, point it at that same file:
+
+- Key store path: `apps/android/keystore/supervisor-agent.p12`
+- Key store password: `supervisor`
+- Key alias: `supervisor-agent`
+- Key password: `supervisor`
+
+These credentials are intentionally in plain text (in the repo and above) - the lab network is isolated and this key doesn't protect anything user-facing, it only keeps installs cross-machine compatible.
 

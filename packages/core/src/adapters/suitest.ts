@@ -106,6 +106,10 @@ export const DeviceCodec = t.intersection([DeviceRequiredCodec, DeviceOptionalCo
 
 export type Device = t.TypeOf<typeof DeviceCodec>;
 
+// Suitest non espone un campo esplicito "tipo device": le smart plug (es. TP-LINK Tapo) sono
+// le uniche entry con `platforms` vuoto, le TV vere hanno sempre almeno una piattaforma (hbbtv, tizen, ...).
+export const isSmartPlug = (device: Pick<Device, "platforms">): boolean => device.platforms.length === 0;
+
 // Dettaglio singolo device (stessi campi senza deviceId, viene usata per la query)
 // (questo codec lo dichiariamo per mimare lo swagger ufficiale)
 const DeviceDetailRequiredCodec = t.type({
