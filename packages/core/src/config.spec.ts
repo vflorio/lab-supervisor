@@ -10,12 +10,11 @@ const validConfig = {
   },
   suitest: {
     baseUrl: "https://the.suite.st/api/public/v4",
-    tokenId: "token-id",
-    tokenPassword: "token-password",
   },
-  slack: { active: false, botToken: "token" },
+  slack: { active: false },
   tracking: {
     adb: { policy: [["constantDelay", "5s"]] },
+    agent: { policy: [["constantDelay", "15m"]] },
     suitestCamera: { policy: [["constantDelay", "20s"]] },
     suitestControlUnit: { policy: [["constantDelay", "20s"]] },
     suitestDevice: { policy: [["constantDelay", "20s"]] },
@@ -62,7 +61,7 @@ describe("Config.applyPatch", () => {
     expect(next.workflows).toEqual(decoded.workflows);
   });
 
-  it("merges suitest/slack field-by-field, never dropping credentials", () => {
+  it("merges suitest/slack field-by-field, leaving the rest untouched", () => {
     const next = Config.applyPatch({ suitest: { baseUrl: "https://new" }, slack: { active: true } })(decoded);
     expect(next.suitest).toEqual({ ...decoded.suitest, baseUrl: "https://new" });
     expect(next.slack).toEqual({ ...decoded.slack, active: true });
@@ -70,5 +69,27 @@ describe("Config.applyPatch", () => {
 
   it("is a no-op for fields absent from the patch", () => {
     expect(Config.applyPatch({})(decoded)).toEqual(decoded);
+  });
+});
+
+describe("Config.withCredentials", () => {
+  const file = E.getOrElseW(() => {
+    throw new Error("validConfig must decode");
+  })(Config.decode(validConfig));
+
+  it("merges env-sourced credentials into suitest/slack, never touching the rest", () => {
+    const service = Config.withCredentials(file, {
+      suitestTokenId: "token-id",
+      suitestTokenPassword: "token-password",
+      slackBotToken: "token",
+    });
+
+    expect(service.suitest).toEqual({
+      baseUrl: file.suitest.baseUrl,
+      tokenId: "token-id",
+      tokenPassword: "token-password",
+    });
+    expect(service.slack).toEqual({ active: file.slack.active, botToken: "token" });
+    expect(service.tracking).toEqual(file.tracking);
   });
 });

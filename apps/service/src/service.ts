@@ -35,15 +35,16 @@ export interface Env {
   readonly process: Node.Process;
   readonly configFetcher: Config.ConfigFetcher;
   readonly configPath: O.Option<string>;
+  readonly credentials: ConfigModel.Credentials;
 }
 
 type Effect<A> = RTE.ReaderTaskEither<
   Env,
-  Validation.ValidationError | Config.FetchError | RetryCodec.PolicyDecodeError | Activation.StartError,
+  Validation.ValidationError | Config.FetchError | Config.EnvError | RetryCodec.PolicyDecodeError | Activation.StartError,
   A
 >;
 
-const loadConfig: Effect<ConfigModel.Service> = (env) => Config.load(env.configFetcher);
+const loadConfig: Effect<ConfigModel.Service> = (env) => Config.load(env.configFetcher, env.credentials);
 
 const parseConfigPolicies = (config: ConfigModel.Service): Effect<ServiceLifecycle.TrackingPolicies> =>
   pipe(
@@ -76,8 +77,9 @@ export const create: Effect<ServiceHandle> = pipe(
   RTE.bind("config", () => loadConfig),
   RTE.bind("policies", ({ config }) => parseConfigPolicies(config)),
   RTE.bind("configPath", () => RTE.asks((env: Env) => env.configPath)),
+  RTE.bind("credentials", () => RTE.asks((env: Env) => env.credentials)),
 
-  RTE.map(({ config, policies, configPath }) => {
+  RTE.map(({ config, policies, configPath, credentials }) => {
     const logStream = LogStream.createLogStream();
     const logger = pipe(ServiceLogger.create(config.log, [logStream.transport]), Logger.tagged("Service"));
 
@@ -136,6 +138,7 @@ export const create: Effect<ServiceHandle> = pipe(
       services: TrpcServices.create({
         config,
         configPath,
+        credentials,
         trpcLog,
         logStream,
         adbDeviceStream,

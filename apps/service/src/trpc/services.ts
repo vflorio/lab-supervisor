@@ -33,6 +33,7 @@ export type Deps = {
   readonly config: Config.Service;
   // `None` se la config è caricata da `--config-url`: `setConfig` non ha un file su cui persistere.
   readonly configPath: O.Option<string>;
+  readonly credentials: Config.Credentials;
   readonly trpcLog: Logger.Tagged;
   readonly logStream: LogStream.LogStream;
   readonly adbDeviceStream: AndroidBridge.AdbDeviceStream;
@@ -52,6 +53,7 @@ export type Deps = {
 export const create = ({
   config,
   configPath,
+  credentials,
   trpcLog,
   adbDeviceStream,
   logStream,
@@ -102,7 +104,7 @@ export const create = ({
         currentConfig = { ...currentConfig, recovery: recovery as Config.Service["recovery"] };
         return Config.redact(currentConfig);
       },
-      // Endomorfismo: legge il file, applica il patch, riscrive solo i campi cambiati - fallisce se la config viene da URL.
+      // legge il file, applica il patch, riscrive solo i campi cambiati - fallisce se la config viene da URL.
       setConfig: (patch) =>
         pipe(
           configPath,
@@ -115,8 +117,8 @@ export const create = ({
               pipe(
                 Config.modify(path)(Config.applyPatch(patch))(Node.fsEnv),
                 TE.map((next) => {
-                  currentConfig = next;
-                  return Config.redact(next);
+                  currentConfig = Config.withCredentials(next, credentials);
+                  return Config.redact(currentConfig);
                 }),
               ),
           ),

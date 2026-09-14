@@ -26,11 +26,21 @@ const main = () => {
 
   const args = argsResult.right;
 
+  const credentialsResult = Config.credentialsFromEnv();
+
+  if (E.isLeft(credentialsResult)) {
+    initLogger.error(Errors.format(credentialsResult.left))();
+    nodeProcess.exit(1);
+  }
+
+  const credentials = credentialsResult.right;
+
   const env: SupervisorService.Env = {
     logger: initLogger,
     process: nodeProcess,
     configFetcher: Config.toFetcher(args.config),
     configPath: args.config.type === "file" ? O.some(args.config.path) : O.none,
+    credentials,
   };
 
   env.logger.info(

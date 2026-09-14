@@ -16,6 +16,10 @@ import * as Recovery from "./recovery/codec";
 import * as Retry from "./retry/codec";
 import * as Workflow from "./workflow/codec";
 
+const SuitestFileCodec = t.type({ baseUrl: t.string });
+
+const SlackFileCodec = t.type({ active: t.boolean });
+
 const SuitestCodec = t.type({
   baseUrl: t.string,
   tokenId: t.string,
@@ -30,6 +34,12 @@ const SlackCodec = t.type({
 });
 
 export type Slack = t.TypeOf<typeof SlackCodec>;
+
+export interface Credentials {
+  readonly suitestTokenId: string;
+  readonly suitestTokenPassword: string;
+  readonly slackBotToken: string;
+}
 
 const TrackingCodec = t.type({
   adb: t.type({ policy: Retry.PolicyJsonCodec }),
@@ -114,11 +124,12 @@ export type Provisioning = t.TypeOf<typeof ProvisioningCodec>;
 
 // `provisioning` è opzionale: senza, il servizio resta identico a prima e la UI mostra il
 // provisioning come non configurato invece di offrire un bottone che non può funzionare.
+// Shape del file su disco/URL: `suitest`/`slack` qui sono le versioni senza credenziali.
 const ServiceCodec = t.intersection([
   t.type({
     activationSchedule: Activation.ActivationScheduleCodec,
-    suitest: SuitestCodec,
-    slack: SlackCodec,
+    suitest: SuitestFileCodec,
+    slack: SlackFileCodec,
     tracking: TrackingCodec,
     adb: AdbCodec,
     log: LogCodec,
@@ -130,7 +141,26 @@ const ServiceCodec = t.intersection([
   t.partial({ provisioning: ProvisioningCodec }),
 ]);
 
-export type Service = t.TypeOf<typeof ServiceCodec>;
+export type ServiceFile = t.TypeOf<typeof ServiceCodec>;
+
+// Shape a runtime: stessa ServiceFile, ma con `suitest`/`slack` mergiate con le credenziali
+// dell'env (vedi `withCredentials`) - il tipo che il resto del servizio consuma.
+export type Service = Omit<ServiceFile, "suitest" | "slack"> & {
+  readonly suitest: Suitest;
+  readonly slack: Slack;
+};
+
+// Merge delle credenziali lette dall'env nella config del file - unico punto in cui una
+// ServiceFile diventa una Service completa e pronta a fare richieste a Suitest/Slack.
+export const withCredentials = (file: ServiceFile, credentials: Credentials): Service => ({
+  ...file,
+  suitest: {
+    ...file.suitest,
+    tokenId: credentials.suitestTokenId,
+    tokenPassword: credentials.suitestTokenPassword,
+  },
+  slack: { ...file.slack, botToken: credentials.slackBotToken },
+});
 
 const formatErrors = (errors: t.Errors): string =>
   errors
@@ -143,7 +173,7 @@ const formatErrors = (errors: t.Errors): string =>
     )
     .join("\n");
 
-export const decode = (raw: unknown): E.Either<Validation.ValidationError, Service> =>
+export const decode = (raw: unknown): E.Either<Validation.ValidationError, ServiceFile> =>
   pipe(
     raw,
     ServiceCodec.decode,
@@ -161,11 +191,11 @@ export const redact = (config: Service): Service => ({
   slack: { ...config.slack, botToken: REDACTED },
 });
 
-// Applica un ConfigPatch: solo i campi presenti sostituiscono il dominio corrispondente,
-// suitest/slack mergiati campo a campo per non perdere le credenziali (mai nel patch, vedi
-// `ConfigPatchCodec`/`InfraCodec`).
+// Applica un ConfigPatch al file: solo i campi presenti sostituiscono il dominio
+// corrispondente, suitest/slack mergiati campo a campo (mai le credenziali, che qui non
+// esistono nemmeno - vedi `ConfigPatchCodec`/`InfraCodec`).
 export const applyPatch =
-  (patch: ConfigPatch): Endomorphism<Service> =>
+  (patch: ConfigPatch): Endomorphism<ServiceFile> =>
   (current) => ({
     ...current,
     ...(patch.suitest ? { suitest: { ...current.suitest, ...patch.suitest } } : {}),
@@ -194,7 +224,7 @@ const parseJsonc = (raw: string): E.Either<ParseError, unknown> =>
 const FORMATTING_OPTIONS: FormattingOptions = { tabSize: 2, insertSpaces: true, eol: "\n" };
 
 export const readRaw =
-  (path: string): ((env: Fs.Env) => TE.TaskEither<ConfigError, { raw: string; config: Service }>) =>
+  (path: string): ((env: Fs.Env) => TE.TaskEither<ConfigError, { raw: string; config: ServiceFile }>) =>
   (env) =>
     pipe(
       env.readFile(path) as TE.TaskEither<ConfigError, string>,
@@ -229,7 +259,7 @@ const diffLeaves = (current: unknown, next: unknown, path: readonly (string | nu
 
 export const modify =
   (path: string) =>
-  (f: Endomorphism<Service>): ((env: Fs.Env) => TE.TaskEither<ConfigError, Service>) =>
+  (f: Endomorphism<ServiceFile>): ((env: Fs.Env) => TE.TaskEither<ConfigError, ServiceFile>) =>
   (env) =>
     pipe(
       readRaw(path)(env),

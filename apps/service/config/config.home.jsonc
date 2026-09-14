@@ -1,12 +1,11 @@
 {
+  // Credenziali (tokenId/tokenPassword/botToken) non vanno qui: sono lette dall'env della shell
+  // (SUITEST_TOKEN_ID, SUITEST_TOKEN_PASSWORD, SLACK_BOT_TOKEN) - vedi SETUP.md.
   "suitest": {
-    "baseUrl": "http://localhost:3002/v1/suitest",
-    "tokenId": "dev-suitest-token-id",
-    "tokenPassword": "dev-suitest-token-password"
+    "baseUrl": "http://localhost:3002/v1/suitest"
   },
   "slack": {
-    "active": false,
-    "botToken": "dev-slack-token"
+    "active": false
   },
   "trpc": {
     "port": 3001,
