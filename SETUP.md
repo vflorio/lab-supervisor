@@ -15,7 +15,7 @@ bun install
 
 ## Environment variables
 
-`tokenId`/`tokenPassword`/`botToken` are read from the process env at startup and merged into the config in memory. 
+`tokenId`/`tokenPassword`/`botToken`/`raspberrySshUser` are read from the process env at startup and merged into the config in memory. 
 The service fails fast at boot if any of these are missing:
 
 | Env var | Used for |
@@ -23,6 +23,7 @@ The service fails fast at boot if any of these are missing:
 | `SUITEST_TOKEN_ID` | Suitest Public API basic auth (paired with `SUITEST_TOKEN_PASSWORD`) |
 | `SUITEST_TOKEN_PASSWORD` | Suitest Public API basic auth |
 | `SLACK_BOT_TOKEN` | Slack bot token used to post recovery notifications |
+| `RASPBERRY_SSH_USER` | SSH username used to reach the control units (Raspberry Pi / CandyBox) for direct reboot. One generic user, valid for every control unit; no password (auth is key-based, see [SSH access to control units](#ssh-access-to-control-units)) |
 
 Two env files, both in `apps/service/`:
 
@@ -34,8 +35,26 @@ Two env files, both in `apps/service/`:
   SUITEST_TOKEN_ID=...
   SUITEST_TOKEN_PASSWORD=...
   SLACK_BOT_TOKEN=...
+  RASPBERRY_SSH_USER=...
   EOF
   ```
+
+### SSH access to control units
+
+The service reboots control units (personal Raspberry Pis, `type: "personal-pi"` in Suitest) by
+SSHing into them directly: `ssh <RASPBERRY_SSH_USER>@<ip>` (the IP comes from Suitest and is stored
+in the device registry). There is a single generic user (`RASPBERRY_SSH_USER`) valid for every
+control unit, and **no password is stored** - authentication is key-based.
+
+On the machine that runs the service, install its public key on each control unit once with
+[`ssh-copy-id`](https://www.man7.org/linux/man-pages/man1/ssh-copy-id.1.html):
+
+```bash
+ssh-copy-id <RASPBERRY_SSH_USER>@<control-unit-ip>
+```
+
+After this, `ssh <RASPBERRY_SSH_USER>@<control-unit-ip>` connects without a password prompt. The
+user must also be able to run `sudo reboot` without a password (default on Raspberry Pi OS).
 ## Development
 
 Build all packages:

@@ -35,10 +35,15 @@ const SlackCodec = t.type({
 
 export type Slack = t.TypeOf<typeof SlackCodec>;
 
+export interface ControlUnitAccess {
+  readonly user: string;
+}
+
 export interface Credentials {
   readonly suitestTokenId: string;
   readonly suitestTokenPassword: string;
   readonly slackBotToken: string;
+  readonly raspberrySshUser: string;
 }
 
 const TrackingCodec = t.type({
@@ -148,6 +153,7 @@ export type ServiceFile = t.TypeOf<typeof ServiceCodec>;
 export type Service = Omit<ServiceFile, "suitest" | "slack"> & {
   readonly suitest: Suitest;
   readonly slack: Slack;
+  readonly controlUnit: ControlUnitAccess;
 };
 
 // Merge delle credenziali lette dall'env nella config del file - unico punto in cui una
@@ -160,6 +166,7 @@ export const withCredentials = (file: ServiceFile, credentials: Credentials): Se
     tokenPassword: credentials.suitestTokenPassword,
   },
   slack: { ...file.slack, botToken: credentials.slackBotToken },
+  controlUnit: { user: credentials.raspberrySshUser },
 });
 
 const formatErrors = (errors: t.Errors): string =>

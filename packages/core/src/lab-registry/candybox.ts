@@ -1,4 +1,6 @@
+import * as Validation from "@supervisor/core/validation";
 import type { Endomorphism } from "fp-ts/Endomorphism";
+import * as O from "fp-ts/Option";
 import * as t from "io-ts";
 import type { ControlUnit } from "../adapters/suitest";
 import type { LabRegistry } from "./registry";
@@ -6,17 +8,20 @@ import type { LabRegistry } from "./registry";
 // Identità = id Suitest: un control unit (CandyBox/Raspberry Pi) non ha esistenza indipendente
 // da Suitest (a differenza di TV/Camera non può essere preconfigurato offline), quindi non serve
 // una foreign key separata: `id` qui È l'id Suitest.
+// `ip` è popolato solo per i Raspberry Pi personali (`type: "personal-pi"`), gli unici raggiungibili
+// via SSH per reboot diretto; per gli altri tipi (candybox/drive/solo-candy) resta None.
 export const CandyboxEntryCodec = t.type({
   id: t.string,
   label: t.string,
   controlled: t.boolean,
+  ip: Validation.optionFromNullable(t.string),
 });
 
 export type CandyboxEntry = t.TypeOf<typeof CandyboxEntryCodec>;
 
 export const CandyboxUpdateInputCodec = t.intersection([
   t.type({ id: t.string }),
-  t.partial({ label: t.string, controlled: t.boolean }),
+  t.partial({ label: t.string, controlled: t.boolean, ip: Validation.optionFromNullable(t.string) }),
 ]);
 
 export type CandyboxUpdateInput = t.TypeOf<typeof CandyboxUpdateInputCodec>;
@@ -55,7 +60,8 @@ export const controlledCandyboxIds = (registry: LabRegistry): readonly string[] 
 
 // Auto-import dalla sync Suitest: a differenza di TV/Camera l'identità coincide con quella
 // Suitest, quindi non serve riconciliazione manuale via UI. Le entry esistenti mantengono
-// label/controlled locali; i control unit nuovi vengono aggiunti con controlled:false.
+// label/controlled locali; i control unit nuovi vengono aggiunti con controlled:false. L'`ip`
+// viene salvato solo per i `personal-pi` (Raspberry Pi raggiungibili via SSH), None altrimenti.
 export const upsertCandyboxesFromSuitestControlUnits =
   (controlUnits: readonly ControlUnit[]): Endomorphism<LabRegistry> =>
   (registry) => ({
@@ -65,7 +71,12 @@ export const upsertCandyboxesFromSuitestControlUnits =
       ...Object.fromEntries(
         controlUnits.map((cu) => [
           cu.id,
-          registry.candyboxes[cu.id] ?? { id: cu.id, label: cu.name, controlled: false },
+          registry.candyboxes[cu.id] ?? {
+            id: cu.id,
+            label: cu.name,
+            controlled: false,
+            ip: cu.type === "personal-pi" ? O.fromNullable(cu.ip) : O.none,
+          },
         ]),
       ),
     },

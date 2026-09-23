@@ -77,11 +77,12 @@ const videoCaptureDevice = (index: number, assignedTvIndex: number): VideoCaptur
   batteryState: { isCharging: true, batteryLevel: 87, batteryTemperature: 29 },
 });
 
-const controlUnit = (index: number): ControlUnit => ({
+const controlUnit = (index: number, overrides: Partial<ControlUnit> = {}): ControlUnit => ({
   id: formatDeviceId(index, "cu"),
   name: `CandyBox_${index}`,
   online: true,
   type: "candybox",
+  ...overrides,
 });
 
 const seedDevices: Device[] = [
@@ -104,6 +105,7 @@ const seedVideoCaptureDevices: VideoCaptureDevice[] = [
 const seedControlUnits: ControlUnit[] = [
   controlUnit(1),
   //controlUnit(2)
+  controlUnit(2, { name: "RaspberryPi_2", type: "personal-pi", ip: "192.168.2.50", reboot: false, shutdown: false }),
 ];
 
 // -------------------------------------------------------------------------------------

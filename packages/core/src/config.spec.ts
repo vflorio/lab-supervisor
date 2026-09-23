@@ -82,6 +82,7 @@ describe("Config.withCredentials", () => {
       suitestTokenId: "token-id",
       suitestTokenPassword: "token-password",
       slackBotToken: "token",
+      raspberrySshUser: "lab",
     });
 
     expect(service.suitest).toEqual({
@@ -90,6 +91,7 @@ describe("Config.withCredentials", () => {
       tokenPassword: "token-password",
     });
     expect(service.slack).toEqual({ active: file.slack.active, botToken: "token" });
+    expect(service.controlUnit).toEqual({ user: "lab" });
     expect(service.tracking).toEqual(file.tracking);
   });
 });

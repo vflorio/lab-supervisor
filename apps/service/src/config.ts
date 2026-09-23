@@ -45,6 +45,7 @@ export const credentialsFromEnv = (): E.Either<EnvError, Config.Credentials> =>
     E.bind("suitestTokenId", () => requireEnv("SUITEST_TOKEN_ID")),
     E.bind("suitestTokenPassword", () => requireEnv("SUITEST_TOKEN_PASSWORD")),
     E.bind("slackBotToken", () => requireEnv("SLACK_BOT_TOKEN")),
+    E.bind("raspberrySshUser", () => requireEnv("RASPBERRY_SSH_USER")),
   );
 
 export const load = (
