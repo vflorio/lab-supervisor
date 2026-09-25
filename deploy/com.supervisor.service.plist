@@ -41,8 +41,10 @@
     <key>KeepAlive</key>
     <true/>
 
+    <!--
     <key>StandardOutPath</key>
     <string>/Users/Shared/lab-supervisor/service.out.log</string>
+    -->
     <key>StandardErrorPath</key>
     <string>/Users/Shared/lab-supervisor/service.err.log</string>
 </dict>

@@ -55,7 +55,7 @@ export const makeCommands = (env: Env, target: Network.Endpoint): WorkflowInterp
         TE.flatMap((showing) => (showing ? Adb.dismissKeyguard(target)(adbEnv) : TE.right(undefined))),
         TE.mapLeft(mapWorkflowError),
       ),
-    inputTap: (coords) => pipe(Adb.inputTap(coords.x, coords.y)(target)(adbEnv), TE.mapLeft(mapWorkflowError)),
+    inputTap: (coords) => pipe(Adb.inputTap(coords[0], coords[1])(target)(adbEnv), TE.mapLeft(mapWorkflowError)),
     waitForDevice: () => pipe(Adb.waitForDevice(target)(adbEnv), TE.mapLeft(mapWorkflowError)),
   };
 };

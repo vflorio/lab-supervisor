@@ -23,7 +23,7 @@ const DEFAULT_CONDITION: Condition = { type: "leaf", leaf: { type: "truthy", nam
 const defaultFieldValue = (kind: CommandSchema["fields"][number]["kind"]): unknown =>
   match(kind)
     .with("duration", () => "0ms" as DurationString)
-    .with("coords", () => ({ x: 0, y: 0 }))
+    .with("coords", () => [0, 0] as const)
     .with("condition", () => DEFAULT_CONDITION)
     .with("string", () => "")
     .exhaustive();
@@ -68,11 +68,11 @@ export function CommandForm({ value, onChange, schema, factOptions = [] }: Comma
             />
           ))
           .with({ kind: "coords" }, () => {
-            const { x, y } = (raw as { x: number; y: number }) ?? { x: 0, y: 0 };
+            const [arg0, arg1] = (raw as readonly [number, number]) ?? [0, 0];
             return (
               <Stack key={field.key} direction="row" sx={{ gap: 1 }}>
-                <NumberField label="x" value={x} onChange={(next) => setField(field.key, { x: next, y })} width={80} />
-                <NumberField label="y" value={y} onChange={(next) => setField(field.key, { x, y: next })} width={80} />
+                <NumberField label="0" value={arg0} onChange={(next) => setField(field.key, [next, arg1])} width={80} />
+                <NumberField label="1" value={arg1} onChange={(next) => setField(field.key, [arg0, next])} width={80} />
               </Stack>
             );
           })

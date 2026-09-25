@@ -40,7 +40,7 @@ const commandToString = (cmd: Command): string =>
     .with({ type: "openDeveloperSettings" }, () => "openDeveloperSettings")
     .with({ type: "reboot" }, () => "reboot")
     .with({ type: "wakeUp" }, () => "wakeUp")
-    .with({ type: "inputTap" }, ({ coords }) => `inputTap(${coords.x}, ${coords.y})`)
+    .with({ type: "inputTap" }, ({ coords }) => `inputTap(${coords[0]}, ${coords[1]})`)
     .with({ type: "waitForDevice" }, () => "waitForDevice")
     .with({ type: "run" }, ({ workflowName }) => `run(${workflowName})`)
     .with({ type: "sleep" }, ({ duration }) => `sleep(${duration})`)

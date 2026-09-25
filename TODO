@@ -133,7 +133,7 @@ I plugs non devono avere il bottone di link alla camera, e vanno riconciliati da
   - [ ] Eseguire il suitest connect solo se lo stato del device è offline (guard tramite probes)
 
 ### Predicates
-- [ ] Blaster Error: predicato dedicato per notificare su Slack (nessun recovery automatico, solo intervento manuale)
+- [X] Blaster Error: predicato dedicato per notificare su Slack (nessun recovery automatico, solo intervento manuale)
 
 ## Backlog
 

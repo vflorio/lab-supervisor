@@ -5,7 +5,7 @@ import { DurationString } from "../date-time";
 import { ConditionCodec } from "./condition-codec";
 import type { Command, Workflow } from "./workflow";
 
-const TapCoordsCodec = t.type({ x: t.number, y: t.number });
+const TapCoordsCodec = t.tuple([t.number, t.number]);
 
 // Metadata for UI: available commands and their fields (avoids duplicating the union)
 export type CommandFieldKind = "string" | "duration" | "coords" | "condition";
@@ -142,7 +142,7 @@ const validateCommand = (u: unknown, c: t.Context): t.Validation<Command> => {
     .with("wakeUp", () => t.success({ type: "wakeUp" as const }))
     .with("inputTap", () => {
       const coords = args[0];
-      if (!TapCoordsCodec.is(coords)) return t.failure(u, c, "inputTap requires {x, y} coords");
+      if (!TapCoordsCodec.is(coords)) return t.failure(u, c, "inputTap requires [arg0, arg1] coords");
 
       return t.success({ type: "inputTap" as const, coords });
     })

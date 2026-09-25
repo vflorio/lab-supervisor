@@ -5,8 +5,9 @@ import type { Condition } from "./condition";
 
 // Flat, named command sequence; retry/escalation lives in Recovery Model and Pipeline
 
-// Tap coordinates: pixel schermo, passati raw a `adb shell input tap`
-export type TapCoords = { readonly x: number; readonly y: number };
+// Passata raw a `adb shell input tap <arg0> <arg1>`.
+// in portrait vengono interpretate come [x, y], in landscape come [y, x]
+export type TapCoords = readonly [number, number];
 
 // Discriminated union dei comandi supportati.
 // JSON format: ["commandName", ...args] -> viene decodificato nel tipo corretto.

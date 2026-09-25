@@ -73,9 +73,9 @@ describe("workflow interpreter", () => {
   });
 
   it("resolves workflow references via the 'run' command", async () => {
-    const tapCalls: Array<{ x: number; y: number }> = [];
+    const tapCalls: Array<readonly [number, number]> = [];
     const env: Interpreter.WorkflowEnv = {
-      workflows: [{ name: "my-workflow", commands: [{ type: "inputTap", coords: { x: 0.5, y: 0.5 } }] }],
+      workflows: [{ name: "my-workflow", commands: [{ type: "inputTap", coords: [0.5, 0.5] }] }],
       logger: noopEnv().logger,
       commands: {
         ...noopEnv().commands,
@@ -93,7 +93,7 @@ describe("workflow interpreter", () => {
 
     const result = await Interpreter.interpretWorkflow(workflow)(env)();
     expect(E.isRight(result)).toBe(true);
-    expect(tapCalls).toEqual([{ x: 0.5, y: 0.5 }]);
+    expect(tapCalls).toEqual([[0.5, 0.5]]);
   });
 
   it("fails with a WorkflowError when the referenced workflow is missing", async () => {

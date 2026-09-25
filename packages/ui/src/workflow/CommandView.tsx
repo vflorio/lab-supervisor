@@ -37,10 +37,10 @@ export function CommandView({ value, schema }: CommandViewProps) {
         if (field.kind === "duration") return <DurationView key={field.key} value={raw as DurationString} />;
         if (field.kind === "condition") return <ConditionView key={field.key} value={raw as Condition} />;
         if (field.kind === "coords") {
-          const coords = raw as { x: number; y: number };
+          const coords = raw as readonly [number, number];
           return (
             <Typography key={field.key} variant="monoLabel" sx={{ color: "textSecondary" }}>
-              ({coords.x}, {coords.y})
+              ({coords[0]}, {coords[1]})
             </Typography>
           );
         }

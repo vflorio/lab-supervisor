@@ -72,7 +72,8 @@
     [
       "open-chrome-reboot-async",
       [["run", "open-chrome-reboot"], ["await", ["truthy", "suitest_camera_connected"], "60s"]]
-    ]
+    ],
+    ["noop", []]
   ],
 
   "recovery": [
@@ -94,6 +95,28 @@
               "type": ["slack"],
               "channel": "#lab-supervisor",
               "message": "{{label}} ({{ip}}) suitest connection failed, manual intervention required",
+              "policy": ["exhausted"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "domain": "suitest-device",
+      "label": "TV Blaster Error",
+      "tripwires": [
+        {
+          // Sopra un ciclo di polling suitestDevice (1m), evita falsi positivi su una singola lettura stantia
+          "grace": "90s",
+          "predicate": ["not", ["equals", "suitest_device_status", "BLASTER_ERROR"]],
+          // Nessun recovery automatico: solo un check, poi si passa direttamente a notificare
+          "pipeline": ["workflow", "noop"],
+          "retry": [["limitRetries", 0]],
+          "notify": [
+            {
+              "type": ["slack"],
+              "channel": "#lab-supervisor",
+              "message": "{{label}} ({{ip}}) in BLASTER_ERROR, intervento manuale richiesto",
               "policy": ["exhausted"]
             }
           ]
