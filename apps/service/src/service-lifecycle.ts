@@ -17,6 +17,7 @@ import * as AndroidBridgeRunner from "./android-bridge/runner";
 import * as AndroidBridgeTracking from "./android-bridge/tracking";
 import type * as AndroidProvisioningRunner from "./android-provisioning/runner";
 import * as AndroidProvisioningTracking from "./android-provisioning/tracking";
+import * as CandyboxSharedHost from "./candybox/shared-host-guard";
 import * as Node from "./node";
 import * as RecoveryEngine from "./recovery/engine";
 import * as Registry from "./registry";
@@ -60,6 +61,7 @@ export interface ActiveLifecycle {
   readonly suitestTracking: TaskRunner.Handle;
   readonly androidBridgeReconciler: TaskRunner.Handle;
   readonly androidProvisioningTracking: TaskRunner.Handle;
+  readonly candyboxSharedHost: TaskRunner.Handle;
   readonly recovery: RecoveryEngine.Handle;
 
   // Lancio manuale di un workflow (via tRPC)
@@ -195,12 +197,28 @@ const createResources =
       loopStream: env.loopStream,
     });
 
+    const candyboxSharedHost = CandyboxSharedHost.create({
+      logger: env.logger.child("Candybox"),
+      registryEnv: {
+        logger: env.logger.child("Registry"),
+        suitestConfig: env.config.suitest,
+        dbPath: env.config.registry.dbPath,
+        seedDevices: env.config.registry.devices,
+        fsEnv: Node.fsEnv,
+      },
+      factStream: env.factStream,
+      sshUser: env.config.controlUnit.user,
+      spawn: Node.spawn,
+      loopStream: env.loopStream,
+    });
+
     return {
       androidBridge,
       androidBridgeTracking,
       suitestTracking,
       androidBridgeReconciler,
       androidProvisioningTracking,
+      candyboxSharedHost,
     };
   };
 
@@ -209,6 +227,7 @@ const startBackgroundTasks = ({
   androidBridgeTracking,
   androidBridgeReconciler,
   androidProvisioningTracking,
+  candyboxSharedHost,
 }: ActiveLifecycle): IO.IO<void> =>
   TaskRunner.detach(
     pipe(
@@ -217,6 +236,7 @@ const startBackgroundTasks = ({
         androidBridgeTracking.start,
         androidBridgeReconciler.start,
         androidProvisioningTracking.start,
+        candyboxSharedHost.start,
       ],
       TE.traverseArray(flow(TaskRunner.detach, TE.fromIO)),
     ),
@@ -228,6 +248,7 @@ const stopResources = ({
   androidBridge,
   androidBridgeReconciler,
   androidProvisioningTracking,
+  candyboxSharedHost,
   recovery,
 }: ActiveLifecycle): IO.IO<void> =>
   pipe(
@@ -237,6 +258,7 @@ const stopResources = ({
     IO.flatMap(() => suitestTracking.stop),
     IO.flatMap(() => androidBridgeReconciler.stop),
     IO.flatMap(() => androidProvisioningTracking.stop),
+    IO.flatMap(() => candyboxSharedHost.stop),
     IO.flatMap(() => androidBridge.stop),
   );
 

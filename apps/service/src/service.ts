@@ -40,7 +40,11 @@ export interface Env {
 
 type Effect<A> = RTE.ReaderTaskEither<
   Env,
-  Validation.ValidationError | Config.FetchError | Config.EnvError | RetryCodec.PolicyDecodeError | Activation.StartError,
+  | Validation.ValidationError
+  | Config.FetchError
+  | Config.EnvError
+  | RetryCodec.PolicyDecodeError
+  | Activation.StartError,
   A
 >;
 

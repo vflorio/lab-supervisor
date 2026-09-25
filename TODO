@@ -122,10 +122,10 @@ I plugs non devono avere il bottone di link alla camera, e vanno riconciliati da
 ## v0.5.0
 
 ### Candybox
-- [ ] Shared-host failure detection: se tutti i device appartenenti allo stesso Candybox risultano OFFLINE, riavvia del Candybox
+- [X] Shared-host failure detection: se tutti i device appartenenti allo stesso Candybox risultano OFFLINE, riavvia del Candybox
 - [X] SSH client: modello di config (host, credenziali/key), servizio di connessione, invio comandi con parsing dell'output
   - [X] Rimodulare il sistema di credenziali che devono stare fuori dalla config (Agent Sign Key, SSH Private key, Suitest API Key, Slack API Key)
-- [ ] Candybox recovery workflow: detect -> wait grace period -> reboot (ssh) -> verify reachability
+- [ ] Candybox recovery workflow: detect -> wait grace period -> reboot (ssh) -> verify reachability -> retry / notify
 
 ### Workflows
 - [ ] Manual run massivo: possibilità di lanciare manualmente un workflow su più device contemporaneamente (non uno alla volta)
