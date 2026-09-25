@@ -1,6 +1,6 @@
 import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
-import type { Device } from "../adapters/suitest";
+import type { Device, DeviceStatus } from "../adapters/suitest";
 import type { CandyboxEntry } from "../lab-registry/candybox";
 import * as Network from "../network";
 
@@ -20,10 +20,13 @@ export interface StuckCandybox {
 // arriva dal fact stream, live, via `statusOf`.
 export type DeviceTopology = Pick<Device, "deviceId" | "controlUnitIds">;
 
-// `OFFLINE` = irraggiungibile. `OFF` (spento di proposito) NON è offline, così una TV spenta a
-// mano non fa mai scattare il reboot. Uno status ignoto (nessun fatto ancora) non è offline:
-// conservativo, non riavvia su stato incerto.
-const OFFLINE = "OFFLINE";
+// `OFFLINE`/`CANDYBOX_OFFLINE` = irraggiungibile. `OFF` (spento di proposito) NON è offline, così
+// una TV spenta a mano non fa mai scattare il reboot. Uno status ignoto (nessun fatto ancora) non
+// è offline: conservativo, non riavvia su stato incerto.
+const OFFLINE_STATUSES: readonly DeviceStatus[] = ["OFFLINE", "CANDYBOX_OFFLINE"];
+
+const isOffline = (status?: string): boolean =>
+  typeof status !== "undefined" && (OFFLINE_STATUSES as readonly string[]).includes(status);
 
 // Un Candybox è "bloccato" se: è `controlled` (non in manutenzione), ha un ip SSH risolvibile
 // (solo `personal-pi`), controlla almeno un device e TUTTI i suoi device sono OFFLINE.
@@ -43,7 +46,7 @@ export const detectStuckCandyboxes = (
 
     const owned = devices.filter((device) => device.controlUnitIds.includes(candybox.id));
     if (owned.length === 0) return [];
-    if (!owned.every((device) => statusOf(device.deviceId) === OFFLINE)) return [];
+    if (!owned.every((device) => isOffline(statusOf(device.deviceId)))) return [];
 
     return [{ id: candybox.id, label: candybox.label, host: host.value }];
   });
