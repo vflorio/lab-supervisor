@@ -90,7 +90,9 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
     pipe(
       Registry.read(capabilitiesEnv.registryEnv),
       TE.map((db) => Target.describeEntity(source.domain, source.entityId, db.lab, capabilitiesEnv.adbPort)),
-      TE.getOrElse(() => T.of<Target.EntityDescriptor>({ id: source.entityId, label: source.entityId, ip: "unknown" })),
+      TE.getOrElse(() =>
+        T.of<Target.EntityDescriptor>({ id: source.entityId, label: source.entityId, ip: "unknown", controlled: true }),
+      ),
     );
 
   // Dispatch lifecycle and publish each result to NotifyStream (one Task per rule)
@@ -102,6 +104,13 @@ export const start = (env: Env): E.Either<StartError, Handle> => {
     pipe(
       describeSource(source),
       T.flatMap((entity) => {
+        // Entità nota nel registry ma con controllo disattivato dall'utente (es. device non nostro/disabilitato):
+        // niente notifiche, non vogliamo allarmare per qualcosa che non gestiamo.
+        if (!entity.controlled) {
+          notifyLog.info(`Skipped notify for ${source.domain}:${entity.id} - entity not controlled`);
+          return T.of(undefined);
+        }
+
         const vars: Record<string, string> = {
           id: entity.id,
           label: entity.label,

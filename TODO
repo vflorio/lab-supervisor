@@ -135,6 +135,9 @@ I plugs non devono avere il bottone di link alla camera, e vanno riconciliati da
 ### Predicates
 - [X] Blaster Error: predicato dedicato per notificare su Slack (nessun recovery automatico, solo intervento manuale)
 
+### Recovery Engine
+- [ ] Gating "controlled" pre-esecuzione: oggi un'entità non-controlled non riceve notifiche (fix applicato in engine.ts) ma il tripwire (grace/retry/pipeline) parte comunque, perché il registry si legge solo async on-demand mentre il FactFeed è sincrono. Serve uno snapshot registry cachato (refresh periodico) da consultare in `Recovery.start`/`runner.ts` prima di osservare un'entità, oppure un hook di gating nell'API generica del recovery runner in `packages/core`
+
 ## Backlog
 
 ### Scheduling

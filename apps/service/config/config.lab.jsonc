@@ -4,7 +4,7 @@
     //"baseUrl": "http://localhost:3002/v1/suitest",
   },
   "slack": {
-    "active": false
+    "active": true
   },
   "trpc": {
     "port": 3001,
@@ -156,7 +156,7 @@
             {
               "type": ["slack"],
               "channel": "#lab-supervisor",
-              "message": "{{label}} ({{ip}}) in BLASTER_ERROR, intervento manuale richiesto",
+              "message": "{{label}} Blaster error, manual intervention required",
               "policy": ["exhausted"]
             }
           ]

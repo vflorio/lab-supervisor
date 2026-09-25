@@ -93,6 +93,9 @@ export interface EntityDescriptor {
   readonly id: string;
   readonly label: string;
   readonly ip: string;
+  // false solo per entità risolte nel registry e marcate non-controlled (utente ha disattivato il controllo);
+  // domini non mappati o lookup falliti restano true, la gating non deve mai bloccare una notifica per un dettaglio mancante.
+  readonly controlled: boolean;
 }
 
 const UNKNOWN = "unknown";
@@ -120,6 +123,31 @@ const resolveLabel = (domain: string, entityId: string, registry: Db.LabRegistry
     )
     .otherwise(() => O.none);
 
+// Stesso `match` su domain di resolveLabel - un'entità non tracciata nel registry locale (es. un device
+// Suitest di un altro tenant/org) non è "nostra": niente notifiche di recovery per lei.
+const resolveControlled = (domain: string, entityId: string, registry: Db.LabRegistry): O.Option<boolean> =>
+  match(domain)
+    .with(AndroidBridge.DOMAIN, () =>
+      pipe(
+        O.fromEither(Network.decode(entityId)),
+        O.chain((endpoint) => findCameraByAdbIp(endpoint.ip, registry)),
+        O.map((camera) => camera.controlled),
+      ),
+    )
+    .with(SuitestCamera.DOMAIN, () =>
+      pipe(
+        findCameraByVideoCaptureDeviceId(entityId, registry),
+        O.map((camera) => camera.controlled),
+      ),
+    )
+    .with(SuitestDevice.DOMAIN, () =>
+      pipe(
+        O.fromNullable(registry.tvs[entityId]),
+        O.map((tv) => tv.controlled),
+      ),
+    )
+    .otherwise(() => O.none);
+
 export const describeEntity = (
   domain: string,
   entityId: string,
@@ -129,4 +157,5 @@ export const describeEntity = (
   id: entityId,
   label: O.getOrElse(() => entityId)(resolveLabel(domain, entityId, registry)),
   ip: O.getOrElse(() => UNKNOWN)(pipe(resolveTarget(domain, entityId, registry, adbPort), O.map(Network.format))),
+  controlled: O.getOrElse(() => true)(resolveControlled(domain, entityId, registry)),
 });
