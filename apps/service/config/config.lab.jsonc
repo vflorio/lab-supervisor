@@ -110,7 +110,8 @@
         // tasto "Update"
         ["inputTap", [1500, 660]]
       ]
-    ]
+    ],
+    ["noop", []]
   ],
   "recovery": [
     {

@@ -7,6 +7,7 @@ import * as S from "fp-ts/string";
 import { match } from "ts-pattern";
 import * as AndroidBridge from "../android-bridge/tracking";
 import * as SuitestCamera from "../suitest/suitest-camera";
+import * as SuitestDevice from "../suitest/suitest-device";
 
 // Risolve l'entityId di un dominio tracciato nel Network.Endpoint ADB per i Commands
 // di una pipeline di recovery. La porta non è mai quella salvata nel registry (che tiene solo
@@ -109,6 +110,12 @@ const resolveLabel = (domain: string, entityId: string, registry: Db.LabRegistry
       pipe(
         findCameraByVideoCaptureDeviceId(entityId, registry),
         O.map((camera) => camera.label),
+      ),
+    )
+    .with(SuitestDevice.DOMAIN, () =>
+      pipe(
+        O.fromNullable(registry.tvs[entityId]),
+        O.map((tv) => tv.label),
       ),
     )
     .otherwise(() => O.none);
