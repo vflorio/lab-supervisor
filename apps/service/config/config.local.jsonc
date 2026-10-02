@@ -19,7 +19,9 @@
   "adb": {
     "port": 5555,
     // Max time to wait for device online after workflow-triggered reboot
-    "waitForDeviceTimeout": "2m"
+    "waitForDeviceTimeout": "2m",
+    // Workflow (tra `workflows`) lanciato dopo ogni connessione ADB confermata di una camera
+    "onConnectWorkflow": "suitest-camera-restart"
   },
   "provisioning": {
     "apkPath": "../android/app/build/outputs/apk/release/app-release.apk",

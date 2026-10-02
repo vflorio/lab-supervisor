@@ -48,7 +48,9 @@
   },
   "adb": {
     "port": 5555,
-    "waitForDeviceTimeout": "90s"
+    "waitForDeviceTimeout": "90s",
+    // Workflow (tra `workflows`) lanciato dopo ogni connessione ADB confermata di una camera
+    "onConnectWorkflow": "suitest-camera-restart"
   },
   "workflows": [
     [

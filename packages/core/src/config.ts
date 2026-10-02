@@ -71,6 +71,8 @@ export type Log = t.TypeOf<typeof LogCodec>;
 const AdbCodec = t.type({
   port: Network.PortCodec,
   waitForDeviceTimeout: DateTime.DurationString,
+  // Workflow (tra `workflows`) lanciato dopo ogni connessione ADB confermata di una camera controlled.
+  onConnectWorkflow: t.string,
 });
 
 export type Adb = t.TypeOf<typeof AdbCodec>;
@@ -127,24 +129,20 @@ const ProvisioningCodec = t.intersection([
 
 export type Provisioning = t.TypeOf<typeof ProvisioningCodec>;
 
-// `provisioning` è opzionale: senza, il servizio resta identico a prima e la UI mostra il
-// provisioning come non configurato invece di offrire un bottone che non può funzionare.
 // Shape del file su disco/URL: `suitest`/`slack` qui sono le versioni senza credenziali.
-const ServiceCodec = t.intersection([
-  t.type({
-    activationSchedule: Activation.ActivationScheduleCodec,
-    suitest: SuitestFileCodec,
-    slack: SlackFileCodec,
-    tracking: TrackingCodec,
-    adb: AdbCodec,
-    log: LogCodec,
-    workflows: t.array(Workflow.WorkflowJsonCodec),
-    trpc: TrpcCodec,
-    registry: RegistryCodec,
-    recovery: t.array(Recovery.RecoveryPolicyCodec),
-  }),
-  t.partial({ provisioning: ProvisioningCodec }),
-]);
+const ServiceCodec = t.type({
+  activationSchedule: Activation.ActivationScheduleCodec,
+  suitest: SuitestFileCodec,
+  slack: SlackFileCodec,
+  tracking: TrackingCodec,
+  adb: AdbCodec,
+  log: LogCodec,
+  workflows: t.array(Workflow.WorkflowJsonCodec),
+  trpc: TrpcCodec,
+  registry: RegistryCodec,
+  recovery: t.array(Recovery.RecoveryPolicyCodec),
+  provisioning: ProvisioningCodec,
+});
 
 export type ServiceFile = t.TypeOf<typeof ServiceCodec>;
 

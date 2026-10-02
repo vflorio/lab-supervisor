@@ -19,12 +19,13 @@ const validConfig = {
     suitestControlUnit: { policy: [["constantDelay", "20s"]] },
     suitestDevice: { policy: [["constantDelay", "20s"]] },
   },
-  adb: { port: 5555, waitForDeviceTimeout: "90s" },
+  adb: { port: 5555, waitForDeviceTimeout: "90s", onConnectWorkflow: "suitest-connect" },
   log: { level: "debug" },
   workflows: [],
   trpc: { port: 3001, hostname: "127.0.0.1" },
   registry: { dbPath: "data/device-registry.json" },
   recovery: [],
+  provisioning: { apkPath: "agent.apk", packageId: "com.vflorio.supervisoragent", activity: ".MainActivity" },
 };
 
 describe("config", () => {
@@ -55,8 +56,14 @@ describe("Config.applyPatch", () => {
   })(Config.decode(validConfig));
 
   it("replaces only the fields present in the patch, leaving the rest untouched", () => {
-    const next = Config.applyPatch({ adb: { port: decoded.adb.port, waitForDeviceTimeout: "5m" } })(decoded);
-    expect(next.adb).toEqual({ port: decoded.adb.port, waitForDeviceTimeout: "5m" });
+    const next = Config.applyPatch({
+      adb: { port: decoded.adb.port, waitForDeviceTimeout: "5m", onConnectWorkflow: decoded.adb.onConnectWorkflow },
+    })(decoded);
+    expect(next.adb).toEqual({
+      port: decoded.adb.port,
+      waitForDeviceTimeout: "5m",
+      onConnectWorkflow: decoded.adb.onConnectWorkflow,
+    });
     expect(next.trpc).toEqual(decoded.trpc);
     expect(next.workflows).toEqual(decoded.workflows);
   });

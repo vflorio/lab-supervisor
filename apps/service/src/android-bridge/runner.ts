@@ -33,6 +33,9 @@ export interface Handle {
   // CommandTimeoutError dopo `timeoutMs`, non fallisce per device ancora giù.
   readonly awaitIdle: (cameraId: string, timeoutMs: number) => TE.TaskEither<Shell.CommandTimeoutError, void>;
   readonly snapshot: () => ReadonlyMap<string, AndroidBridge.AndroidBridgeState>;
+  // Registra un handler invocato quando una camera entra in Idle (connessione ADB confermata):
+  // una sola volta per connessione. Usato per lanciare un workflow dichiarato in config.
+  readonly onConnected: (handler: (cameraId: string) => void) => void;
   readonly stop: () => void;
 }
 
@@ -50,6 +53,9 @@ export const create = (env: AndroidBridge.AndroidBridgeMachineEnv, adbDeviceStre
   // camere diverse restano parallele.
   const queues = new Map<string, Promise<void>>();
 
+  // Handler notificati sulla transizione in Idle (connessione confermata), vedi `onConnected`.
+  const connectedListeners: Array<(cameraId: string) => void> = [];
+
   const dispatchTo =
     (cameraId: string, event: AndroidBridge.AndroidBridgeEvent): TE.TaskEither<never, void> =>
     () => {
@@ -61,8 +67,14 @@ export const create = (env: AndroidBridge.AndroidBridgeMachineEnv, adbDeviceStre
 
           const result = await AndroidBridge.dispatch(state, event)(env)();
           // Err = never: il ramo Left è irraggiungibile, resta come rete di sicurezza
-          if (E.isRight(result)) states.set(cameraId, result.right);
-          else env.logger.error(`Dispatch failed for "${cameraId}": ${Errors.format(result.left)}`)();
+          if (E.isRight(result)) {
+            const next = result.right;
+            states.set(cameraId, next);
+            // Transizione in Idle = connessione ADB confermata: notifica i listener (one-shot per connect)
+            if (state._tag !== "Idle" && next._tag === "Idle") {
+              for (const listener of connectedListeners) listener(cameraId);
+            }
+          } else env.logger.error(`Dispatch failed for "${cameraId}": ${Errors.format(result.left)}`)();
         })
         // Evita che un rejection avveleni la coda: il prossimo dispatch deve poter partire comunque.
         .catch((error) => env.logger.error(`Dispatch threw for "${cameraId}": ${String(error)}`)());
@@ -164,6 +176,9 @@ export const create = (env: AndroidBridge.AndroidBridgeMachineEnv, adbDeviceStre
       );
     },
     snapshot: () => new Map(states),
+    onConnected: (handler) => {
+      connectedListeners.push(handler);
+    },
     stop: unsubscribe,
   };
 };

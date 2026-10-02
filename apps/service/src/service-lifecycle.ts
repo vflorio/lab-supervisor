@@ -125,19 +125,27 @@ const createRecovery = (
       androidBridge: resources.androidBridge,
     }),
     TE.fromEither,
-    TE.map(
-      (recovery): ActiveLifecycle => ({
-        ...resources,
-        recovery,
-        runWorkflow: WorkflowManualRun.run({
-          logger: env.logger.child("ManualWorkflow"),
-          workflows: env.config.workflows,
-          capabilitiesEnv: recovery.capabilitiesEnv,
-          activityStream: env.activityStream,
-          factStream: env.factStream,
-        }),
-      }),
-    ),
+    TE.map((recovery): ActiveLifecycle => {
+      const runWorkflow = WorkflowManualRun.run({
+        logger: env.logger.child("ManualWorkflow"),
+        workflows: env.config.workflows,
+        capabilitiesEnv: recovery.capabilitiesEnv,
+        activityStream: env.activityStream,
+        factStream: env.factStream,
+      });
+
+      // Init workflow: dopo ogni connessione ADB confermata di una camera, lancia il workflow
+      // dichiarato in config (`adb.onConnectWorkflow`). Fire-and-forget: TaskEither non rejecta
+      // e `runWorkflow` emette già l'esito su activityStream.
+      const onConnectWorkflow = env.config.adb.onConnectWorkflow;
+      const connectLog = env.logger.child("AndroidBridge");
+      resources.androidBridge.onConnected((cameraId) => {
+        connectLog.info(`Camera "${cameraId}" connected - running on-connect workflow "${onConnectWorkflow}"`)();
+        void runWorkflow(cameraId, onConnectWorkflow)();
+      });
+
+      return { ...resources, recovery, runWorkflow };
+    }),
   );
 
 const createResources =
