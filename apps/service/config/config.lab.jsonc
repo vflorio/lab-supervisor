@@ -76,13 +76,16 @@
     [
       "suitest-camera-restart",
       [
+        // Skip the restart entirely if a stream is already active: restarting the app would interrupt it for nothing
+        ["when", ["not", ["truthy", "suitest_camera_streaming"]], "suitest-camera-restart-force"]
+      ]
+    ],
+    [
+      "suitest-camera-restart-force",
+      [
         ["restartApp", "st.suite.camera"],
         ["await", ["probe", "activityResumed", "st.suite.android.suitestcamera.MainActivity"], "5s"],
         ["run", "suitest-set-experimental-profile"]
-        // [
-        //   "run",
-        //   "suitest-connect"
-        // ]
       ]
     ],
     [
